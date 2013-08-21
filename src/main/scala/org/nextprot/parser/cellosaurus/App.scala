@@ -7,7 +7,7 @@ import scala.util.matching.Regex
 import java.nio.charset.CodingErrorAction
 import scala.io.Codec
 
-object celloparser {
+object App {
 implicit val codec = Codec("UTF-8")
 codec.onMalformedInput(CodingErrorAction.IGNORE)
 //codec.onUnmappableCharacter(CodingErrorAction.IGNORE)

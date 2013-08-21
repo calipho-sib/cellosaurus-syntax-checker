@@ -52,7 +52,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>org.nextprot.parser.cellosaurus.celloparser</mainClass>
+							<mainClass>org.nextprot.parser.cellosaurus.App</mainClass>
 						</manifest>
 					</archive>
 					<descriptorRefs>
