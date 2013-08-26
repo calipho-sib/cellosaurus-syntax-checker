@@ -9,11 +9,9 @@ import scala.io.Codec
 
 object CelloParser {
 implicit val codec = Codec("UTF-8")
-codec.onMalformedInput(CodingErrorAction.IGNORE)
-//codec.onUnmappableCharacter(CodingErrorAction.IGNORE)
-codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
-//codec.onUnmappableCharacter(CodingErrorAction.REPORT)
+codec.onMalformedInput(CodingErrorAction.REPLACE)
 // grep -n --color='auto' -P "[\x80-\xFF]" cellosaurus.txt
+
 
     def main(args: Array[String]) {
       var started : Boolean = false
@@ -55,7 +53,7 @@ codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
       
       for(line <- Source.fromFile(args(0)).getLines()) {
         curr_line_nb += 1
-        if(line.contains("�") ) {println("Warning: " + line); nonUTF8cnt += 1}
+        if(line.map(_.toInt).contains(65533)) {println("Warning: " + line); nonUTF8cnt += 1}
         if(!started) bigHeader += line
         if(line.startsWith("____")) started=true
         else if (started) {
