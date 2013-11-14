@@ -34,7 +34,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
       val ok_dblist = List("ATCC", "BCRJ", "Brenda","CBA", "CCLE", "CCLV", "CCRID", "CHEMBL", "CLDB",
           "CLO", "Coriell", "Cosmic", "dbMHC","DOI", "DSMZ", "ECACC", "EFO", "ESTDAB", "hESCreg", "ICLC",
-          "IFO", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "Lonza", "MCCL", "MeSH", "PubMed",
+          "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "Lonza", "MCCL", "MeSH", "PubMed",
           "RCB", "RSCB", "TKG", "UKSCB")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
       val ok_catlist = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
@@ -53,7 +53,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       
       for(line <- Source.fromFile(args(0)).getLines()) {
         curr_line_nb += 1
-        if(line.map(_.toInt).contains(65533)) {println("Warning: " + line); nonUTF8cnt += 1}
+        if(line.map(_.toInt).contains(65533)) {println("Warning: " + line); nonUTF8cnt += 1} // code for special '�' replacement character from coded
         if(!started) bigHeader += line
         if(line.startsWith("____")) started=true
         else if (started) {
@@ -84,7 +84,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
          if(curr_rank < last_rank) {Console.err.println("Misordered line type: " + entryline + " in entry " + id); errcnt+=1}
          last_rank = curr_rank  
          }
-         }
+        }
         if(entryline.contains("\t")) Console.err.println("Tab found at: " + entryline)
         if(entryline.endsWith(" ")) Console.err.println("Trailing space found at: " + entryline)
         if(entryline.startsWith("ID   ")) {id = entrylinedata; idlist += id}
@@ -210,6 +210,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
    println(nonUTF8cnt + " non-UTF8 character containing line(s), " + blankcnt + " blank line(s)")    
    
    if(stats)  {
+      println("\n ===== Statistics =====\n")
       println(drcnt + " Xrefs")
       println(wwcnt + " Web links")
       println(syncnt + " synonyms")
