@@ -37,6 +37,24 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
           "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH", "PubMed",
           "RCB", "RSCB", "TKG", "UKSCB")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
+      /*
+       * CC   Caution:
+CC   Discontinued:
+CC   From:
+CC   Group:
+CC   Knockout cell:
+CC   Miscellaneous
+CC   Misspelling:
+CC   NIH funded research status:
+CC   Omics:
+CC   Part of:
+CC   Population:
+CC   Problematic cell line:
+CC   Published in:
+CC   Transfected with:
+*/
+      val ok_cclist = List("Caution", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling", "NIH funded research status",
+          "Omics", "Part of","Population", "Problematic cell line", "Published in", "Transfected with")
       val ok_catlist = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
       		"Recombinant protein production insect cell line", "Spontaneously immortalized cell line", "Stromal cell line",
       		"Telomerase immortalized cell line", "Transformed cell line", "Undefined cell line type", "Embryonic cell line", "Embryonic stem cell",
@@ -86,7 +104,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
          }
         }
         if(entryline.contains("\t")) Console.err.println("Tab found at: " + entryline)
-        if(entryline.contains("  ")) Console.err.println("Multiple spaces found at: " + entryline)
+        if(entrylinedata.contains("  ")) Console.err.println("Multiple spaces found at: " + entryline)
         if(entryline.endsWith(" ")) Console.err.println("Trailing space found at: " + entryline)
         if(entryline.startsWith("ID   ")) {id = entrylinedata; idlist += id}
         else if(entryline.startsWith("AC   ")) {
@@ -124,6 +142,8 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
         			wwcnt += 1
         }
         else if(entryline.startsWith("CC   ")) {
+          val cctopic = entrylinedata.split(":")(0)
+          if(!ok_cclist.contains(cctopic)) {Console.err.println("Unknown CC topic found at: " + entryline); errcnt+=1}
           if(!entryline.endsWith(".")) {Console.err.println("Unterminated CC found at: " + entryline); errcnt+=1}
         }
         else if(entryline.startsWith("DI   ")) {
