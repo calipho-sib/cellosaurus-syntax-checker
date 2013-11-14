@@ -34,7 +34,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
       val ok_dblist = List("ATCC", "BCRJ", "Brenda","CBA", "CCLE", "CCLV", "CCRID", "CHEMBL", "CLDB",
           "CLO", "Coriell", "Cosmic", "dbMHC","DOI", "DSMZ", "ECACC", "EFO", "ESTDAB", "hESCreg", "ICLC",
-          "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "Lonza", "MCCL", "MeSH", "PubMed",
+          "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH", "PubMed",
           "RCB", "RSCB", "TKG", "UKSCB")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
       val ok_catlist = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
@@ -86,6 +86,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
          }
         }
         if(entryline.contains("\t")) Console.err.println("Tab found at: " + entryline)
+        if(entryline.contains("  ")) Console.err.println("Multiple spaces found at: " + entryline)
         if(entryline.endsWith(" ")) Console.err.println("Trailing space found at: " + entryline)
         if(entryline.startsWith("ID   ")) {id = entrylinedata; idlist += id}
         else if(entryline.startsWith("AC   ")) {
