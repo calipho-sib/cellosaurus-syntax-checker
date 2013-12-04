@@ -37,22 +37,6 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
           "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH", "PubMed",
           "RCB", "RSCB", "TKG", "UKSCB")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
-      /*
-       * CC   Caution:
-CC   Discontinued:
-CC   From:
-CC   Group:
-CC   Knockout cell:
-CC   Miscellaneous
-CC   Misspelling:
-CC   NIH funded research status:
-CC   Omics:
-CC   Part of:
-CC   Population:
-CC   Problematic cell line:
-CC   Published in:
-CC   Transfected with:
-*/
       val ok_cclist = List("Caution", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling", "NIH funded research status",
           "Omics", "Part of","Population", "Problematic cell line", "Published in", "Transfected with")
       val ok_catlist = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
@@ -118,15 +102,12 @@ CC   Transfected with:
         }
         else if(entryline.startsWith("SY   ")) {
           if(entryline.endsWith(";")) {Console.err.println("SY trailing ; found at: " + entryline); errcnt+=1}
-          val locsynlist = entrylinedata.split(";")
+          val locsynlist = entrylinedata.split("; ")
           val synduplist = locsynlist.diff(locsynlist.distinct)
           if(synduplist.size != 0) synduplist.foreach(syn =>  {Console.err.println("Locally duplicated SY: " + syn); errcnt+=1})
-          var cursyn = ""
           locsynlist.foreach(synonym => {
             syncnt += 1
-            if(synonym.startsWith(" ")) cursyn = synonym.substring(1)
-            else cursyn = synonym
-            if(cursyn == id) {Console.err.println("Synonym exists as main ID: " + cursyn); errcnt+=1}
+            if(synonym == id) {Console.err.println("Synonym exists as main ID: " + id); errcnt+=1}
             })
             
         }
