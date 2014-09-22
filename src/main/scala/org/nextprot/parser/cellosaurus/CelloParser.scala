@@ -27,19 +27,20 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       val emap    = Map.empty[String, Int]
       val oxmap   = Map.empty[String, Int]
       val line_occmap = Map("ID" -> (1,1), "AC" -> (1,1), "SY" -> (0,1),"DR" -> (0,999),"RX" -> (0,999),"WW" -> (0,999),"CC" -> (0,999),"DI" -> (0,99),"OX" -> (1,999),"HI" -> (0,999),
-                            "OI" -> (1,999),  "SX" -> (0,1), "CA" -> (0,1))
+                            "OI" -> (0,999),  "SX" -> (0,1), "CA" -> (0,1))
       val line_ordmap = Map("ID" -> 1, "AC" -> 2, "SY" -> 3, "DR" -> 4, "RX" -> 5, "WW" -> 6, "CC" -> 7, "DI" -> 8, "OX" -> 9, "HI" -> 10, "OI" -> 11,
                               "SX" -> 12, "CA" -> 13)
       val idacmap = Map.empty[String, String]
+      var pmids = Set.empty[String]
       var Entries = ArrayBuffer[ArrayBuffer[String]]()
       val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
-      val ok_dblist = List("ATCC", "BCRJ", "Brenda","CBA", "CCLE", "CCLV", "CCRID", "CHEMBL", "CLDB",
-          "CLO", "Coriell", "Cosmic", "dbMHC", "DSMZ", "ECACC", "EFO", "ESTDAB", "hESCreg", "ICLC",
+      val ok_dblist = List("ATCC", "BCRJ", "BTO","CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "CHEMBL", "CLDB",
+          "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DSMZ", "ECACC", "EFO", "ESTDAB", "hESCreg", "ICLC",
           "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH",
-          "RCB", "RSCB", "SKIP", "TKG", "UKSCB")
+          "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG", "UKSCB")
       val ok_rxdblist = List("PubMed", "Patent", "DOI","CelloPub")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
-      val ok_cclist = List("Caution", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling", "NIH funded research status",
+      val ok_cclist = List("Breed/subspecies", "Caution", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling", "NIH funded research status",
           "Omics", "Part of","Population", "Problematic cell line", "Transfected with")
       val ok_catlist = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
       		"Recombinant protein production insect cell line", "Spontaneously immortalized cell line", "Stromal cell line",
@@ -75,7 +76,9 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
        var id = ""
        var curr_rank = 0
        var last_rank = 0
-       val linecntmap    = Map.empty[String, Int]
+       val linecntmap = Map("ID" -> 0, "AC" -> 0, "SY" -> 0,"DR" -> 0,"RX" -> 0,"WW" -> 0,"CC" -> 0,"DI" -> 0,"OX" -> 0,"HI" -> 0,
+                            "OI" -> 0,  "SX" -> 0, "CA" -> 0) // Initialize to 0 the line count for each possible field
+       
      if(!(entry(0).startsWith("ID   ") && entry(1).startsWith("AC   ")))
         {Console.err.println("Severe error: Missing ID/AC line at " + entry(0) + " Please correct before re-check"); exit}
        entry.foreach(entryline =>  {//println(entryline)
@@ -85,7 +88,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
          entrylinedata = entryline.substring(5)
          if(!line_ordmap.contains(header))  {Console.err.println("Unknown line type: " + entryline); errcnt+=1}
          else {
-           if(!linecntmap.contains(header)) linecntmap(header) = 1 else linecntmap(header) += 1
+         linecntmap(header) += 1 // Increment count for line type
          curr_rank = line_ordmap(header)
          if(curr_rank < last_rank) {Console.err.println("Misordered line type: " + entryline + " in entry " + id); errcnt+=1}
          last_rank = curr_rank  
@@ -126,8 +129,11 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                     val rxdbname = entrylinedata.split("=")(0) 
                     if(!ok_rxdblist.contains(rxdbname)) {Console.err.println("Illegal db:" + rxdbname + " found at: " + entryline); errcnt+=1}
                     val identifier = entrylinedata.split("[=;]")(1);
-                    if((rxdbname == "PubMed") && ("^[1-9][0-9]{0,7}".r.findFirstIn(identifier)) == None)
-                      {Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt+=1}
+                    if(rxdbname == "PubMed") {
+                      if("^[1-9][0-9]{0,7}".r.findFirstIn(identifier) == None) {Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt+=1}
+                      else pmids += identifier
+                    }
+                      
                     else if((rxdbname == "DOI") && !identifier.startsWith("10."))
                       {Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt+=1}
                     else if((rxdbname == "CelloPub") && ("^CLPUB[0-9]{5}".r.findFirstIn(identifier)) == None)
@@ -150,7 +156,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                     if(entryline.endsWith(";") || entryline.endsWith(".")) {Console.err.println("DI trailing ; found at: " + entryline); errcnt+=1 }
                     val dilist = entrylinedata.split("; ")
                     if(dilist.length != 3) {Console.err.println("Illegal disease format found at: " + entryline); errcnt+=1}
-                    if(dilist(0) != "NCI") {Console.err.println("Illegal disease db:" + dilist(0) + " found at: " + entryline); errcnt+=1}
+                    if(dilist(0) != "NCIt") {Console.err.println("Illegal disease db:" + dilist(0) + " found at: " + entryline); errcnt+=1}
         			}
         else if(entryline.startsWith("OX   ")) {
                     if(entryline.endsWith(";")) {Console.err.println("OX trailing ; found at: " + entryline); errcnt+=1}
@@ -179,7 +185,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
          if(!ok_catlist.contains(entrylinedata)) {Console.err.println("Illegal category found at: " + entryline); errcnt+=1} 
 
         }
-        else if(entryline.startsWith("//")) { // check line occurences
+        else if(entryline.startsWith("//")) { // check line occurences in collected entry
           linecntmap.keys.foreach{ key =>
                                  if((linecntmap(key) < line_occmap(key)._1) || (linecntmap(key) > line_occmap(key)._2))
                                    if(key == "AC" || key == "ID") {Console.err.println("Severe error: " + key + " in entry " + id + " Please correct before re-check"); exit}
@@ -267,7 +273,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
    if(stats)  {
       println("\n ===== Statistics =====\n")
       println(drcnt + " Xrefs")
-      println(rxcnt + " RX refs")
+      println(rxcnt + " RX refs (" + pmids.size + " unique PMIDs)")
       println(wwcnt + " Web links")
       println(syncnt + " synonyms")
       println(oxmap.size + " different species")
