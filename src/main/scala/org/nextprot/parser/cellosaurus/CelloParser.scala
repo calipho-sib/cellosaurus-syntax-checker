@@ -34,17 +34,17 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       var pmids = Set.empty[String]
       var Entries = ArrayBuffer[ArrayBuffer[String]]()
       val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
-      val ok_dblist = List("ATCC", "BCRJ", "BTO","CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "CHEMBL", "CLDB",
-          "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DSMZ", "ECACC", "EFO", "ESTDAB", "hESCreg", "ICLC",
+      val ok_dblist = List("ATCC", "BCRC", "BCRJ", "BTO","CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "CHEMBL", "CLDB",
+          "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "hESCreg", "ICLC",
           "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH",
           "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG", "UKSCB")
       val ok_rxdblist = List("PubMed", "Patent", "DOI","CelloPub")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
-      val ok_cclist = List("Breed/subspecies", "Caution", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling", "NIH funded research status",
+      val ok_cclist = List("Breed/subspecies", "Caution", "Derived from metastatic site", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling", "NIH funded research status",
           "Omics", "Part of","Population", "Problematic cell line", "Transfected with")
       val ok_catlist = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
       		"Recombinant protein production insect cell line", "Spontaneously immortalized cell line", "Stromal cell line",
-      		"Telomerase immortalized cell line", "Transformed cell line", "Undefined cell line type", "Embryonic cell line", "Embryonic stem cell",
+      		"Telomerase immortalized cell line", "Transformed cell line", "Undefined cell line type", "Embryonic stem cell",
       		"Factor-dependent cell line", "Finite cell line")
       var errcnt = 0
       var drcnt = 0
