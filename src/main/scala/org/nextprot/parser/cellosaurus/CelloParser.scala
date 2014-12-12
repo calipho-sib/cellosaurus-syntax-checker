@@ -37,13 +37,13 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       val ok_dblist = List("ATCC", "BCRC", "BCRJ", "BTO","CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "CHEMBL", "CLDB",
           "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "hESCreg", "ICLC",
           "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH",
-          "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG", "UKSCB")
+          "NISES", "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG")
       val ok_rxdblist = List("PubMed", "Patent", "DOI","CelloPub")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
-      val ok_cclist = List("Breed/subspecies", "Caution", "Derived from metastatic site", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling", "NIH funded research status",
-          "Omics", "Part of","Population", "Problematic cell line", "Transfected with")
+      val ok_cclist = List("Breed/subspecies", "Caution", "Derived from metastatic site", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling",
+          "Omics", "Part of","Population", "Problematic cell line", "Registration", "Transfected with")
       val ok_catlist = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
-      		"Recombinant protein production insect cell line", "Spontaneously immortalized cell line", "Stromal cell line",
+      		"Spontaneously immortalized cell line", "Stromal cell line",
       		"Telomerase immortalized cell line", "Transformed cell line", "Undefined cell line type", "Embryonic stem cell",
       		"Factor-dependent cell line", "Finite cell line")
       var errcnt = 0
