@@ -35,7 +35,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       var Entries = ArrayBuffer[ArrayBuffer[String]]()
       val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
       val ok_dblist = List("ATCC", "BCRC", "BCRJ", "BTO","CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "CHEMBL", "CLDB",
-          "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "hESCreg", "ICLC",
+          "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DGRC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "hESCreg", "ICLC",
           "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH",
           "NISES", "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG")
       val ok_rxdblist = List("PubMed", "Patent", "DOI","CelloPub")
