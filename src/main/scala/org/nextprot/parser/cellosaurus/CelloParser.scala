@@ -34,10 +34,10 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       var pmids = Set.empty[String]
       var Entries = ArrayBuffer[ArrayBuffer[String]]()
       val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
-      val ok_dblist = List("ATCC", "BCRC", "BCRJ", "BTO","CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "CHEMBL", "CLDB",
-          "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DGRC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "hESCreg", "ICLC",
+      val ok_dblist = List("ATCC", "BCRC", "BCRJ", "BTO","BioSample", "CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "ChEMBL-Cells", "ChEMBL-Targets", "CLDB",
+          "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DGRC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "hPSCreg", "ICLC",
           "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH",
-          "NISES", "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG")
+          "NISES", "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG", "Ximbio")
       val ok_rxdblist = List("PubMed", "Patent", "DOI","CelloPub")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
       val ok_cclist = List("Breed/subspecies", "Caution", "Derived from metastatic site", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling",
@@ -54,7 +54,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       var nonUTF8cnt = 0
       var blankcnt = 0
       var curr_line_nb = 0
-     if(args.length == 0) { Console.err.println("Please provide a filename"); exit(1)}
+     if(args.length == 0) { Console.err.println("Please provide a filename"); sys.exit(1)}
       args.foreach(arg => { if(arg.contains("OBO")) toOBO=true else if(arg.contains("stats")) stats=true })
       
       for(line <- Source.fromFile(args(0)).getLines()) {
@@ -80,7 +80,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                             "OI" -> 0,  "SX" -> 0, "CA" -> 0) // Initialize to 0 the line count for each possible field
        
      if(!(entry(0).startsWith("ID   ") && entry(1).startsWith("AC   ")))
-        {Console.err.println("Severe error: Missing ID/AC line at " + entry(0) + " Please correct before re-check"); exit}
+        {Console.err.println("Severe error: Missing ID/AC line at " + entry(0) + " Please correct before re-check"); sys.exit(2)}
        entry.foreach(entryline =>  {//println(entryline)
         var entrylinedata = ""
         var header = entryline.substring(0, 2)
@@ -188,7 +188,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
         else if(entryline.startsWith("//")) { // check line occurences in collected entry
           linecntmap.keys.foreach{ key =>
                                  if((linecntmap(key) < line_occmap(key)._1) || (linecntmap(key) > line_occmap(key)._2))
-                                   if(key == "AC" || key == "ID") {Console.err.println("Severe error: " + key + " in entry " + id + " Please correct before re-check"); exit}
+                                   if(key == "AC" || key == "ID") {Console.err.println("Severe error: " + key + " in entry " + id + " Please correct before re-check"); sys.exit(3)}
                                    else {Console.err.println("Illegal line count for: " + key + " in entry " + id); errcnt+=1}}
         }
       })
