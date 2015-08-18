@@ -7,6 +7,8 @@ import scala.util.matching.Regex
 import java.nio.charset.CodingErrorAction
 import scala.io.Codec
 import scala.util.control.Breaks._
+import java.io.PrintWriter
+import java.io.File
 
 object CelloParser {
 implicit val codec = Codec("UTF-8")
@@ -18,12 +20,14 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       var started : Boolean = false
       var toOBO : Boolean = false
       var stats : Boolean = false
+      var drmapname : String = ""
       var bigHeader = ArrayBuffer[String]()
       var currEntry = ArrayBuffer[String]()
       var aclist = ArrayBuffer[String]()
       var idlist = ArrayBuffer[String]()
       var hilist = ArrayBuffer[String]()
       var duplist = ArrayBuffer[String]()
+      var drmap = ArrayBuffer[String]()
       val emap    = Map.empty[String, Int]
       val oxmap   = Map.empty[String, Int]
       val line_occmap = Map("ID" -> (1,1), "AC" -> (1,1), "SY" -> (0,1),"DR" -> (0,999),"RX" -> (0,999),"WW" -> (0,999),"CC" -> (0,999),"DI" -> (0,99),"OX" -> (1,999),"HI" -> (0,999),
@@ -41,7 +45,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       val ok_rxdblist = List("PubMed", "Patent", "DOI","CelloPub")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
       val ok_cclist = List("Breed/subspecies", "Caution", "Derived from metastatic site", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling",
-          "Omics", "Part of","Population", "Problematic cell line", "Registration", "Transfected with")
+          "Monoclonal antibody target", "Omics", "Part of","Population", "Problematic cell line", "Registration", "Transfected with")
       val ok_catlist = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
       		"Spontaneously immortalized cell line", "Stromal cell line",
       		"Telomerase immortalized cell line", "Transformed cell line", "Undefined cell line type", "Embryonic stem cell",
@@ -55,7 +59,11 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       var blankcnt = 0
       var curr_line_nb = 0
      if(args.length == 0) { Console.err.println("Please provide a filename"); sys.exit(1)}
-      args.foreach(arg => { if(arg.contains("OBO")) toOBO=true else if(arg.contains("stats")) stats=true })
+      args.foreach(arg => {
+        if(arg.contains("OBO")) toOBO=true
+        else if(arg.contains("stats")) stats=true
+        else if(arg.contains("DRmap=")){drmapname = arg.split("=")(1)}
+        })
       
       for(line <- Source.fromFile(args(0)).getLines()) {
         curr_line_nb += 1
@@ -74,6 +82,8 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
     Console.err.println("Error report:\n")
     Entries.foreach(entry =>  {
        var id = ""
+       var coreid = ""
+       var ac = ""
        var curr_rank = 0
        var last_rank = 0
        val linecntmap = Map("ID" -> 0, "AC" -> 0, "SY" -> 0,"DR" -> 0,"RX" -> 0,"WW" -> 0,"CC" -> 0,"DI" -> 0,"OX" -> 0,"HI" -> 0,
@@ -99,12 +109,13 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
         if(entryline.endsWith(" ")) Console.err.println("Trailing space found at: " + entryline)
         if(entryline.startsWith("ID   ")) {id = entrylinedata; idlist += id}
         else if(entryline.startsWith("AC   ")) {
-          if(acregexp.findFirstIn(entrylinedata) == None) {Console.err.println("Incorrect AC format at: " + entryline); errcnt+=1}
-          aclist += entrylinedata
+          ac = entrylinedata
+          if(acregexp.findFirstIn(ac) == None) {Console.err.println("Incorrect AC format at: " + entryline); errcnt+=1}
+          aclist += ac
           // Map AC to entry
-          emap(entrylinedata) = entrynb
+          emap(ac) = entrynb
            // Map AC to ID
-          idacmap(entrylinedata) = id
+          idacmap(ac) = id
          entrynb += 1;  
         }
         else if(entryline.startsWith("SY   ")) {
@@ -123,6 +134,10 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                     val dbname = entrylinedata.split(";")(0) 
                     if(!ok_dblist.contains(dbname)) {Console.err.println("Illegal db:" + dbname + " found at: " + entryline); errcnt+=1}
                     drcnt += 1
+                    if(drmapname != "") { // Add DR to DRmap
+                      if(id.contains("[")) coreid = id.split("\\[")(0).trim() else coreid=id
+                      drmap += dbname + "\t" + entrylinedata.split(";")(1).trim() + "\t" + ac + "\t" + coreid + "\n"
+                    }
         			}
         else if(entryline.startsWith("RX   "))  {
                     if(!entryline.endsWith(";")) {Console.err.println("RX unterminated line found at: " + entryline); errcnt+=1}
@@ -146,7 +161,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
         			if(!(entrylinedata.startsWith("http://")  || entrylinedata.startsWith("https://") || entrylinedata.startsWith("ftp://")))
         				{Console.err.println("Invalid url found at: " + entryline); errcnt+=1}
         			wwcnt += 1
-                    }
+              }
         else if(entryline.startsWith("CC   ")) {
           val cctopic = entrylinedata.split(":")(0)
           if(!ok_cclist.contains(cctopic)) {Console.err.println("Unknown CC topic found at: " + entryline); errcnt+=1}
@@ -283,5 +298,11 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                         else if(i == "10116")  println("Rat: " + oxmap(i) )
                         }
       }
+    
+    if(drmapname != "") { // Write DRmap to file
+      val drmapfile = new PrintWriter(new File(drmapname))
+      drmap.sortWith(_ < _).foreach { line => drmapfile.write(line) }
+      drmapfile.close()
+    }
    }
 }
