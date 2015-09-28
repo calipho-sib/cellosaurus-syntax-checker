@@ -45,7 +45,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       val ok_rxdblist = List("PubMed", "Patent", "DOI","CelloPub")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
       val ok_cclist = List("Breed/subspecies", "Caution", "Derived from metastatic site", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling",
-          "Monoclonal antibody target", "Omics", "Part of","Population", "Problematic cell line", "Registration", "Transfected with")
+          "Monoclonal antibody target", "Omics", "Part of","Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with")
       val ok_catlist = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
       		"Spontaneously immortalized cell line", "Stromal cell line",
       		"Telomerase immortalized cell line", "Transformed cell line", "Undefined cell line type", "Embryonic stem cell",
@@ -135,7 +135,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                     if(!ok_dblist.contains(dbname)) {Console.err.println("Illegal db:" + dbname + " found at: " + entryline); errcnt+=1}
                     drcnt += 1
                     if(drmapname != "") { // Add DR to DRmap
-                      if(id.contains("[")) coreid = id.split("\\[")(0).trim() else coreid=id
+                      if(id.contains(" [")) coreid = id.split("\\[")(0).trim() else coreid=id
                       drmap += dbname + "\t" + entrylinedata.split(";")(1).trim() + "\t" + ac + "\t" + coreid + "\n"
                     }
         			}
