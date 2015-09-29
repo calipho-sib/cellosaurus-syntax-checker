@@ -79,7 +79,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
     
     // All entries text-loaded
     var entrynb = 0
-    Console.err.println("Error report:\n")
+    Console.err.println("Error report (" + Entries.size + " entries) :\n")
     Entries.foreach(entry =>  {
        var id = ""
        var coreid = ""
@@ -89,7 +89,8 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
        val linecntmap = Map("ID" -> 0, "AC" -> 0, "SY" -> 0,"DR" -> 0,"RX" -> 0,"WW" -> 0,"CC" -> 0,"DI" -> 0,"OX" -> 0,"HI" -> 0,
                             "OI" -> 0,  "SX" -> 0, "CA" -> 0) // Initialize to 0 the line count for each possible field
        
-     if(!(entry(0).startsWith("ID   ") && entry(1).startsWith("AC   ")))
+       //Console.err.println(entry(0) + " (" + entry.size + " lines)");
+       if(!(entry(0).startsWith("ID   ") && entry(1).startsWith("AC   ")))
         {Console.err.println("Severe error: Missing ID/AC line at " + entry(0) + " Please correct before re-check"); sys.exit(2)}
        entry.foreach(entryline =>  {//println(entryline)
         var entrylinedata = ""
@@ -143,19 +144,21 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                     if(!entryline.endsWith(";")) {Console.err.println("RX unterminated line found at: " + entryline); errcnt+=1}
                     val rxdbname = entrylinedata.split("=")(0) 
                     if(!ok_rxdblist.contains(rxdbname)) {Console.err.println("Illegal db:" + rxdbname + " found at: " + entryline); errcnt+=1}
-                    val identifier = entrylinedata.split("[=;]")(1);
-                    if(rxdbname == "PubMed") {
-                      if("^[1-9][0-9]{0,7}".r.findFirstIn(identifier) == None) {Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt+=1}
-                      else pmids += identifier
-                    }
-                      
-                    else if((rxdbname == "DOI") && !identifier.startsWith("10."))
+                    if(entrylinedata.split("[=;]").length < 2) {Console.err.println("No " + rxdbname + " identifier found at: " + entryline + "(" + id + ")"); errcnt+=1}
+                    else {
+                      val identifier = entrylinedata.split("[=;]")(1);
+                      if(rxdbname == "PubMed") {
+                        if("^[1-9][0-9]{0,7}".r.findFirstIn(identifier) == None) {Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt+=1}
+                        else pmids += identifier
+                       }
+                      else if((rxdbname == "DOI") && !identifier.startsWith("10."))
                       {Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt+=1}
-                    else if((rxdbname == "CelloPub") && ("^CLPUB[0-9]{5}".r.findFirstIn(identifier)) == None)
+                      else if((rxdbname == "CelloPub") && ("^CLPUB[0-9]{5}".r.findFirstIn(identifier)) == None)
                       {Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt+=1}
-                    else if((rxdbname == "Patent") && ("^[A-Z]{2}[0-9]{7,11}[A-Z]{0,1}[1-9]{0,1}".r.findFirstIn(identifier)) == None)
+                      else if((rxdbname == "Patent") && ("^[A-Z]{2}[0-9]{7,11}[A-Z]{0,1}[1-9]{0,1}".r.findFirstIn(identifier)) == None)
                       {Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt+=1}
-                    rxcnt += 1
+                      rxcnt += 1
+                     }
         			}
         else if(entryline.startsWith("WW   ")) {
         			if(!(entrylinedata.startsWith("http://")  || entrylinedata.startsWith("https://") || entrylinedata.startsWith("ftp://")))
@@ -207,7 +210,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                                    else {Console.err.println("Illegal line count for: " + key + " in entry " + id); errcnt+=1}}
         }
       })
-    })
+     })
     
     // Entry level checks
     duplist = aclist.diff(aclist.distinct)
