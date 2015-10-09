@@ -38,15 +38,15 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       var pmids = Set.empty[String]
       var Entries = ArrayBuffer[ArrayBuffer[String]]()
       val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
-      val ok_dblist = List("ATCC", "BCRC", "BCRJ", "BTO","BioSample", "CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "ChEMBL-Cells", "ChEMBL-Targets", "CLDB",
+      val ok_dblist1 = List("ATCC", "BCRC", "BCRJ", "BTO","BioSample", "CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "ChEMBL-Cells", "ChEMBL-Targets", "CLDB",
           "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DGRC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "GDSC", "hPSCreg", "ICLC",
           "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH",
           "NISES", "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG", "Ximbio")
       val ok_rxdblist = List("PubMed", "Patent", "DOI","CelloPub")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
-      val ok_cclist = List("Breed/subspecies", "Caution", "Derived from metastatic site", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling",
+      val ok_cclist1 = List("Breed/subspecies", "Caution", "Derived from metastatic site", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling",
           "Monoclonal antibody target", "Omics", "Part of","Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with")
-      val ok_catlist = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
+      val ok_catlist1 = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
       		"Spontaneously immortalized cell line", "Stromal cell line",
       		"Telomerase immortalized cell line", "Transformed cell line", "Undefined cell line type", "Embryonic stem cell",
       		"Factor-dependent cell line", "Finite cell line")
@@ -58,13 +58,37 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       var nonUTF8cnt = 0
       var blankcnt = 0
       var curr_line_nb = 0
-     if(args.length == 0) { Console.err.println("Please provide a filename"); sys.exit(1)}
+      
+      if(args.length == 0) { Console.err.println("Please provide a filename"); sys.exit(1)}
+      if(!new File(args(0)).exists) { Console.err.println(args(0) + " not found"); sys.exit(1)}
       args.foreach(arg => {
         if(arg.contains("OBO")) toOBO=true
         else if(arg.contains("stats")) stats=true
         else if(arg.contains("DRmap=")){drmapname = arg.split("=")(1)}
         })
       
+      // Load CVs for cc, ca, and xref dbs
+      var jarpath = new File(System.getProperty("java.class.path"));
+      var celloCVpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "celloparser.cv"
+      if(!new File(celloCVpath).exists) { Console.err.println("celloparser.cv not found at: " + celloCVpath); sys.exit(1)}
+      var ca = ArrayBuffer[String]()
+      var cc = ArrayBuffer[String]()
+      var dr = ArrayBuffer[String]()
+      var valid_element = ""
+        for(line <- Source.fromFile(celloCVpath).getLines()) {
+          if(line.matches("[CD][ACR]   .*")) {
+            valid_element = line.substring(5).trim()
+            if(valid_element.contains("#")) valid_element = valid_element.split("#")(0).trim()
+          }
+          if(line.startsWith("DR   ")) dr += valid_element
+          else if(line.startsWith("CA   ")) ca += valid_element
+          else if(line.startsWith("CC   ")) cc += valid_element
+        }
+      val ok_dblist = dr.toList
+      val ok_cclist = cc.toList
+      val ok_catlist = ca.toList
+      
+      // Parse cellosaurus file  
       for(line <- Source.fromFile(args(0)).getLines()) {
         curr_line_nb += 1
         if(line.map(_.toInt).contains(65533)) {println("Warning: " + line); nonUTF8cnt += 1} // code for special '�' replacement character from coded
@@ -111,6 +135,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
         if(entryline.startsWith("ID   ")) {id = entrylinedata; idlist += id}
         else if(entryline.startsWith("AC   ")) {
           ac = entrylinedata
+          //println(ac);
           if(acregexp.findFirstIn(ac) == None) {Console.err.println("Incorrect AC format at: " + entryline); errcnt+=1}
           aclist += ac
           // Map AC to entry
@@ -189,16 +214,20 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                     else oxmap(taxid) += 1
         			}
         else if(entryline.startsWith("HI   ") || entryline.startsWith("OI   ")) {
-                    if(entryline.endsWith(";") || entryline.endsWith(".")) {Console.err.println("HI/OI trailing ; found at: " + entryline); errcnt+=1}
+                    var hitoken = "";
+                    if(entryline.endsWith(";") || entryline.endsWith(".")) {Console.err.println("HI/OI trailing ;/. found at: " + entryline); errcnt+=1}
                     if(!entrylinedata.contains(" ! ")) {Console.err.println("Illegal HI/OI format found at: " + entryline); errcnt+=1}
                     val toklist = entrylinedata.split(" ")
                     if(toklist.length < 3) {Console.err.println("Illegal HI/OI format found at: " + entryline); errcnt+=1}
+                    hitoken = toklist(0)
                     if(acregexp.findFirstIn(toklist(0)) == None) {Console.err.println("Incorrect HI/OI AC format at: " + entryline); errcnt+=1}
-                    else hilist += toklist(0)
-        			}
+                    else hilist += hitoken;
+        			      
+            }
         else if(entryline.startsWith("SX   ")) {
-         if(!ok_sxlist.contains(entrylinedata)) {Console.err.println("Illegal sex found at: " + entryline); errcnt+=1} 
-        }
+         if(!ok_sxlist.contains(entrylinedata)) {Console.err.println("Illegal sex found at: " + entryline); errcnt+=1 } 
+         }
+        
         else if(entryline.startsWith("CA   ")) {
          if(!ok_catlist.contains(entrylinedata)) {Console.err.println("Illegal category found at: " + entryline); errcnt+=1} 
 
@@ -241,13 +270,13 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       dislist.clear
       disErrorlist.clear
       entry.foreach(entryline =>  {
-      if(entryline.startsWith("AC   ")) {ac = entryline.substring(5)}  
+      if(entryline.startsWith("AC   ")) { ac = entryline.substring(5); }  
       else if(entryline.startsWith("OX   ")) { ox= entryline.split("=")(1)}
       else if(entryline.startsWith("DI   ")) { disease= entryline.split("; ")(2); dislist += disease}
       else if(entryline.startsWith("OI   ")) {
              oiac = entryline.substring(5).split(" ")(0)
              oiid = (entryline.substring(5).split("!")(1)).substring(1)
-             if(oiac == ac) {Console.err.println("Self-referencing OI: " + oiac + "/" + ac); errcnt+=1}
+             if(oiac.equals(ac)) {Console.err.println("Self-referencing OI: " + oiac + "/" + ac); errcnt+=1}
              else {
              var ok = false
              currEntry = Entries(emap(oiac))
@@ -261,16 +290,15 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       else if(entryline.startsWith("HI   ")) {
              oiac = entryline.substring(5).split(" ")(0)
              oiid = (entryline.substring(5).split("!")(1)).substring(1)
-             if(oiac == ac) {Console.err.println("Self-referencing HI: " + oiac + "/" + ac); errcnt+=1}
+             if(oiac.equals(ac)) {Console.err.println("Self-referencing HI: " + oiac + "/" + ac); errcnt+=1}
              if(idacmap(oiac) != oiid) {Console.err.println("Incorrect HI AC/ID pair: " + oiac + "/" + oiid); errcnt+=1}
              currEntry = Entries(emap(oiac))
              // Parse parent entry
-             currEntry.foreach(line =>  { //println(line)
+             currEntry.foreach(line =>  { //if(ac=="CVCL_A121") println("scanning parent of CVCL_A121: " + line)
              if(line.startsWith("OX   ")) {parentSpecies = line.split("=")(1)}
-             //else if(line.startsWith("DI   ")) {if (line.split("; ")(2) != disease) {Console.err.println("Missing parent disease in: " + oiac + "(parent)=" + line.split("; ")(2) + " " + ac + "=" + disease); errcnt+=1}}
-             //else if(line.startsWith("DI   ")) {if (!dislist.contains(line.split("; ")(2))) {Console.err.println("Missing parent disease in: " + oiac + "(parent)=" + line.split("; ")(2) + " " + ac + "=" + disease); errcnt+=1}}
              else if(line.startsWith("DI   ")) {if (!dislist.contains(line.split("; ")(2))) {disErrorlist += "Missing parent disease in: " + oiac + "(parent)=" + line.split("; ")(2) + " " + ac + "=" + disease}}
              else if(line.startsWith("SX   ")) {parentSex = line.split("   ")(1)}
+             else if(line.startsWith("HI   ")) {if(line.substring(5).split(" ")(0).equals(ac)) {Console.err.println("Reciprocal HI: " + oiac + "/" + ac); errcnt+=1}}
              })}
              
       else if(entryline.startsWith("SX   ") && parentSex != "") {
