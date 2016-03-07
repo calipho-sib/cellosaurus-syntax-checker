@@ -39,8 +39,10 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       var pmids = Set.empty[String]
       var Entries = ArrayBuffer[ArrayBuffer[String]]()
       val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
-      val stdataregexp = new Regex("[1-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,3}( \\([A-Z][A-Za-z;= ]+\\))?$")
-      val ameloregexp = new Regex("X(,Y)?( \\([A-Z][A-Za-z;= ]+\\))?$")
+      //val stdataregexp = new Regex("[1-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,3}( \\([A-Z][A-Za-z;= ]+\\))?$")
+      val stdataregexp = new Regex("[1-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,4}( \\([A-Zs][A-Za-z0-9_;= ]+\\))?$") // s is for some_subclones
+      val ameloregexp = new Regex("[XY](,Y)?( \\([A-Zs][A-Za-z0-9_;= ]+\\))?$")
+
       val ok_dblist1 = List("ATCC", "BCRC", "BCRJ", "BTO","BioSample", "CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "ChEMBL-Cells", "ChEMBL-Targets", "CLDB",
           "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DGRC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "GDSC", "hPSCreg", "ICLC",
           "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH",
