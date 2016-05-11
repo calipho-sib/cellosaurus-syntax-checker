@@ -40,18 +40,22 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       var Entries = ArrayBuffer[ArrayBuffer[String]]()
       val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
       //val stdataregexp = new Regex("[1-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,3}( \\([A-Z][A-Za-z;= ]+\\))?$") Not_determined
+      // last val stdataregexp = new Regex("[1-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,4}( \\([A-Zs][A-Za-z0-9_;=:\\- ]+\\))?$") // s is for some_subclones
       val stdataregexp = new Regex("[1-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,4}( \\([A-Zs][A-Za-z0-9_;=:\\- ]+\\))?$") // s is for some_subclones
-      //val ameloregexp = new Regex("[XY](,Y)?( \\([A-Zs][A-Za-z0-9_;= ]+\\))?$")
-      val ameloregexp = new Regex("X|X,Y|Y|Not_detected( \\([A-Zs][A-Za-z0-9_;= ]+\\))?$")
-
+      //val ameloregexp = new Regex("X|X,Y|Y|Not_detected( \\([A-Zs][A-Za-z0-9_;= ]+\\))?$")
+      val ameloregexp = new Regex("X|X,Y|Y|Not_detected( \\([A-Z][A-Za-z0-9_;=:\\- ]+\\))?$")
+      val chronlyregexp = new Regex("^[0-9\\.,]{1,30}+$");
+      // Just a reminder, the actual CV is stored in celloparser.cv file
       val ok_dblist1 = List("ATCC", "BCRC", "BCRJ", "BTO","BioSample", "CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "ChEMBL-Cells", "ChEMBL-Targets", "CLDB",
           "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DGRC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "GDSC", "hPSCreg", "ICLC",
           "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH",
           "NISES", "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG", "Ximbio")
       val ok_rxdblist = List("PubMed", "Patent", "DOI","CelloPub")
       val ok_sxlist = List("Female", "Male", "Mixed sex","Sex ambiguous", "Sex undetermined")
+      // Just a reminder, the actual CV is stored in celloparser.cv file
       val ok_cclist1 = List("Breed/subspecies", "Caution", "Derived from metastatic site", "Discontinued", "From","Group", "Knockout cell","Miscellaneous", "Misspelling",
           "Monoclonal antibody target", "Omics", "Part of","Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with")
+      // Just a reminder, the actual CV is stored in celloparser.cv file
       val ok_catlist1 = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
       		"Spontaneously immortalized cell line", "Stromal cell line",
       		"Telomerase immortalized cell line", "Transformed cell line", "Undefined cell line type", "Embryonic stem cell",
@@ -73,10 +77,9 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
         else if(arg.contains("DRmap=")){drmapname = arg.split("=")(1)}
         })
       
-      // Load CVs for cc, ca, and xref dbs
+      // Load CVs for cc, ca, st, and xref dbs
       var jarpath = new File(System.getProperty("java.class.path"));
       var celloCVpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "celloparser.cv"
-      //Console.err.println("lookin for celloparser.cv at: " + celloCVpath); sys.exit(1);
       if(!new File(celloCVpath).exists) { Console.err.println("celloparser.cv not found at: " + celloCVpath); sys.exit(1)}
       var ca = ArrayBuffer[String]()
       var cc = ArrayBuffer[String]()
@@ -184,7 +187,13 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                       val identifier = entrylinedata.split("[=;]")(1);
                       if(rxdbname == "PubMed") {
                         if("^[1-9][0-9]{0,7}".r.findFirstIn(identifier) == None) {Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt+=1}
-                        else pmids += identifier
+                        else {
+                          pmids += identifier
+                          if(drmapname != "") { // Add DR to DRmap
+                             if(id.contains(" [")) coreid = id.split("\\[")(0).trim() else coreid=id
+                             drmap += "PubMed\t" + identifier + "\t" + ac + "\t" + coreid + "\n"
+                            }
+                        }
                        }
                       else if((rxdbname == "DOI") && !identifier.startsWith("10."))
                       {Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt+=1}
@@ -214,13 +223,33 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
           if(!sttopic.contains("Source(s)")) {
             if(!ok_stlist.contains(sttopic)) {Console.err.println("Unknown ST site found at: " + entryline); errcnt+=1}
             else { // check ST data format
+              val chrdata = stdata.split("\\(")(0).trim()
               if(sttopic.contains("Amelogenin")) {
                if(ameloregexp.findFirstIn(stdata) == None) {Console.err.println("Incorrect ST data format at: " + entryline); errcnt+=1}
+              } 
+              else {
+                if(chronlyregexp.findFirstIn(chrdata) == None) {Console.err.println("Incorrect ST data format at: " + entryline); errcnt+=1}
+                else if(stdataregexp.findFirstIn(stdata) == None) {Console.err.println("Incorrect ST data format at: " + entryline); errcnt+=1}
+                else {
+                // check for order and unicity token by token
+                val toklist = chrdata.split(",")
+                toklist.foreach(token =>  {
+                  val dottoken = token.split("\\.")
+                  if(dottoken(0).length() > 2) {Console.err.println("Incorrect ST data format at: " + entryline); errcnt+=1}
+                  else if(dottoken.length > 1 && dottoken(1).length() > 1) {Console.err.println("Incorrect ST data format at: " + entryline); errcnt+=1}
+              })
+              // check for order and unicity
+              if(toklist.length != toklist.distinct.length) {Console.err.println("Duplicate in ST data at: " + entryline); errcnt+=1}
+              else if (toklist.length > 1) {
+              val doubles = toklist.map { x => x.toDouble }
+              if(doubles.toList != doubles.sortWith(_<_).toList) {Console.err.println("Wrong order in ST data at: " + entryline); errcnt+=1}              
+              }  
               }
-              else if(stdataregexp.findFirstIn(stdata) == None) {Console.err.println("Incorrect ST data format at: " + entryline); errcnt+=1}
-                 }
-               }
-              }}
+             }
+            }
+           }
+          }
+        }
         else if(entryline.startsWith("DI   ")) {
                     if(entryline.endsWith(";") || entryline.endsWith(".")) {Console.err.println("DI trailing ; found at: " + entryline); errcnt+=1 }
                     val dilist = entrylinedata.split("; ")
