@@ -25,16 +25,17 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
       var bigHeader = ArrayBuffer[String]()
       var currEntry = ArrayBuffer[String]()
       var aclist = ArrayBuffer[String]()
+      var aslist = ArrayBuffer[String]()
       var idlist = ArrayBuffer[String]()
       var hilist = ArrayBuffer[String]()
       var duplist = ArrayBuffer[String]()
       var drmap = ArrayBuffer[String]()
       val emap    = Map.empty[String, Int]
       val oxmap   = Map.empty[String, Int]
-      val line_occmap = Map("ID" -> (1,1), "AC" -> (1,1), "SY" -> (0,1),"DR" -> (0,999),"RX" -> (0,999),"WW" -> (0,999),"CC" -> (0,999),"ST" -> (0,999), "DI" -> (0,99),"OX" -> (1,999),"HI" -> (0,999),
-                            "OI" -> (0,999),  "SX" -> (0,1), "CA" -> (1,1))
-      val line_ordmap = Map("ID" -> 1, "AC" -> 2, "SY" -> 3, "DR" -> 4, "RX" -> 5, "WW" -> 6, "CC" -> 7, "ST" -> 8, "DI" -> 9, "OX" -> 10, "HI" -> 11, "OI" -> 12,
-                              "SX" -> 13, "CA" -> 14)
+      val line_occmap = Map("ID" -> (1,1), "AC" -> (1,1), "AS" -> (0,1) , "SY" -> (0,1),"DR" -> (0,999),"RX" -> (0,999),"WW" -> (0,999),"CC" -> (0,999),"ST" -> (0,999), "DI" -> (0,99),"OX" -> (1,999),"HI" -> (0,999),
+                            "OI" -> (0,999),  "SX" -> (0,1), "CA" -> (1,1)) // min and max occurences
+      val line_ordmap = Map("ID" -> 1, "AC" -> 2,  "AS" -> 3, "SY" -> 4, "DR" -> 5, "RX" -> 6, "WW" -> 7, "CC" -> 8, "ST" -> 9, "DI" -> 10, "OX" -> 11, "HI" -> 12, "OI" -> 14,
+                              "SX" -> 14, "CA" -> 15)
       val idacmap = Map.empty[String, String]
       var pmids = Set.empty[String]
       var Entries = ArrayBuffer[ArrayBuffer[String]]()
@@ -123,7 +124,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
        var ac = ""
        var curr_rank = 0
        var last_rank = 0
-       val linecntmap = Map("ID" -> 0, "AC" -> 0, "SY" -> 0,"DR" -> 0,"RX" -> 0,"WW" -> 0,"CC" -> 0,"ST" -> 0,"DI" -> 0,"OX" -> 0,"HI" -> 0,
+       val linecntmap = Map("ID" -> 0, "AC" -> 0, "AS" -> 0, "SY" -> 0,"DR" -> 0,"RX" -> 0,"WW" -> 0,"CC" -> 0,"ST" -> 0,"DI" -> 0,"OX" -> 0,"HI" -> 0,
                             "OI" -> 0,  "SX" -> 0, "CA" -> 0) // Initialize to 0 the line count for each possible field
        
        //Console.err.println(entry(0) + " (" + entry.size + " lines)");
@@ -157,7 +158,15 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
           idacmap(ac) = id
          entrynb += 1;  
         }
-        else if(entryline.startsWith("SY   ")) {
+        else if(entryline.startsWith("AS   ")) { // AC Secundary
+          val locaslist = entrylinedata.split("; ")
+          locaslist.foreach(as => {
+            aslist += as
+            if(acregexp.findFirstIn(as) == None) {Console.err.println("Incorrect AC format at: " + entryline); errcnt+=1}
+            })
+            
+        }
+        else if(entryline.startsWith("SY   ")) { // Synonyms
           if(entryline.endsWith(";")) {Console.err.println("SY trailing ; found at: " + entryline); errcnt+=1}
           val locsynlist = entrylinedata.split("; ")
           val synduplist = locsynlist.diff(locsynlist.distinct)
@@ -168,7 +177,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
             })
             
         }
-        else if(entryline.startsWith("DR   "))  {
+        else if(entryline.startsWith("DR   "))  { // X-refs
                     if(entryline.endsWith(";") || entryline.endsWith(".")) {Console.err.println("DR trailing ; found at: " + entryline); errcnt+=1}
                     val dbname = entrylinedata.split("; ")(0) 
                     if(!ok_dblist.contains(dbname)) {Console.err.println("Illegal db:" + dbname + " found at: " + entryline); errcnt+=1}
@@ -178,7 +187,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                       drmap += dbname + "\t" + entrylinedata.split(";")(1).trim() + "\t" + ac + "\t" + coreid + "\n"
                     }
         			}
-        else if(entryline.startsWith("RX   "))  {
+        else if(entryline.startsWith("RX   "))  { // PubMed/DOIs
                     if(!entryline.endsWith(";")) {Console.err.println("RX unterminated line found at: " + entryline); errcnt+=1}
                     val rxdbname = entrylinedata.split("=")(0) 
                     if(!ok_rxdblist.contains(rxdbname)) {Console.err.println("Illegal db:" + rxdbname + " found at: " + entryline); errcnt+=1}
@@ -204,12 +213,12 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                       rxcnt += 1
                      }
         			}
-        else if(entryline.startsWith("WW   ")) {
+        else if(entryline.startsWith("WW   ")) { // Web links
         			if(!(entrylinedata.startsWith("http://")  || entrylinedata.startsWith("https://") || entrylinedata.startsWith("ftp://")))
         				{Console.err.println("Invalid url found at: " + entryline); errcnt+=1}
         			wwcnt += 1
               }
-        else if(entryline.startsWith("CC   ")) {
+        else if(entryline.startsWith("CC   ")) { // Comments
           val cctopic = entrylinedata.split(":")(0)
           if(!ok_cclist.contains(cctopic)) {Console.err.println("Unknown CC topic found at: " + entryline); errcnt+=1}
           if(!entryline.endsWith(".")) {Console.err.println("Unterminated CC found at: " + entryline); errcnt+=1}
@@ -250,13 +259,13 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
            }
           }
         }
-        else if(entryline.startsWith("DI   ")) {
+        else if(entryline.startsWith("DI   ")) { // Diseases
                     if(entryline.endsWith(";") || entryline.endsWith(".")) {Console.err.println("DI trailing ; found at: " + entryline); errcnt+=1 }
                     val dilist = entrylinedata.split("; ")
                     if(dilist.length != 3) {Console.err.println("Illegal disease format found at: " + entryline); errcnt+=1}
                     if(dilist(0) != "NCIt") {Console.err.println("Illegal disease db:" + dilist(0) + " found at: " + entryline); errcnt+=1}
         			}
-        else if(entryline.startsWith("OX   ")) {
+        else if(entryline.startsWith("OX   ")) { // Organisms
                     if(entryline.endsWith(";")) {Console.err.println("OX trailing ; found at: " + entryline); errcnt+=1}
                     val oxlist = entrylinedata.split(";")
                     if(oxlist.length != 2) {Console.err.println("Illegal taxonomy format found at: " + entryline); errcnt+=1}
@@ -268,7 +277,7 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                     if(!oxmap.contains(taxid)) oxmap(taxid) = 1
                     else oxmap(taxid) += 1
         			}
-        else if(entryline.startsWith("HI   ") || entryline.startsWith("OI   ")) {
+        else if(entryline.startsWith("HI   ") || entryline.startsWith("OI   ")) { // Hierarchy
                     var hitoken = "";
                     if(entryline.endsWith(";") || entryline.endsWith(".")) {Console.err.println("HI/OI trailing ;/. found at: " + entryline); errcnt+=1}
                     if(!entrylinedata.contains(" ! ")) {Console.err.println("Illegal HI/OI format found at: " + entryline); errcnt+=1}
@@ -279,15 +288,15 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
                     else hilist += hitoken;
         			      
             }
-        else if(entryline.startsWith("SX   ")) {
+        else if(entryline.startsWith("SX   ")) { // Sex
          if(!ok_sxlist.contains(entrylinedata)) {Console.err.println("Illegal sex found at: " + entryline); errcnt+=1 } 
          }
         
-        else if(entryline.startsWith("CA   ")) {
+        else if(entryline.startsWith("CA   ")) { // Category
          if(!ok_catlist.contains(entrylinedata)) {Console.err.println("Illegal category found at: " + entryline); errcnt+=1} 
 
         }
-        else if(entryline.startsWith("//")) { // check line occurences in collected entry
+        else if(entryline.startsWith("//")) { // Entry terminator, check line occurences in collected entry
           linecntmap.keys.foreach{ key =>
                                  if((linecntmap(key) < line_occmap(key)._1) || (linecntmap(key) > line_occmap(key)._2))
                                    if(key == "AC" || key == "ID") {Console.err.println("Severe error: " + key + " in entry " + id + " Please correct before re-check"); sys.exit(3)}
@@ -303,8 +312,11 @@ codec.onMalformedInput(CodingErrorAction.REPLACE)
     duplist = idlist.diff(idlist.distinct)
     if(duplist.length != 0)  {duplist.foreach(id =>  {Console.err.println("duplicated ID: " + id); errcnt+=1})}
     
+    // Check that no AS exists as a living AC
+    aslist.foreach { as =>  if(aclist.contains(as)) {Console.err.println("living AC in AS: " + as); errcnt+=1} }
+    
+    // Check for orphans hierarchies (inexistant ACs)
     val misslist = hilist.filter(s => !aclist.contains(s)).toSet
-    //if(misslist.length != 0)  { misslist.foreach(ac =>  {Console.err.println("Inexistent HI/OI AC: " + ac); errcnt+=1})}
     if(misslist.size != 0)  { misslist.foreach(ac =>  {Console.err.println("Inexistent HI/OI AC: " + ac); errcnt+=1})}
     
    // Check OI/HI lines consistency
