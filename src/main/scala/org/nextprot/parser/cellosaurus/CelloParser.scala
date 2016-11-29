@@ -186,7 +186,7 @@ object CelloParser {
 
     val xmlheader = // date and version are dynamic
           <header>
-            <terminology-name>cellosaurus</terminology-name>
+            <terminology-name>Cellosaurus</terminology-name>
             <description>Cellosaurus: a controlled vocabulary of cell lines</description>
             <release version={ celloversion } updated={ todaystring }/>    
            <terminology-list>
@@ -210,7 +210,7 @@ object CelloParser {
       val oboheader: String = "format-version: 1.2\ndata-version: " + celloversion + "\ndate: " + obodate + " 12:00\ndefault-namespace: cellosaurus\n\n"
       obofile.write(oboheader)
       obofile.write(subsetdefs)
-      obofile.write("\nontology: cellosaurus\n\n")
+      obofile.write("\nontology: Cellosaurus\n\n")
       obofile.write(oboheadercomment)
     }  
     
@@ -440,7 +440,7 @@ object CelloParser {
     if (misslist.size != 0) { misslist.foreach(ac => { Console.err.println("Inexistent HI/OI AC: " + ac); errcnt += 1 }) }
     
     if (toxml) {
-      xmlfile.write("<cellosaurus>\n")
+      xmlfile.write("<Cellosaurus>\n")
       xmlfile.write(prettyXMLprinter.format(xmlheader) + "\n")
       xmlfile.write("<cell-line-list>\n")
     }
@@ -540,7 +540,7 @@ object CelloParser {
       //Console.err.println(pubcnt + " refs in cellosaurus_refs.txt")
       xmlfile.write("</publication-list>\n") // finnish xml file
       xmlfile.write(prettyXMLprinter.format(xmlcopyright))
-      xmlfile.write("\n</cellosaurus>")
+      xmlfile.write("\n</Cellosaurus>")
       xmlfile.close
       }
     
@@ -597,7 +597,10 @@ object CelloParser {
     var lastpage = ""
     var title = ""
     var publisher = ""
-    var location = ""
+    var city = ""
+    var country = ""
+    var institute = ""
+    //var location = ""
     var pubtype = ""
     var internalId = ""
     val editorregexp = new Regex("[A-Z][a-z]+.* .*[A-Z]\\.$") // eg: Saunders S.J., Gruev B., Park J.-G.
@@ -623,8 +626,8 @@ object CelloParser {
         else if (linedata.startsWith("Thesis")) { // RL   Thesis PhD (1971), Erasmus University Rotterdam, Netherlands.
           year = linedata.split("[\\(||\\)]")(1)
           val rltokens = linedata.split(", ")
-          publisher =  rltokens(rltokens.size-2)
-          location =  rltokens(rltokens.size-1).split("\\.")(0)
+          institute =  rltokens(rltokens.size-2)
+          country =  rltokens(rltokens.size-1).split("\\.")(0)
           pubtype = "t" + linedata.split(" \\(")(0).substring(1) // t + hesis + level (phd, ms, ..)
         }
         else if (linedata.startsWith("(In)")) { // RL   (In) Abstracts of the 91st meeting of the Japanese Society of Veterinary Science, pp.149-149, Tokyo (1981).
@@ -636,22 +639,36 @@ object CelloParser {
             lastpage = rltoken.substring(3).split("-")(1)
             }
             else if(rltoken.contains("(eds.)")) { // Collect editors (Hiddemann W., Haferlach T., Unterhalt M., Buechner T., Ritter J. (eds.))
-            //editorlist += rltoken
-            editorlist =  rltoken.dropRight(7).split(", ").to[ArrayBuffer] 
+             editorlist =  rltoken.dropRight(7).split(", ").to[ArrayBuffer] 
             }
           }
           publisher =  rltokens(rltokens.size-2)
           if(publisher.startsWith("pp") || publisher.startsWith("Abs")|| publisher.startsWith("Abs")) publisher = ""
-          location =  rltokens(rltokens.size-1).split(" \\(")(0)
+          city =  rltokens(rltokens.size-1).split(" \\(")(0)
           journal = rltokens(0).substring(5) // Actually the 'book' title ((In) is skipped)
-          pubtype = "book"
+          pubtype = "book chapter"
         }
         else { // General journal RL eg: RL   Naunyn Schmiedebergs Arch. Pharmacol. 352:662-669(1995).
           year = linedata.split(":")(1).split("[\\(||\\)]")(1)
           val rltokens = linedata.split(":")(0).split(" ")
           pubtype = "article"
           journal = rltokens.dropRight(1).mkString(" ")
-          volume = rltokens(rltokens.size - 1)
+          if(journal.contains("Suppl")) { // add the Suppl part to volume, eg: J. Physiol. Pharmacol. 60 Suppl.
+            var digitpos = 0
+            val matchlist = new Regex("[0-9]").findAllIn(journal).matchData.toList
+            if(matchlist.size != 0)
+               digitpos = matchlist(0).start
+            else  
+               digitpos = journal.indexOf("Suppl")
+            volume = journal.substring(digitpos)
+            journal = journal.substring(0,digitpos-1)
+          }
+          
+          if(volume == "")
+            volume = rltokens(rltokens.size - 1)
+          else // Add to suppl part
+            volume = volume + " " + rltokens(rltokens.size - 1)
+            
           val pages = linedata.split(":")(1).split("\\(")(0).split("-")
           firstpage = pages(0)
           if (pages.size > 1)
@@ -668,8 +685,9 @@ object CelloParser {
         })
       }
     }
-    val publiEntry = new CelloPublication(year = year, name = journal, pubtype = pubtype, volume = volume, firstpage = firstpage, lastpage = lastpage, publisher = publisher, location = location, internal_id = internalId,
-      title = title.split("\"")(1), authors = celloPubAuthorlist, editors = celloPubEditorlist, dbrefs = pubXreflist)
+    // .reverse in author lists to recover original order
+    val publiEntry = new CelloPublication(year = year, name = journal, pubtype = pubtype, volume = volume, firstpage = firstpage, lastpage = lastpage, publisher = publisher, institute = institute, city = city, country = country, internal_id = internalId,
+      title = title.split("\"")(1), authors = celloPubAuthorlist.reverse, editors = celloPubEditorlist.reverse, dbrefs = pubXreflist)
     publiEntry
   }
   
@@ -726,7 +744,6 @@ object CelloParser {
           textdata += ": " + linetokens(2).trim()
         if(!(category.equals("Miscellaneous") || category.equals("Caution") || category.equals("Problematic cell line")) )
           textdata = textdata.dropRight(1) // Drop final dot
-        //if(!category.equals("Discontinued"))  
           celloCommentlist = new Comment(category = category, text = textdata, xmap) :: celloCommentlist
         //else Console.err.println(category + " " + textdata)
       }
@@ -740,10 +757,10 @@ object CelloParser {
         celloSpeclist = new CvTerm(_terminology = "NCBI-Taxonomy", _ac = entrylinedata.split("=")(1).split("; ")(0), _name = entrylinedata.split("! ")(1)) :: celloSpeclist
       }
       else if (entryline.startsWith("OI   ")) { // same origin 
-        celloOriglist = new CvTerm(_terminology = "cellosaurus", _ac = entrylinedata.split(" ! ")(0), _name = entrylinedata.split(" ! ")(1)) :: celloOriglist
+        celloOriglist = new CvTerm(_terminology = "Cellosaurus", _ac = entrylinedata.split(" ! ")(0), _name = entrylinedata.split(" ! ")(1)) :: celloOriglist
       }
       else if (entryline.startsWith("HI   ")) { // derived from 
-        celloDerivedlist = new CvTerm(_terminology = "cellosaurus", _ac = entrylinedata.split(" ! ")(0), _name = entrylinedata.split(" ! ")(1)) :: celloDerivedlist
+        celloDerivedlist = new CvTerm(_terminology = "Cellosaurus", _ac = entrylinedata.split(" ! ")(0), _name = entrylinedata.split(" ! ")(1)) :: celloDerivedlist
       }
       else if (entryline.startsWith("RX   ")) { // publications 
         celloPublilist = new PubliRef(db_ac = entrylinedata.split(";")(0)) :: celloPublilist
@@ -792,7 +809,6 @@ object CelloParser {
          tomergemarkersList.foreach(strmarker => {
          newmarkdatalist =  strmarker.markerdatalist(0) :: newmarkdatalist 
           })
-          //Console.err.println(markerid + ": merging " + newmarkdatalist.size)
           finalmarkerList = new Strmarker(id = markerid, conflict = "true", markerdatalist = newmarkdatalist) :: finalmarkerList
        })
       }
@@ -1024,7 +1040,7 @@ class CvTerm(val _terminology: String, val _ac: String, val _name: String) {
     var db = _terminology
     var drline = ""
     if(db.equals("NCBI-Taxonomy")) db = "NCBI_TaxID"
-    if(_terminology.equals("cellosaurus"))
+    if(_terminology.equals("Cellosaurus"))
       drline = "relationship: originate_from_same_individual_as " + _ac + " ! " + _name + "\n"
     else  
       drline = "xref: " + db + ":" + _ac + " ! " + _name + "\n"
@@ -1138,25 +1154,18 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
         ccXreflist = new DbXref(_db = db, _ac = linetoks(1), _category = xmap(db)._2, _url = xmap(db)._1, _property = property) :: ccXreflist
       }
     }
-    else if ((category.equals("Transformant") || category.equals("Selected for resistance to")) && (text.contains("ChEBI") || text.contains("PubChem")) ) {
-      var name = ""
-      var db_ac = ""
-      var terminology = "ChEBI"
-      var matchpos = 0
-      
-      if(!text.contains("ChEBI")) terminology = "PubChem"
-      val matchlist = new Regex("[0-9]; ").findAllIn(text).matchData.toList
-      if(matchlist.size == 0) { // Transformant style
-        name = text.split("\\(ChEBI")(0);
-        db_ac = text.substring(text.lastIndexOf('(')).split("; ")(1).dropRight(1)
-        }
-      else  {
-        matchpos = matchlist(0).start
-        name = text.substring(matchpos+3)
-        db_ac = text.split("; ")(1).split("\\)")(0)
-      }
-      cvterm = new CvTerm(_terminology = terminology, _ac = db_ac, _name = name)
+    else if ((category.equals("Transformant") || category.equals("Selected for resistance to")) && text.contains(";") ) {
+      val linetoks = text.split("; ")
+      var terminology = linetoks(0);
+      val ac = linetoks(1)
+      val name = linetoks(2)
+
       text = ""
+      if(terminology == "NCBI_TaxID") terminology = "NCBI-Taxonomy"
+      if(terminology == "UniProtKB")
+        ccXreflist = new DbXref(_db = terminology, _ac = ac, _category = xmap(terminology)._2, _url = xmap(terminology)._1, _property = name) :: ccXreflist
+      else  
+        cvterm = new CvTerm(_terminology = terminology, _ac = ac, _name = name)
     }
   }
 
@@ -1183,10 +1192,10 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
 }
 
 class CelloPublication(val year: String, val name: String, val pubtype: String, val volume: String, val firstpage: String, val lastpage: String,
-                       val publisher: String, val location: String, val internal_id: String, val title: String, val authors: List[Author], val editors: List[Author], val dbrefs: List[DbXref]) {
+                       val publisher: String, val institute: String, val city: String, val country: String, val internal_id: String, val title: String, val authors: List[Author], val editors: List[Author], val dbrefs: List[DbXref]) {
 
   def toXML =
-    <publication date={ year } type={ pubtype } name={ if (name != "") name else null } volume={ if (volume != "") volume else null } firstpage={ if (firstpage != "") firstpage else null } lastpage={ if (lastpage != "") lastpage else null } publisher={ if (publisher != "") publisher else null } location={ if (location != "") location else null } internal-id={ internal_id }>
+    <publication date={ year } type={ pubtype } name={ if (name != "") name else null } volume={ if (volume != "") volume else null } firstpage={ if (firstpage != "") firstpage else null } lastpage={ if (lastpage != "") lastpage else null } publisher={ if (publisher != "") publisher else null } institute={ if (institute != "") institute else null } city={ if (city != "") city else null } country={ if (country != "") country else null } internal-id={ internal_id }>
       <title>{ scala.xml.PCData(title) }</title>
       {
         if (editors.size > 0)
