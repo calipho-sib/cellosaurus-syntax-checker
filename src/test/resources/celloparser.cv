@@ -1,0 +1,136 @@
+# Cellosaurus controlled vocabulary for Xrefs, Categories, Comment types and STR markers
+
+# Xrefs
+DR   ATCC
+DR   BCGO
+DR   BCRC
+DR   BCRJ
+DR   BTO
+DR   BioSample
+DR   CBA
+DR   CCLE
+DR   CCLV
+DR   CCRID
+DR   CGH-DB
+DR   ChEMBL-Cells
+DR   ChEMBL-Targets
+DR   CLDB
+DR   CLO
+DR   CLS
+DR   Coriell
+DR   Cosmic
+DR   Cosmic-CLP
+DR   dbMHC
+DR   DGRC
+DR   DSMZ
+DR   EBiSC
+DR   ECACC
+DR   EFO
+DR   ENCODE
+DR   ESTDAB
+DR   GDSC
+DR   GEO
+DR   HipSci
+DR   hPSCreg
+DR   ICLC
+DR   IFO
+DR   IGRhCellID
+DR   IGSR
+DR   IHW
+DR   IMGT/HLA
+DR   ISCR
+DR   IZSLER
+DR   JCRB
+DR   KCB
+DR   KCLB
+DR   LINCS
+DR   Lonza
+DR   MCCL
+DR   MeSH
+DR   Millipore
+DR   NCBI_Iran
+DR   NHCDR 
+DR   NISES
+DR   NIH-ARP
+DR   PRIDE
+DR   RCB
+DR   RSCB
+DR   SKIP
+DR   SKY/M-FISH/CGH
+DR   TCB
+DR   TKG
+DR   TOKU-E
+DR   Wikidata
+DR   Ximbio
+
+# Categories
+CA   Adult stem cell
+CA   Cancer cell line
+CA   Conditionally immortalized cell line
+CA   Embryonic stem cell
+CA   Factor-dependent cell line
+CA   Finite cell line
+CA   Hybrid cell line
+CA   Hybridoma
+CA   Induced pluripotent stem cell
+CA   Spontaneously immortalized cell line
+CA   Stromal cell line
+CA   Telomerase immortalized cell line
+CA   Transformed cell line
+CA   Undefined cell line type
+
+# Comments
+CC   Anecdotal
+CC   Biotechnology
+CC   Breed/subspecies
+CC   Caution
+CC   Characteristics
+CC   Derived from metastatic site
+CC   Discontinued
+CC   From
+CC   Group
+CC   Knockout cell
+CC   Microsatellite instability
+CC   Miscellaneous
+CC   Misspelling
+CC   Monoclonal antibody target
+CC   Omics
+CC   Part of
+CC   Population
+CC   Problematic cell line
+CC   Registration
+CC   Selected for resistance to
+CC   Transfected with
+CC   Transformant
+
+# STR markers
+ST   Amelogenin
+ST   CSF1PO
+ST   D10S1248
+ST   D12S391
+ST   D13S317
+ST   D16S539
+ST   D18S51
+ST   D19S433
+ST   D1S1656
+ST   D21S11
+ST   D22S1045
+ST   D2S1338
+ST   D2S441
+ST   D3S1358
+ST   D5S818
+ST   D6S1043
+ST   D7S820
+ST   D8S1179
+ST   DXS101
+ST   F13A01
+ST   F13B
+ST   FESFPS
+ST   FGA
+ST   LPL
+ST   Penta D
+ST   Penta E
+ST   SE33
+ST   TH01
+ST   TPOX
+ST   vWA
