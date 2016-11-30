@@ -108,14 +108,14 @@ object CelloParser {
     // Load CVs for cc, ca, st, and xref dbs
     var jarpath = new File(System.getProperty("java.class.path"));
     //Console.err.println("jar path is: " + jarpath)
-    var celloCVpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "celloparser.cv"
-    var celloXrefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_xrefs.txt"
-    var celloRefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_refs.txt"
-    //var celloCVpath = "/home/agateau/workspace/cellosaurus-syntax-checker/celloparser.cv"
+    //var celloCVpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "celloparser.cv"
+    //var celloXrefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_xrefs.txt"
+    //var celloRefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_refs.txt"
+    var celloCVpath = "/home/agateau/workspace/cellosaurus-syntax-checker/celloparser.cv"
     if (!new File(celloCVpath).exists) { Console.err.println("celloparser.cv not found at: " + celloCVpath); sys.exit(1) }
-    //var celloXrefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_xrefs.txt"
+    var celloXrefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_xrefs.txt"
     if (!new File(celloXrefpath).exists) { Console.err.println("cellosaurus_xrefs.txt not found at: " + celloXrefpath); sys.exit(1) }
-    //var celloRefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_refs.txt"
+    var celloRefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_refs.txt"
     if (!new File(celloRefpath).exists) { Console.err.println("cellosaurus_refs.txt not found at: " + celloRefpath); sys.exit(1) }
     var ca = ArrayBuffer[String]()
     var cc = ArrayBuffer[String]()
@@ -681,7 +681,7 @@ object CelloParser {
         editorlist.foreach(editor => { celloPubEditorlist = new Author(name = editor) :: celloPubEditorlist })
         xreflist.foreach(xref => {
           val db = xref.split("=")(0)
-          pubXreflist = new DbXref(_db = db, _ac = xref.split("=")(1), _category = xmap(db)._2, _url = xmap(db)._1, _property = "") :: pubXreflist
+          pubXreflist = new DbXref(_db = db, _ac = xref.split("=")(1), _category = xmap(db)._2, _url = xmap(db)._1, _property = "", _entryCategory = "") :: pubXreflist
         })
       }
     }
@@ -696,6 +696,7 @@ object CelloParser {
     var ac = ""
     var id = ""
     var category = ""
+    var entrycategory = ""
     var sex = ""
     var source_pmid = ""
     var alleles = ""
@@ -714,6 +715,11 @@ object CelloParser {
     var celloCommentlist = List[Comment]()
     var celloWebPagelist = List[WebPage]()
 
+    flatEntry.foreach(entryline => { // First pass just to get the cell line category, it can influence the urls in DbXrefs
+    if (entryline.startsWith("CC   Part of: ECACC")) entrycategory = entryline.substring(20) // Category    
+    else if (entryline.startsWith("CA   ") && entrycategory == "") entrycategory = entryline.substring(5) // Category
+    })
+    
     flatEntry.foreach(entryline => {
       if (entryline.length() > 5) entrylinedata = entryline.substring(5)
       if (entryline.startsWith("AC   ")) ac = entrylinedata // primary accession  
@@ -734,7 +740,7 @@ object CelloParser {
       else if (entryline.startsWith("SX   ")) sex = entrylinedata // Sex  
       else if (entryline.startsWith("DR   ")) { // xref 
         val db = entrylinedata.split("; ")(0)
-        celloXreflist = new DbXref(_db = db, _ac = entrylinedata.split(";")(1).trim(), _category = xmap(db)._2, _url = xmap(db)._1, _property = "") :: celloXreflist
+        celloXreflist = new DbXref(_db = db, _ac = entrylinedata.split(";")(1).trim(), _category = xmap(db)._2, _url = xmap(db)._1, _property = "", _entryCategory = entrycategory) :: celloXreflist
       }
       else if (entryline.startsWith("CC   ")) { // comment
         val linetokens = entrylinedata.split(": ")
@@ -945,8 +951,6 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
     var newCommentlist = List[Comment]()
     comments.foreach(comment => {
       if(comment.category.equals("Discontinued") && comment.text.split("; ").size > 2) { //Console.err.println(comment.text)
-        //todeleteCommentlist = comment :: todeleteCommentlist
-        //comments -= comment
         discAC = comment.text.split("; ")(1)
         property = comment.text.split("; ")(2)
         dbrefs.foreach(dbref => {
@@ -1059,14 +1063,41 @@ class WebPage(val url: String) {
   }
 }
 
-class DbXref(val _db: String, val _ac: String, val _category: String, val _url: String, var _property: String) {
+class DbXref(val _db: String, val _ac: String, val _category: String, val _url: String, var _property: String, val _entryCategory: String) {
   var final_url = _url
   var propname = "gene/protein designation" // default value, overriden in comments.updatDBrefs for discontinued cell lines
   
   init
   def init = { // prepare final url from template and accession
-    if (_url.contains("%s"))
-      final_url = _url.replace("%s", _ac)
+    if (_url.contains("%s")) {
+      // Deal with a few exceptions...
+      if(_db.equals("BTO"))
+        final_url = _url.replace("%s", _ac.substring(4)) // BTO:  %s is the numerical part of the BTO:nnnnnnn identifier
+      else if(_db.equals("CGH-DB"))
+        final_url = _url.replace("%s", _ac.split("-")(0)).replace("%t", _ac.split("-")(1)) // CGH-DB: Note: %s and %t are respectively the values before and after the dash in the DR line.
+      else if(_db.equals("CLS"))
+        final_url = _url.replace("%s", _ac.split("/")(1)) // CLS: Note: %s is the value after the slash "/" in the DR line.
+      else if(_db.equals("ECACC")) {
+        var urlCategory = ""
+        var modifiedUrl = ""
+        var collection = ""
+        if(_entryCategory.equals("Hybridoma")) {urlCategory = "hybridoma"; collection="ecacc_gc";}
+        else if(_entryCategory.equals("Induced pluripotent stem cell")) {urlCategory = "ipsc"; collection="ecacc_ipsc";}
+        else if(_entryCategory.startsWith("chromosomal")) {urlCategory = "humangeneticca"; collection="ecacc_hgc";}
+        else if(_entryCategory.startsWith("randomly")) {urlCategory = "humanrandomcontrol"; collection="ecacc_hrc";}
+        if(urlCategory != "") modifiedUrl = _url.replace("generalcell", urlCategory).split("&")(0) + "&collection=" + collection
+        else modifiedUrl = _url
+        final_url = modifiedUrl.replace("%s", _ac)
+        }
+      else if(_db.equals("NIH-ARP"))
+        final_url = _url.replace("%s", _ac.split("-")(1)) // NIH-ARP: Note: %s is the value after the dash in the DR line.
+      else if(_db.equals("TKG")) {// TKG: Note: n% is the second digit of the cell line AC and %s is the cell line AC without the 'TKG'
+        val digits = _ac.split(" ")(1)
+        final_url = _url.replace("%n", digits.substring(1,2)).replace("%s", digits); // wtf! digits.substring(1,1) is empty!!!
+        } 
+      else // General form
+        final_url = _url.replace("%s", _ac)
+    }
     else
      final_url = "" // for xrefs like ICLC
   }
@@ -1121,9 +1152,9 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
             geneName = ""
         }
         text = ""
-        ccXreflist = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = geneName) :: ccXreflist
+        ccXreflist = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = geneName,  _entryCategory = "") :: ccXreflist
         if (ac2 != "") {
-          ccXreflist = new DbXref(_db = db, _ac = ac2, _category = xmap(db)._2, _url = xmap(db)._1, _property = geneName2) :: ccXreflist
+          ccXreflist = new DbXref(_db = db, _ac = ac2, _category = xmap(db)._2, _url = xmap(db)._1, _property = geneName2,  _entryCategory = "") :: ccXreflist
         }
       }
     }
@@ -1137,7 +1168,7 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
         for(i <- 3 to linetoks.size-1)
           newtext += "; " + linetoks(i)
       if(db != "ChEBI")
-        ccXreflist = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = newtext) :: ccXreflist
+        ccXreflist = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = newtext,  _entryCategory = "") :: ccXreflist
       else
         cvterm = new CvTerm(_terminology = "ChEBI", _ac = ac.split("\\)")(0), _name = newtext)
       text = "" // Since the text is copied either as a property or name there is no need to display as comment's text
@@ -1151,7 +1182,7 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
         if(linetoks.size > 3) // like "Transfected with: UniProtKB; P42212; GFP (with L-64, T-65 and L-231 = EGFP). Transfected with: UniProtKB; Q99ZW2; Streptomyces pyogenes Cas9 (nuclear version; nCas9n)."
           for(i <- 3 to linetoks.size-1)
             property += "; " + linetoks(i)
-        ccXreflist = new DbXref(_db = db, _ac = linetoks(1), _category = xmap(db)._2, _url = xmap(db)._1, _property = property) :: ccXreflist
+        ccXreflist = new DbXref(_db = db, _ac = linetoks(1), _category = xmap(db)._2, _url = xmap(db)._1, _property = property,  _entryCategory = "") :: ccXreflist
       }
     }
     else if ((category.equals("Transformant") || category.equals("Selected for resistance to")) && text.contains(";") ) {
@@ -1163,7 +1194,7 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
       text = ""
       if(terminology == "NCBI_TaxID") terminology = "NCBI-Taxonomy"
       if(terminology == "UniProtKB")
-        ccXreflist = new DbXref(_db = terminology, _ac = ac, _category = xmap(terminology)._2, _url = xmap(terminology)._1, _property = name) :: ccXreflist
+        ccXreflist = new DbXref(_db = terminology, _ac = ac, _category = xmap(terminology)._2, _url = xmap(terminology)._1, _property = name,  _entryCategory = "") :: ccXreflist
       else  
         cvterm = new CvTerm(_terminology = terminology, _ac = ac, _name = name)
     }
