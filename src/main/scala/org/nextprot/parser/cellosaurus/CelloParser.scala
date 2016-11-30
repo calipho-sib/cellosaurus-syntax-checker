@@ -108,14 +108,14 @@ object CelloParser {
     // Load CVs for cc, ca, st, and xref dbs
     var jarpath = new File(System.getProperty("java.class.path"));
     //Console.err.println("jar path is: " + jarpath)
-    //var celloCVpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "celloparser.cv"
-    //var celloXrefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_xrefs.txt"
-    //var celloRefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_refs.txt"
-    var celloCVpath = "/home/agateau/workspace/cellosaurus-syntax-checker/celloparser.cv"
+    var celloCVpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "celloparser.cv"
+    var celloXrefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_xrefs.txt"
+    var celloRefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_refs.txt"
+    //var celloCVpath = "/home/agateau/workspace/cellosaurus-syntax-checker/celloparser.cv"
     if (!new File(celloCVpath).exists) { Console.err.println("celloparser.cv not found at: " + celloCVpath); sys.exit(1) }
-    var celloXrefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_xrefs.txt"
+    //var celloXrefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_xrefs.txt"
     if (!new File(celloXrefpath).exists) { Console.err.println("cellosaurus_xrefs.txt not found at: " + celloXrefpath); sys.exit(1) }
-    var celloRefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_refs.txt"
+    //var celloRefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_refs.txt"
     if (!new File(celloRefpath).exists) { Console.err.println("cellosaurus_refs.txt not found at: " + celloRefpath); sys.exit(1) }
     var ca = ArrayBuffer[String]()
     var cc = ArrayBuffer[String]()
