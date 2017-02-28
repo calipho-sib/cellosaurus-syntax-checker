@@ -55,7 +55,7 @@ object CelloParser {
     var cellorefs = Set.empty[String]
     var Entries = ArrayBuffer[ArrayBuffer[String]]()
     val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
-    val stdataregexp = new Regex("[1-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,4}( \\([A-Zs][A-Za-z0-9_;=:\\- ]+\\))?$") // s is for some_subclones
+    val stdataregexp = new Regex("[1-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,4}( \\([A-Zs][A-Za-z0-9_;=:/\\.\\- ]+\\))?$") // s is for some_subclones
     val ameloregexp = new Regex("X|X,Y|Y|Not_detected( \\([A-Z][A-Za-z0-9_;=:\\- ]+\\))?$")
     val chronlyregexp = new Regex("^[0-9\\.,]{1,30}+$");
     // Just a reminder, the actual CV is stored in celloparser.cv file
@@ -136,7 +136,6 @@ object CelloParser {
     val ok_cclist = cc.toList
     val ok_catlist = ca.toList
     val ok_stlist = st.toList
-
     // Prepare subsetdef list from categories (for OBO generation)
     var subsetdefs = ""
     ok_catlist.foreach(cat => { // categories
@@ -224,11 +223,12 @@ object CelloParser {
       var drlist = ArrayBuffer[String]()
       var curr_rank = 0
       var last_rank = 0
+      var curr_ccrank = 0
+      var last_ccrank = 0
       var strsrcCnt = 0 // count of ST Sources lines in an entry, never > 1
       var hasSTR = false
       val linecntmap = Map("ID" -> 0, "AC" -> 0, "AS" -> 0, "SY" -> 0, "DR" -> 0, "RX" -> 0, "WW" -> 0, "CC" -> 0, "ST" -> 0, "DI" -> 0, "OX" -> 0, "HI" -> 0,
         "OI" -> 0, "SX" -> 0, "CA" -> 0) // Initialize to 0 the line count for each possible field
-
       if (!(entry(0).startsWith("ID   ") && entry(1).startsWith("AC   "))) { Console.err.println("Severe error: Missing ID/AC line at " + entry(0) + " Please correct before re-check"); sys.exit(2) }
       entry.foreach(entryline => { //println(entryline)
         var entrylinedata = ""
@@ -319,7 +319,10 @@ object CelloParser {
         else if (entryline.startsWith("CC   ")) { // Comments
           val cctopic = entrylinedata.split(":")(0)
           if (!ok_cclist.contains(cctopic)) { Console.err.println("Unknown CC topic found at: " + entryline); errcnt += 1 }
+          else curr_ccrank = ok_cclist.indexOf(cctopic)
           if (!entryline.endsWith(".")) { Console.err.println("Unterminated CC found at: " + entryline); errcnt += 1 }
+          if (curr_ccrank < last_ccrank) { Console.err.println("Misordered CC topic line: " + entryline + " in entry " + id); errcnt += 1 }
+          last_ccrank = curr_ccrank
           if(cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
             // These discontinued CCs must also exist as DR lines
             var discontinued = entrylinedata.split(": ")(1) // just keep db reference
@@ -330,8 +333,7 @@ object CelloParser {
           }
         else if (entryline.startsWith("ST   ")) { // Short tandem repeats
           hasSTR = true
-          if (!entrylinedata.contains(":")) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
-          else if (entrylinedata.split(": ").size < 2) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
+          if (!entrylinedata.contains(": ")) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
           else {
             val sttopic = entrylinedata.split(":")(0)
             val stdata = entrylinedata.split(": ")(1).trim()
@@ -340,11 +342,11 @@ object CelloParser {
               else { // check ST data format
                 val chrdata = stdata.split("\\(")(0).trim()
                 if (sttopic.contains("Amelogenin")) {
-                  if (ameloregexp.findFirstIn(stdata) == None) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
+                  if (ameloregexp.findFirstIn(stdata) == None) { Console.err.println("Incorrect ST data format (Amel) at: " + entryline); errcnt += 1 }
                 }
                 else if(!stdata.contains("Not_detected")) {
-                  if (chronlyregexp.findFirstIn(chrdata) == None) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
-                  else if (stdataregexp.findFirstIn(stdata) == None) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
+                  if (chronlyregexp.findFirstIn(chrdata) == None) { Console.err.println("Incorrect ST data format (Not_detected) at: " + entryline); errcnt += 1 }
+                  else if (stdataregexp.findFirstIn(stdata) == None) { Console.err.println("Incorrect ST data format (regex) at: " + entryline); errcnt += 1 }
                   else { 
                     // check for order and unicity token by token
                     val toklist = chrdata.split(",")
@@ -740,7 +742,8 @@ object CelloParser {
       else if (entryline.startsWith("SX   ")) sex = entrylinedata // Sex  
       else if (entryline.startsWith("DR   ")) { // xref 
         val db = entrylinedata.split("; ")(0)
-        celloXreflist = new DbXref(_db = db, _ac = entrylinedata.split(";")(1).trim(), _category = xmap(db)._2, _url = xmap(db)._1, _property = "", _entryCategory = entrycategory) :: celloXreflist
+        if(!xmap.contains(db)) Console.err.println("Error: no entry for \"" + db + "\" in cellosaurus_xrefs.txt")
+        else celloXreflist = new DbXref(_db = db, _ac = entrylinedata.split(";")(1).trim(), _category = xmap(db)._2, _url = xmap(db)._1, _property = "", _entryCategory = entrycategory) :: celloXreflist
       }
       else if (entryline.startsWith("CC   ")) { // comment
         val linetokens = entrylinedata.split(": ")
