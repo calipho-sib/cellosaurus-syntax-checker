@@ -7,6 +7,7 @@ DR   BCRC
 DR   BCRJ
 DR   BTO
 DR   BioSample
+DR   BioSamples
 DR   CBA
 DR   CCLE
 DR   CCLV
@@ -28,6 +29,7 @@ DR   ECACC
 DR   EFO
 DR   ENCODE
 DR   ESTDAB
+DR   FlyBase
 DR   GDSC
 DR   GEO
 DR   HipSci
@@ -80,28 +82,31 @@ CA   Transformed cell line
 CA   Undefined cell line type
 
 # Comments
-CC   Anecdotal
-CC   Biotechnology
-CC   Breed/subspecies
-CC   Caution
-CC   Characteristics
-CC   Derived from metastatic site
-CC   Discontinued
-CC   From
 CC   Group
+CC   Problematic cell line
+CC   Part of
+CC   From
+CC   Registration
+CC   Population
+CC   Biotechnology
+CC   Characteristics
+CC   Doubling time
 CC   Knockout cell
 CC   Microsatellite instability
-CC   Miscellaneous
-CC   Misspelling
 CC   Monoclonal antibody target
-CC   Omics
-CC   Part of
-CC   Population
-CC   Problematic cell line
-CC   Registration
 CC   Selected for resistance to
+CC   Sequence variation
 CC   Transfected with
 CC   Transformant
+CC   Omics
+CC   Anecdotal
+CC   Miscellaneous
+CC   Caution
+CC   Misspelling
+CC   Discontinued
+CC   Derived from metastatic site
+CC   Derived from sampling site
+CC   Breed/subspecies
 
 # STR markers
 ST   Amelogenin
@@ -134,3 +139,13 @@ ST   SE33
 ST   TH01
 ST   TPOX
 ST   vWA
+ST   Dog FHC2010
+ST   Dog FHC2054
+ST   Dog FHC2079
+ST   Dog PEZ1
+ST   Dog PEZ3
+ST   Dog PEZ5
+ST   Dog PEZ6
+ST   Dog PEZ8
+ST   Dog PEZ12
+ST   Dog PEZ20
