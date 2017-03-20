@@ -351,8 +351,9 @@ object CelloParser {
                     // check for order and unicity token by token
                     val toklist = chrdata.split(",")
                     toklist.foreach(token => {
+                      //Console.err.println("token: " + token)
                       val dottoken = token.split("\\.")
-                      if (dottoken(0).length() > 2) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
+                      if (dottoken(0).length() > 2) { if(!entrylinedata.contains("Dog ")) {Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }} // no more than 99 except for dog
                       else if (dottoken.length > 1 && dottoken(1).length() > 1) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
                     })
                     // check for order and unicity
