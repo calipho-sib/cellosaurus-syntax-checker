@@ -55,9 +55,9 @@ object CelloParser {
     var cellorefs = Set.empty[String]
     var Entries = ArrayBuffer[ArrayBuffer[String]]()
     val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
-    val stdataregexp = new Regex("[1-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,4}( \\([A-Zs][A-Za-z0-9_;=:/\\.\\- ]+\\))?$") // s is for some_subclones
+    val stdataregexp = new Regex("[0-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,4}( \\([A-Zs][A-Za-z0-9_;=:/\\.\\- ]+\\))?$") // s is for some_subclones
     val ameloregexp = new Regex("X|X,Y|Y|Not_detected( \\([A-Z][A-Za-z0-9_;=:\\- ]+\\))?$")
-    val chronlyregexp = new Regex("^[0-9\\.,]{1,30}+$");
+    val repcntregexp = new Regex("^[0-9\\.,]{1,30}+$");
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_dblist1 = List("ATCC", "BCRC", "BCRJ", "BTO", "BioSample", "CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "ChEMBL-Cells", "ChEMBL-Targets", "CLDB",
       "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DGRC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "GDSC", "hPSCreg", "ICLC",
@@ -345,8 +345,9 @@ object CelloParser {
                   if (ameloregexp.findFirstIn(stdata) == None) { Console.err.println("Incorrect ST data format (Amel) at: " + entryline); errcnt += 1 }
                 }
                 else if(!stdata.contains("Not_detected")) {
-                  if (chronlyregexp.findFirstIn(chrdata) == None) { Console.err.println("Incorrect ST data format (Not_detected) at: " + entryline); errcnt += 1 }
-                  else if (stdataregexp.findFirstIn(stdata) == None) { Console.err.println("Incorrect ST data format (regex) at: " + entryline); errcnt += 1 }
+                  // Todo: maybe split at parenthesis and apply a simpler stdataregexp only to the reference part if any
+                  if (repcntregexp.findFirstIn(chrdata) == None) { Console.err.println("Incorrect ST data format (regex) at: " + entryline); errcnt += 1 } // repeat counts
+                  else if (stdataregexp.findFirstIn(stdata) == None) { Console.err.println("Incorrect ST data format (regex) at: " + entryline); errcnt += 1 } // repeats plus references
                   else { 
                     // check for order and unicity token by token
                     val toklist = chrdata.split(",")
