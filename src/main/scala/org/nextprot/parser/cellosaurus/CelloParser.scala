@@ -45,7 +45,7 @@ object CelloParser {
     var drmap = ArrayBuffer[String]()
     val emap = Map.empty[String, Int]
     val oxmap = Map.empty[String, Int]
-    val line_occmap = Map("ID" -> (1, 1), "AC" -> (1, 1), "AS" -> (0, 1), "SY" -> (0, 1), "DR" -> (0, 999), "RX" -> (0, 999), "WW" -> (0, 999), "CC" -> (0, 999), "ST" -> (0, 999), "DI" -> (0, 99), "OX" -> (1, 999), "HI" -> (0, 999),
+    val line_occmap = Map("ID" -> (1, 1), "AC" -> (1, 1), "AS" -> (0, 1), "SY" -> (0, 1), "DR" -> (0, 1999), "RX" -> (0, 999), "WW" -> (0, 999), "CC" -> (0, 999), "ST" -> (0, 999), "DI" -> (0, 99), "OX" -> (1, 999), "HI" -> (0, 999),
       "OI" -> (0, 999), "SX" -> (0, 1), "CA" -> (1, 1)) // min and max occurences
     val line_ordmap = Map("ID" -> 1, "AC" -> 2, "AS" -> 3, "SY" -> 4, "DR" -> 5, "RX" -> 6, "WW" -> 7, "CC" -> 8, "ST" -> 9, "DI" -> 10, "OX" -> 11, "HI" -> 12, "OI" -> 14,
       "SX" -> 14, "CA" -> 15)
@@ -323,6 +323,13 @@ object CelloParser {
           if (!entryline.endsWith(".")) { Console.err.println("Unterminated CC found at: " + entryline); errcnt += 1 }
           if (curr_ccrank < last_ccrank) { Console.err.println("Misordered CC topic line: " + entryline + " in entry " + id); errcnt += 1 }
           last_ccrank = curr_ccrank
+          // check database separator tokens
+          val cctext = entrylinedata.split(": ")(1)
+          val cctoks = cctext.split("; ")
+          if(cctoks.size > 1 ) {
+          	val maybedb = cctoks(0)
+           	if (((maybedb == "UniProtKB") || (maybedb == "HGNC") || (ok_dblist.contains(maybedb))) && cctoks.size < 3) { Console.err.println("Missing separator at : " + entryline); errcnt += 1 }
+         	 }
           if(cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
             // These discontinued CCs must also exist as DR lines
             var discontinued = entrylinedata.split(": ")(1) // just keep db reference
