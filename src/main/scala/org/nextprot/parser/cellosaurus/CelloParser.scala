@@ -377,6 +377,7 @@ object CelloParser {
             else { // ST   Source(s) line
               strsrcCnt += 1
               if (stdata.contains(",")) { Console.err.println("No comma allowed in ST source format at: " + entryline); errcnt += 1 }
+              if (stdata.endsWith(";") || stdata.endsWith(".")) { Console.err.println("ST trailing ; found at: " + entryline); errcnt += 1 }
               if (stdata.contains("PubMed")) { // PubMed in sources
               val srcrefs = stdata.split("; ").filter(_.startsWith("PubMed"))
               srcrefs.foreach(ref => { // for subsequent consistency check with cellosaurus_refs.txt
