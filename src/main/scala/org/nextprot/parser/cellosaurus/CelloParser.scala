@@ -783,7 +783,7 @@ object CelloParser {
       else if (entryline.startsWith("RX   ")) { // publications 
         celloPublilist = new PubliRef(db_ac = entrylinedata.split(";")(0)) :: celloPublilist
       }
-      else if (entryline.startsWith("ST   Source")) { // short dandem repeats source
+      else if (entryline.startsWith("ST   Source")) { // short tandem repeats source
         val srcList = entrylinedata.substring(11).split("; ") // skip the 'Source(s):' comment
         srcList.foreach(src => {
           if(src.contains("="))
@@ -798,7 +798,7 @@ object CelloParser {
         val id = entrylinedata.split(": ")(0)
         val rawdata = entrylinedata.split(": ")(1)
         if(rawdata.contains("(")) { // ST   D21S11: 27,32.2 (PubMed=25877200)
-          // Separate alleles from references
+          // Separate allele counts from references
         alleles = rawdata.split(" \\(")(0)
         val allelerefs = rawdata.split("[\\(||\\)]")(1)
         allelerefs.split("; ").foreach(alleleref => {
@@ -876,7 +876,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
           </comment-list>
       }
       {
-        if (sources.size > 0 )
+        if (sources.size > 0 || sourcerefs.size > 0)
           <str-list>
             <source-list>
               { sources.map(_.toXML) }
