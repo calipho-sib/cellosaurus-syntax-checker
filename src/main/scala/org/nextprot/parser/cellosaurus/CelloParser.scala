@@ -32,6 +32,7 @@ object CelloParser {
     var toxml: Boolean = false
     var stats: Boolean = false
     var celloversion: String = ""
+    var conflictfilename: String = ""
     var drmapname: String = ""
     var oboheadercomment: String = ""
     var obotypedef: String = "\n[Typedef]\nid: derived_from\nname: derived from\nis_transitive: true\n\n" +
@@ -50,6 +51,12 @@ object CelloParser {
     val line_ordmap = Map("ID" -> 1, "AC" -> 2, "AS" -> 3, "SY" -> 4, "DR" -> 5, "RX" -> 6, "WW" -> 7, "CC" -> 8, "ST" -> 9, "DI" -> 10, "OX" -> 11, "HI" -> 12, "OI" -> 14,
       "SX" -> 14, "CA" -> 15)
     val idacmap = Map.empty[String, String]
+    var synoaclist = List.empty[(String,String)]
+    var synoidlist = List.empty[(String,String)]
+    var stripiddups = List.empty[(String,String)]
+    var caseiddups = List.empty[(List[String],List[String])]
+    var synsyndups = List.empty[(List[String],List[String])]
+    //var namesynodups = List.empty[(String,String)]
     var pmids = Set.empty[String]
     var uniquerefs = Set.empty[String]
     var cellorefs = Set.empty[String]
@@ -93,8 +100,9 @@ object CelloParser {
 
     // Parse command line arguments
     if (args.length == 0) {
-      Console.err.println("Usage: celloparser.jar cellosaurus.txt [DRmap=DRMapfilename] [-obo] [-xml] [-stats]")
+      Console.err.println("Usage: celloparser.jar cellosaurus.txt [DRmap=DRMapfilename] [conflicts=conflictfilename] [-obo] [-xml] [-stats]")
       Console.err.println("-obo will generate cellosaurus.obo, -xml will generate cellosaurus.xml")
+      Console.err.println("conflicts= will generate the five xplicate type tables in given filename")
       sys.exit(1)
       }
     if (!new File(args(0)).exists) { Console.err.println(args(0) + " not found"); sys.exit(1) }
@@ -102,7 +110,8 @@ object CelloParser {
       if (arg.contains("obo")) {toOBO = true;  obofile = new PrintWriter(new File("cellosaurus.obo"))}
       else if (arg.contains("xml")) {toxml = true;  xmlfile = new PrintWriter(new File("cellosaurus.xml"))} //xmlfile.write("<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>")
       else if (arg.contains("stats")) stats = true
-      else if (arg.contains("DRmap=")) { drmapname = arg.split("=")(1) }
+      else if (arg.contains("conflicts=")) conflictfilename = arg.split("=")(1)
+      else if (arg.contains("DRmap=")) drmapname = arg.split("=")(1)
     })
 
     // Load CVs for cc, ca, st, and xref dbs
@@ -214,6 +223,8 @@ object CelloParser {
     }  
     
     // All entries text-loaded
+    var stripid = ""
+    var lastid = ""
     var entrynb = 0
     Console.err.println("Error report (" + Entries.size + " entries) :\n")
     Entries.foreach(entry => {
@@ -257,7 +268,27 @@ object CelloParser {
           emap(ac) = entrynb
           // Map AC to ID
           idacmap(ac) = id
+          if(conflictfilename != "") {
+            if(id.contains(" [")) {
+          	  stripid = id.split(" \\[")(0)
+          	  val default = (-1,"")
+          	  if(idacmap.values.exists(_ == stripid)) {
+          	    // get the pure (no bracket-followed) version of the id
+          	    val mappedac = idacmap.find(_._2 == stripid).getOrElse(default)._1
+          	    stripiddups = stripiddups:+((stripid + " ", mappedac.toString()))
+           	   }
+          	  stripiddups = stripiddups:+((id,ac))
+          	  }
+          	else if(id.toLowerCase == lastid.toLowerCase) {
+          	   val default = (-1,"")
+          	   val mappedac = idacmap.find(_._2 == lastid).getOrElse(default)._1
+          	   val newcasedup = (List(lastid,id),List(mappedac.toString(),ac))
+          	   caseiddups = caseiddups:+newcasedup
+          	   //Console.err.println(id + " === " + lastid)
+          	   }
+          	}
           entrynb += 1;
+          lastid = id
           }
         else if (entryline.startsWith("AS   ")) { // AC Secundary
           val locaslist = entrylinedata.split("; ")
@@ -274,6 +305,9 @@ object CelloParser {
             locsynlist.foreach(synonym => {
             syncnt += 1
             if (synonym == id) { Console.err.println("Synonym exists as main ID: " + id); errcnt += 1 }
+            else if(conflictfilename != "") {
+            synoidlist = synoidlist:+((synonym.toLowerCase, synonym))
+            synoaclist = synoaclist:+((synonym.toLowerCase, ac))} // add to map
             })
           }
         else if (entryline.startsWith("DR   ")) { // X-refs
@@ -308,7 +342,7 @@ object CelloParser {
             }
             else if ((rxdbname == "DOI") && !identifier.startsWith("10.")) { Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt += 1 }
             else if ((rxdbname == "CelloPub") && ("^CLPUB[0-9]{5}".r.findFirstIn(identifier)) == None) { Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt += 1 }
-            else if ((rxdbname == "Patent") && ("^[A-Z]{2}[0-9]{7,11}[A-Z]{0,1}[1-9]{0,1}".r.findFirstIn(identifier)) == None) { Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt += 1 }
+            else if ((rxdbname == "Patent") && ("^[A-Z]{2}(RE)?[0-9]{5,11}[A-Z]{0,1}[1-9]{0,1}".r.findFirstIn(identifier)) == None) { Console.err.println("Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline); errcnt += 1 }
             rxcnt += 1
             }
           }
@@ -524,7 +558,7 @@ object CelloParser {
       celloentry.updatDBrefs // Add a property flag to discontinued cell line dbrefs
       xmlfile.write(prettyXMLprinter.format(celloentry.toXML) + "\n") 
       }
-    if(toOBO) //if(ac.startsWith ("CVCL_9728")) Console.err.println(celloentry.toOBO) 
+    if(toOBO) //if(ac.startsWith ("CVCL_")) Console.err.println(celloentry.toOBO) 
       obofile.write(celloentry.toOBO)
     if (!category.contains("Hybrid")) { // outside line loop, needs all entry parsed
        if ((parentSpecies != "") && !ox.contains("hybrid") && (parentSpecies != ox)) { Console.err.println("Wrong parent species: " + oiac + "(parent)=" + parentSpecies + " " + ac + "=" + ox) }
@@ -563,6 +597,90 @@ object CelloParser {
 
     println(Entries.length + " entries: " + errcnt + " error(s)")
     println(nonUTF8cnt + " non-UTF8 character containing line(s), " + blankcnt + " blank line(s)")
+    
+    if (conflictfilename != "") { // Output five tables in reference file
+      val dupfile = new PrintWriter(new File(conflictfilename))
+      var matchedsynos = Set.empty[String]
+      val stripidmap = stripiddups.groupBy { case ( k, v ) => k.takeWhile { _ != ' ' } }.map { case (k, tups ) => ( k, tups.map { _._2 } ) }
+      dupfile.write("-- Stripped id xplicates --\n\n") // First table
+      stripidmap.toSeq.sortWith(_._1 < _._1).foreach { elem =>
+        dupfile.write(elem._1 + ": ")
+         elem._2.init.foreach { ac => dupfile.write(ac + ", ") }
+        dupfile.write(elem._2.last + "\n") // ex: 15C6: CVCL_D147, CVCL_9142
+        }
+      dupfile.write("\n\n") 
+      dupfile.write("-- case id xplicates --\n\n") 
+      
+      // second table: casing duplicates
+      caseiddups.toSeq.sortWith(_._1(0) < _._1(0)).foreach { elem => // ex: Bob, BOB: CVCL_2317, CVCL_E491
+      if(elem._1.size > 2) Console.err.println("watch " + elem._1(0))
+        dupfile.write(elem._1(0) + ", " + elem._1(1) + ": " + elem._2(0) + ", " + elem._2(1) + "\n")
+        } 
+        
+      // synonym stuff
+      val synogroupmap = synoaclist.groupBy { case ( k, v ) => k }.map { case (k, tups ) => ( k, tups.map { _._2 } ) }
+      val synoidgroupmap = synoidlist.groupBy { case ( k, v ) => k }.map { case (k, tups ) => ( k, tups.map { _._2 } ) }
+      dupfile.write("\n\n")
+      dupfile.write("-- id/synonyms xplicates --\n\n") // Third table
+      
+      idacmap.toSeq.sortWith(_._2 < _._2).foreach { elem =>
+      	if(synogroupmap.contains(elem._2.toLowerCase)) { // this id exists as synonym elsewhere
+      	    val currsyngroup = synogroupmap(elem._2.toLowerCase).toSet
+      	    if(!currsyngroup.contains(elem._1) || currsyngroup.size > 1) {
+      	    matchedsynos += elem._2.toUpperCase
+      		dupfile.write(elem._2 + ": Name: " + elem._1 + ", Synonym: ") // ex: 143BTK-: Name: CVCL_9W36, Synonym: CVCL_2270
+      		currsyngroup.init.foreach {ac => dupfile.write(ac + ", ")}
+      		dupfile.write(currsyngroup.last + "\n")
+      		}
+      	  }
+      	} 
+      dupfile.write("\n\n") 
+      dupfile.write("-- synonyms/synonyms xplicates --\n\n") // fourth table
+      
+      var intersynolineslist = ArrayBuffer[String]()
+      synogroupmap.foreach {synogroup =>
+        if(!matchedsynos.contains(synogroup._1) && synogroup._2.toSet.size > 1) {
+          var dupstring = ""
+          val synidilst = synoidgroupmap(synogroup._1).toSet
+          for( synid <- synidilst.init ) dupstring += synid + ", " 
+          dupstring += synoidgroupmap(synogroup._1).toSet.last + ": Synonym: " // ex: 1102: Synonym: CVCL_8030, CVCL_C574
+          for(ac <- synogroup._2.init) {dupstring += ac + ", " }
+          dupstring += synogroup._2.last
+          intersynolineslist += dupstring
+          }
+        }
+      intersynolineslist.sorted.foreach { line =>	dupfile.write(line + "\n") }
+      
+      // Strip all '-', '/', '.', and ' ' characters from Ids
+      val punctmap = idacmap.filter((t) => t._2.contains("-") || t._2.contains("/") || t._2.contains(".") || t._2.contains(" "))
+      var punctduplist = ArrayBuffer[String]()
+      var punctduplinelist = ArrayBuffer[String]()
+      punctmap.foreach { elem => 
+        val stripped = elem._2.filter(!" -/.".contains(_))
+        punctduplist += stripped // add the striped version
+        }
+      
+      val dups = punctduplist.diff(punctduplist.distinct) // get duplicates
+      dups.foreach { dup =>
+      var dupidlist = Set.empty[String]
+      var dupaclist = Set.empty[String]
+      var line = ""
+      punctmap.foreach { idac =>
+        val stripped = idac._2.filter(!" -/.".contains(_)) 
+        if(dup == stripped) { dupidlist += idac._2; dupaclist += idac._1} //dupfile.write(idac._2 + ", " + idac._1 + " ")
+        }
+       dupidlist.init foreach{ id => line += id + ", "}
+       line +=  dupidlist.last + ": "
+       dupaclist.init foreach{ ac => line += ac + ", "} // ex: 171-4, 17/14: CVCL_G573, CVCL_J097
+       line +=  dupaclist.last
+       punctduplinelist += line 
+      }
+      
+      dupfile.write("\n\n") 
+      dupfile.write("-- punctuaded names xplicates --\n\n") // Fifth table
+      punctduplinelist.sorted.foreach { line =>	dupfile.write(line + "\n") }
+    dupfile.close()
+    }
 
 
     // Sanity check of cellosaurus.txt and cellosaurus_refs.txt content
