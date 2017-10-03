@@ -47,9 +47,9 @@ object CelloParser {
     val emap = Map.empty[String, Int]
     val oxmap = Map.empty[String, Int]
     val line_occmap = Map("ID" -> (1, 1), "AC" -> (1, 1), "AS" -> (0, 1), "SY" -> (0, 1), "DR" -> (0, 1999), "RX" -> (0, 999), "WW" -> (0, 999), "CC" -> (0, 999), "ST" -> (0, 999), "DI" -> (0, 99), "OX" -> (1, 999), "HI" -> (0, 999),
-      "OI" -> (0, 999), "SX" -> (0, 1), "CA" -> (1, 1)) // min and max occurences
+      "OI" -> (0, 999), "SX" -> (0, 1), "CA" -> (1, 1), "AG" -> (0, 1)) // min and max occurences
     val line_ordmap = Map("ID" -> 1, "AC" -> 2, "AS" -> 3, "SY" -> 4, "DR" -> 5, "RX" -> 6, "WW" -> 7, "CC" -> 8, "ST" -> 9, "DI" -> 10, "OX" -> 11, "HI" -> 12, "OI" -> 14,
-      "SX" -> 14, "CA" -> 15)
+      "SX" -> 14, "CA" -> 15, "AG" -> 16)
     val idacmap = Map.empty[String, String]
     var synoaclist = List.empty[(String,String)]
     var synoidlist = List.empty[(String,String)]
@@ -192,27 +192,6 @@ object CelloParser {
       else if(line.startsWith(" Version:")) celloversion = line.split(" ")(2)
     }
 
-    val xmlheader = // date and version are dynamic
-          <header>
-            <terminology-name>Cellosaurus</terminology-name>
-            <description>Cellosaurus: a controlled vocabulary of cell lines</description>
-            <release version={ celloversion } updated={ todaystring }/>    
-           <terminology-list>
-               <terminology name="NCBI-Taxonomy" source="National Center for Biotechnology Information" description="Taxonomy database of organisms">
-                    <url><![CDATA[https://www.ncbi.nlm.nih.gov/taxonomy]]></url>
-                </terminology>
-                <terminology name="NCIt" source="National Cancer Institute" description="Terminology of biomedical concepts">
-                    <url><![CDATA[https://ncit.nci.nih.gov]]></url>
-                </terminology>
-                <terminology name="ChEBI" source="European Molecular Biology Laboratory" description="Chemical Entities of Biological Interest">
-                    <url><![CDATA[https://www.ebi.ac.uk/chebi/]]></url>
-                </terminology>
-                <terminology name="PubChem" source="PubChem compound database" description="Public repository for information on chemical substances and their biological activities">
-                    <url><![CDATA[https://pubchem.ncbi.nlm.nih.gov/]]></url>
-                </terminology>
-           </terminology-list>
-         </header>   
-           
     if(toOBO) {
       val obodate = new SimpleDateFormat("MM:dd:yyyy").format(today)
       val oboheader: String = "format-version: 1.2\ndata-version: " + celloversion + "\ndate: " + obodate + " 12:00\ndefault-namespace: cellosaurus\n\n"
@@ -247,11 +226,11 @@ object CelloParser {
         if (entryline.length() > 5) {
           entrylinedata = entryline.substring(5)
           if (!line_ordmap.contains(header)) { Console.err.println("Unknown line type: " + entryline); errcnt += 1 }
-          else {
+          else { if(header != "AG") { // ignore AG lines for now, to be removed soon
             linecntmap(header) += 1 // Increment count for line type
             curr_rank = line_ordmap(header)
             if (curr_rank < last_rank) { Console.err.println("Misordered line type: " + entryline + " in entry " + id); errcnt += 1 }
-            last_rank = curr_rank
+            last_rank = curr_rank }
           }
         }
         if (entryline.contains("\t")) Console.err.println("Tab found at: " + entryline)
@@ -371,6 +350,7 @@ object CelloParser {
             if(!drlist.contains(discontinued))
               { Console.err.println("No match for discontinued: '" + discontinued + "' found among DR lines of " + ac); errcnt += 1 }
             }
+          if(cctopic == "Misspelling" && cctoks.size != 2) { Console.err.println("Wrong format for "  + entryline); errcnt += 1 }
           }
         else if (entryline.startsWith("ST   ")) { // Short tandem repeats
           hasSTR = true
@@ -484,9 +464,31 @@ object CelloParser {
     // Check for orphans hierarchies (inexistant ACs)
     val misslist = hilist.filter(s => !aclist.contains(s)).toSet
     if (misslist.size != 0) { misslist.foreach(ac => { Console.err.println("Inexistent HI/OI AC: " + ac); errcnt += 1 }) }
-    
+
     if (toxml) {
+    val xmlheader = // date, version, entry count and pub count are dynamic
+          <header>
+            <terminology-name>Cellosaurus</terminology-name>
+            <description>Cellosaurus: a controlled vocabulary of cell lines</description>
+            <release version={ celloversion } updated={ todaystring } nb-cell-lines={ Entries.size.toString } nb-publications={ uniquerefs.size.toString } /> 
+           <terminology-list>
+               <terminology name="NCBI-Taxonomy" source="National Center for Biotechnology Information" description="Taxonomy database of organisms">
+                    <url><![CDATA[https://www.ncbi.nlm.nih.gov/taxonomy]]></url>
+                </terminology>
+                <terminology name="NCIt" source="National Cancer Institute" description="Terminology of biomedical concepts">
+                    <url><![CDATA[https://ncit.nci.nih.gov]]></url>
+                </terminology>
+                <terminology name="ChEBI" source="European Molecular Biology Laboratory" description="Chemical Entities of Biological Interest">
+                    <url><![CDATA[https://www.ebi.ac.uk/chebi/]]></url>
+                </terminology>
+                <terminology name="PubChem" source="PubChem compound database" description="Public repository for information on chemical substances and their biological activities">
+                    <url><![CDATA[https://pubchem.ncbi.nlm.nih.gov/]]></url>
+                </terminology>
+           </terminology-list>
+         </header>   
+           
       xmlfile.write("<Cellosaurus>\n")
+      Console.err.println("XML: " + Entries.size + " entries, " + uniquerefs.size + " publications...\n")
       xmlfile.write(prettyXMLprinter.format(xmlheader) + "\n")
       xmlfile.write("<cell-line-list>\n")
     }
@@ -499,6 +501,7 @@ object CelloParser {
     var parentSex = ""
     var parentSpecies = ""
     var category = ""
+    var derivedfromcc = ""
     var disease = ""
     var dislist = ArrayBuffer[String]()
     var disErrorlist = ArrayBuffer[String]()
@@ -507,13 +510,16 @@ object CelloParser {
       category = ""
       parentSex = ""
       parentSpecies = ""
+      derivedfromcc = ""
       disease = ""
       dislist.clear
       disErrorlist.clear
                                  
+      entry.foreach(entryline => {if (entryline.startsWith("CA   ") && entryline.contains("Hybrid")) { derivedfromcc = "OK" }}) // just because CA comes last and info is needed before getting to HI line
       entry.foreach(entryline => {
        if (entryline.startsWith("AC   ")) { ac = entryline.substring(5); }
        else if (entryline.startsWith("OX   ")) { ox = entryline.split("=")(1) }
+       else if (entryline.contains("Derived from sampling site") || entryline.contains("Derived from metastatic site")) { derivedfromcc = entryline.substring(5).split(": ")(0) }
        else if (entryline.startsWith("DI   ")) { disease = entryline.split("; ")(2); dislist += disease }
        else if (entryline.startsWith("OI   ")) {
                oiac = entryline.substring(5).split(" ")(0)
@@ -542,6 +548,7 @@ object CelloParser {
                    currEntry.foreach(line => { //if(ac=="CVCL_A121") println("scanning parent of CVCL_A121: " + line)
                              if (line.startsWith("OX   ")) { parentSpecies = line.split("=")(1) }
                              else if (line.startsWith("DI   ")) { if (!dislist.contains(line.split("; ")(2))) { disErrorlist += "Missing parent disease in: " + oiac + "(parent)=" + line.split("; ")(2) + " " + ac + "=" + disease } }
+                             else if (line.contains("Derived from sampling site") || line.contains("Derived from metastatic site")) { if (derivedfromcc == "") { Console.err.println("Missing parent's (" + oiac + ") 'derived from' CC in: " + ac); errcnt += 1  } }
                              else if (line.startsWith("SX   ")) { parentSex = line.split("   ")(1) }
                              else if (line.startsWith("HI   ")) { if (line.substring(5).split(" ")(0).equals(ac)) { Console.err.println("Reciprocal HI: " + oiac + "/" + ac); errcnt += 1 } }
                              })
@@ -1208,6 +1215,8 @@ class DbXref(val _db: String, val _ac: String, val _category: String, val _url: 
         final_url = _url.replace("%s", _ac.split("-")(0)).replace("%t", _ac.split("-")(1)) // CGH-DB: Note: %s and %t are respectively the values before and after the dash in the DR line.
       else if(_db.equals("CLS"))
         final_url = _url.replace("%s", _ac.split("/")(1)) // CLS: Note: %s is the value after the slash "/" in the DR line.
+      else if(_db.equals("AddexBio"))
+        final_url = _url.replace("%s", _ac.split("/")(1)) // AddexBio: Note: %s is the value after the slash "/" in the DR line.
       else if(_db.equals("ECACC")) {
         var urlCategory = ""
         var modifiedUrl = ""
@@ -1289,7 +1298,7 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
         }
       }
     }
-    else if (category.equals("Monoclonal antibody target") && text.contains(";")) {
+    else if (category.equals("Monoclonal antibody target") && text.contains("; ")) {
       val linetoks = text.split("; ")
       val db = linetoks(0)
       val ac = linetoks(1)
