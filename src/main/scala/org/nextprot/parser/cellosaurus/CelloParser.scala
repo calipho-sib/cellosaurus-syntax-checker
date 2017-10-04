@@ -497,25 +497,31 @@ object CelloParser {
     var ac = ""
     var oiac = ""
     var oiid = ""
+    var parentac = ""
+    var parentid = ""
     var ox = ""
+    var cellSex = ""
     var parentSex = ""
     var parentSpecies = ""
     var category = ""
     var derivedfromcc = ""
+    var parentderivedfromcc = ""
     var disease = ""
     var dislist = ArrayBuffer[String]()
     var disErrorlist = ArrayBuffer[String]()
 
     Entries.foreach(entry => {
       category = ""
+      cellSex = ""
+      parentac = ""
       parentSex = ""
       parentSpecies = ""
       derivedfromcc = ""
+      parentderivedfromcc = ""
       disease = ""
       dislist.clear
       disErrorlist.clear
                                  
-      entry.foreach(entryline => {if (entryline.startsWith("CA   ") && entryline.contains("Hybrid")) { derivedfromcc = "OK" }}) // just because CA comes last and info is needed before getting to HI line
       entry.foreach(entryline => {
        if (entryline.startsWith("AC   ")) { ac = entryline.substring(5); }
        else if (entryline.startsWith("OX   ")) { ox = entryline.split("=")(1) }
@@ -538,25 +544,23 @@ object CelloParser {
                      }
                 }
        else if (entryline.startsWith("HI   ")) {
-               oiac = entryline.substring(5).split(" ")(0)
-               oiid = (entryline.substring(5).split("!")(1)).substring(1)
-               if (oiac.equals(ac)) { Console.err.println("Self-referencing HI: " + oiac + "/" + ac); errcnt += 1 }
-               if (!misslist.contains(oiac)) { // otherwise previously reported
-                   if (idacmap(oiac) != oiid) { Console.err.println("Incorrect HI AC/ID pair: " + oiac + "/" + oiid); errcnt += 1 }
-                   currEntry = Entries(emap(oiac))
+               parentac = entryline.substring(5).split(" ")(0)
+               parentid = (entryline.substring(5).split("!")(1)).substring(1)
+               if (parentac.equals(ac)) { Console.err.println("Self-referencing HI: " + parentac + "/" + ac); errcnt += 1 }
+               if (!misslist.contains(parentac)) { // otherwise previously reported
+                   if (idacmap(parentac) != parentid) { Console.err.println("Incorrect HI AC/ID pair: " + parentac + "/" + parentid); errcnt += 1 }
+                   currEntry = Entries(emap(parentac))
                    // Parse parent entry
                    currEntry.foreach(line => { //if(ac=="CVCL_A121") println("scanning parent of CVCL_A121: " + line)
                              if (line.startsWith("OX   ")) { parentSpecies = line.split("=")(1) }
-                             else if (line.startsWith("DI   ")) { if (!dislist.contains(line.split("; ")(2))) { disErrorlist += "Missing parent disease in: " + oiac + "(parent)=" + line.split("; ")(2) + " " + ac + "=" + disease } }
-                             else if (line.contains("Derived from sampling site") || line.contains("Derived from metastatic site")) { if (derivedfromcc == "") { Console.err.println("Missing parent's (" + oiac + ") 'derived from' CC in: " + ac); errcnt += 1  } }
+                             else if (line.startsWith("DI   ")) { if (!dislist.contains(line.split("; ")(2))) { disErrorlist += "Missing parent disease in: " + parentac + "(parent)=" + line.split("; ")(2) + " " + ac + "=" + disease } }
+                             else if (line.contains("Derived from sampling site") || line.contains("Derived from metastatic site")) { parentderivedfromcc = line.substring(5).split(": ")(0) }
                              else if (line.startsWith("SX   ")) { parentSex = line.split("   ")(1) }
-                             else if (line.startsWith("HI   ")) { if (line.substring(5).split(" ")(0).equals(ac)) { Console.err.println("Reciprocal HI: " + oiac + "/" + ac); errcnt += 1 } }
+                             else if (line.startsWith("HI   ")) { if (line.substring(5).split(" ")(0).equals(ac)) { Console.err.println("Reciprocal HI: " + parentac + "/" + ac); errcnt += 1 } }
                              })
                    }
                }
-       else if (entryline.startsWith("SX   ") && parentSex != "") {
-                if (entryline.split("   ")(1) != parentSex) { Console.err.println("Wrong parent sex match: " + oiac + ":" + ac); errcnt += 1 }
-                }
+       else if (entryline.startsWith("SX   ")) { cellSex = entryline.split("   ")(1) }
        else if (entryline.startsWith("CA   ")) { category = entryline.split("   ")(1) }
       })
       
@@ -568,8 +572,10 @@ object CelloParser {
     if(toOBO) //if(ac.startsWith ("CVCL_")) Console.err.println(celloentry.toOBO) 
       obofile.write(celloentry.toOBO)
     if (!category.contains("Hybrid")) { // outside line loop, needs all entry parsed
-       if ((parentSpecies != "") && !ox.contains("hybrid") && (parentSpecies != ox)) { Console.err.println("Wrong parent species: " + oiac + "(parent)=" + parentSpecies + " " + ac + "=" + ox) }
+       if ((parentSpecies != "") && !ox.contains("hybrid") && (parentSpecies != ox)) { Console.err.println("Wrong parent species: " + parentac + "(parent)=" + parentSpecies + " " + ac + "=" + ox) }
        if (disErrorlist.length != 0) { Console.err.println(disErrorlist(0)); errcnt += 1 }
+       if ((parentac != "") && cellSex != parentSex) { Console.err.println("Wrong parent's  ( " + parentac + " ) sex match in: " + ac); errcnt += 1 }  
+       if((parentac != "") && derivedfromcc != parentderivedfromcc) {Console.err.println("Missing parent's (" + parentac + ") 'derived from' CC in: " + ac); errcnt += 1 }
        }
    })
 
