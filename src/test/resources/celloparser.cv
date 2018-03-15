@@ -1,6 +1,7 @@
 # Cellosaurus controlled vocabulary for Xrefs, Categories, Comment types and STR markers
 
 # Xrefs
+DR   AddexBio
 DR   ATCC
 DR   BCGO
 DR   BCRC
@@ -12,17 +13,20 @@ DR   CBA
 DR   CCLE
 DR   CCLV
 DR   CCRID
+DR   Cell_Biolabs
 DR   CGH-DB
 DR   ChEMBL-Cells
 DR   ChEMBL-Targets
 DR   CLDB
 DR   CLO
 DR   CLS
+DR   ColonAtlas
 DR   Coriell
 DR   Cosmic
 DR   Cosmic-CLP
 DR   dbMHC
 DR   DGRC
+DR   DiscoverX
 DR   DSMZ
 DR   EBiSC
 DR   ECACC
@@ -35,21 +39,24 @@ DR   GEO
 DR   HipSci
 DR   hPSCreg
 DR   ICLC
-DR   IFO
 DR   IGRhCellID
 DR   IGSR
 DR   IHW
+DR   Imanis
 DR   IMGT/HLA
 DR   ISCR
 DR   IZSLER
 DR   JCRB
 DR   KCB
 DR   KCLB
-DR   LINCS
+DR   LINCS_HMS
+DR   LINCS_LDP
 DR   Lonza
 DR   MCCL
 DR   MeSH
+DR   MetaboLights
 DR   Millipore
+DR   MMRRC
 DR   NCBI_Iran
 DR   NCI-DTP
 DR   NHCDR 
@@ -62,7 +69,9 @@ DR   SKIP
 DR   SKY/M-FISH/CGH
 DR   TCB
 DR   TKG
+DR   TNGB
 DR   TOKU-E
+DR   WiCell
 DR   Wikidata
 DR   Ximbio
 
@@ -94,6 +103,7 @@ CC   Characteristics
 CC   Doubling time
 CC   Knockout cell
 CC   Microsatellite instability
+CC   Monoclonal antibody isotype
 CC   Monoclonal antibody target
 CC   Selected for resistance to
 CC   Sequence variation
@@ -129,6 +139,7 @@ ST   D6S1043
 ST   D7S820
 ST   D8S1179
 ST   DXS101
+ST   DYS391
 ST   F13A01
 ST   F13B
 ST   FESFPS
