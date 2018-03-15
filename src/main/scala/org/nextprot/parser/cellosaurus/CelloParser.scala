@@ -27,6 +27,7 @@ object CelloParser {
     val today = Calendar.getInstance().getTime()
     var todaystring: String = new SimpleDateFormat("yyyy-MM-dd").format(today)
     var started: Boolean = false
+    //var debug: Boolean = false
     var obostarted: Boolean = false
     var toOBO: Boolean = false
     var toxml: Boolean = false
@@ -47,9 +48,9 @@ object CelloParser {
     val emap = Map.empty[String, Int]
     val oxmap = Map.empty[String, Int]
     val line_occmap = Map("ID" -> (1, 1), "AC" -> (1, 1), "AS" -> (0, 1), "SY" -> (0, 1), "DR" -> (0, 1999), "RX" -> (0, 999), "WW" -> (0, 999), "CC" -> (0, 999), "ST" -> (0, 999), "DI" -> (0, 99), "OX" -> (1, 999), "HI" -> (0, 999),
-      "OI" -> (0, 999), "SX" -> (0, 1), "CA" -> (1, 1), "AG" -> (0, 1)) // min and max occurences
+      "OI" -> (0, 999), "SX" -> (0, 1), "AG" -> (0, 1), "CA" -> (1, 1)) // min and max occurences
     val line_ordmap = Map("ID" -> 1, "AC" -> 2, "AS" -> 3, "SY" -> 4, "DR" -> 5, "RX" -> 6, "WW" -> 7, "CC" -> 8, "ST" -> 9, "DI" -> 10, "OX" -> 11, "HI" -> 12, "OI" -> 14,
-      "SX" -> 14, "CA" -> 15, "AG" -> 16)
+      "SX" -> 14, "AG" -> 15, "CA" -> 16)
     val idacmap = Map.empty[String, String]
     var synoaclist = List.empty[(String,String)]
     var synoidlist = List.empty[(String,String)]
@@ -64,14 +65,15 @@ object CelloParser {
     val acregexp = new Regex("CVCL_[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$")
     val stdataregexp = new Regex("[0-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,4}( \\([A-Zs][A-Za-z0-9_;=:/\\.\\- ]+\\))?$") // s is for some_subclones
     val ameloregexp = new Regex("X|X,Y|Y|Not_detected( \\([A-Z][A-Za-z0-9_;=:\\- ]+\\))?$")
-    val repcntregexp = new Regex("^[0-9\\.,]{1,30}+$");
+    val repcntregexp = new Regex("^[0-9\\.,]{1,30}+$")
+
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_dblist1 = List("ATCC", "BCRC", "BCRJ", "BTO", "BioSample", "CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "ChEMBL-Cells", "ChEMBL-Targets", "CLDB",
       "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DGRC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "GDSC", "hPSCreg", "ICLC",
       "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH",
       "NISES", "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG", "Ximbio")
     val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
-    val ok_sxlist = List("Female", "Male", "Mixed sex", "Sex ambiguous", "Sex undetermined")
+    val ok_sxlist = List("Female", "Male", "Mixed sex", "Sex ambiguous", "Sex unspecified")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_cclist1 = List("Breed/subspecies", "Caution", "Derived from metastatic site", "Discontinued", "From", "Group", "Knockout cell", "Miscellaneous", "Misspelling",
       "Monoclonal antibody target", "Omics", "Part of", "Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with")
@@ -85,6 +87,8 @@ object CelloParser {
     var rxcnt = 0
     var wwcnt = 0
     var syncnt = 0
+    var ageunitcnt = 0
+    var agendrange = 0
     var nonUTF8cnt = 0
     var blankcnt = 0
     var curr_line_nb = 0
@@ -155,7 +159,7 @@ object CelloParser {
     subsetdefs += "subsetdef: Male \"Male\"\n"
     subsetdefs += "subsetdef: Mixed_sex \"Mixed sex\"\n"
     subsetdefs += "subsetdef: Sex_ambiguous \"Sex ambiguous\"\n"
-    subsetdefs += "subsetdef: Sex_undetermined \"Sex undetermined\"\n"
+    subsetdefs += "subsetdef: Sex_unspecified \"Sex unspecified\"\n"
     subsetdefs = subsetdefs.split("\n").sortWith(_ < _).mkString("\n")
 
     // Parse cellosaurus xref file to get databases categories and urls, and put in a map
@@ -218,7 +222,7 @@ object CelloParser {
       var strsrcCnt = 0 // count of ST Sources lines in an entry, never > 1
       var hasSTR = false
       val linecntmap = Map("ID" -> 0, "AC" -> 0, "AS" -> 0, "SY" -> 0, "DR" -> 0, "RX" -> 0, "WW" -> 0, "CC" -> 0, "ST" -> 0, "DI" -> 0, "OX" -> 0, "HI" -> 0,
-        "OI" -> 0, "SX" -> 0, "CA" -> 0) // Initialize to 0 the line count for each possible field
+        "OI" -> 0, "SX" -> 0, "AG" -> 0, "CA" -> 0) // Initialize to 0 the line count for each possible field
       if (!(entry(0).startsWith("ID   ") && entry(1).startsWith("AC   "))) { Console.err.println("Severe error: Missing ID/AC line at " + entry(0) + " Please correct before re-check"); sys.exit(2) }
       entry.foreach(entryline => { //println(entryline)
         var entrylinedata = ""
@@ -226,11 +230,11 @@ object CelloParser {
         if (entryline.length() > 5) {
           entrylinedata = entryline.substring(5)
           if (!line_ordmap.contains(header)) { Console.err.println("Unknown line type: " + entryline); errcnt += 1 }
-          else { if(header != "AG") { // ignore AG lines for now, to be removed soon
+          else { 
             linecntmap(header) += 1 // Increment count for line type
             curr_rank = line_ordmap(header)
             if (curr_rank < last_rank) { Console.err.println("Misordered line type: " + entryline + " in entry " + id); errcnt += 1 }
-            last_rank = curr_rank }
+            last_rank = curr_rank
           }
         }
         if (entryline.contains("\t")) Console.err.println("Tab found at: " + entryline)
@@ -437,6 +441,78 @@ object CelloParser {
         else if (entryline.startsWith("SX   ")) { // Sex
             if (!ok_sxlist.contains(entrylinedata)) { Console.err.println("Illegal sex found at: " + entryline); errcnt += 1 }
             }
+        else if (entryline.startsWith("AG   ")) { // Age
+            val AGregexp = "AG   [A-Z0-9<>]".r
+            val AGregexp2 = "(^[0-9-]+Y)([0-9]+M)?".r 
+            val AGregexp3 = "^[0-9-]+(F)?M([0-9]+[WD])?".r 
+            val AGregexp4 = "^[0-9-]+(F)?[WD]$".r
+            val firstchar = entryline.substring(5,6)
+            if(AGregexp.findFirstIn(entryline) == None)
+              {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+            else if((firstchar == "<" || firstchar == ">") && new Regex("AG   [><][1-9]").findFirstIn(entryline) == None)              
+              {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+            else if ("^[1-9]".r.findFirstIn(entrylinedata) != None) { // starts with digit
+              if(AGregexp2.findFirstIn(entrylinedata) == None &&
+                 AGregexp3.findFirstIn(entrylinedata) == None &&
+                 AGregexp4.findFirstIn(entrylinedata) == None)
+              {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+            }
+           // Further checks for valid ranges/units
+            if(AGregexp2.findFirstIn(entrylinedata) != None) { 
+              val parsepattern = "([0-9-]+)([A-Z]+)([0-9-]+)?([A-Z]+)?".r
+              val parsepattern(value1, unit1, value2, unit2) = entrylinedata
+              if(value1.contains("-")) {
+                val rangelist = value1.split("-")
+                ageunitcnt = rangelist(0).toInt
+                agendrange = rangelist(1).toInt
+              }
+              else {
+                 ageunitcnt = value1.toInt
+                 agendrange = ageunitcnt + 1
+              }
+              if((ageunitcnt >= agendrange) ||
+                  ageunitcnt > 114 ||
+                  (unit2 != null && unit2 != "M") ||
+                  (value2 != null && value2.toInt > 11))
+                 {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+            }
+            else if(AGregexp3.findFirstIn(entrylinedata) != None) { 
+              val parsepattern = "([0-9-]+)([A-Z]+)([0-9-]+)?([A-Z]+)?".r
+              val parsepattern(value1, unit1, value2, unit2) = entrylinedata
+              if(value1.contains("-")) {
+                val rangelist = value1.split("-")
+                ageunitcnt = rangelist(0).toInt
+                agendrange = rangelist(1).toInt
+              }
+              else {
+                 ageunitcnt = value1.toInt
+                 agendrange = ageunitcnt + 1
+              }
+              if((ageunitcnt >= agendrange) || ageunitcnt > 11 ||
+                  (value2 != null && value2.toInt > 50) ||
+                  (unit1 == "FM" && unit2 != null && !unit2.startsWith("F")) ||
+                  (unit1 == "M" && unit2 != null && unit2.startsWith("F")) ||
+                  (unit1 == "FM" && ageunitcnt > 9))
+                 {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+            }
+            else if(AGregexp4.findFirstIn(entrylinedata) != None) { 
+              val parsepattern = "([0-9-]+)([A-Z]+)".r
+              val parsepattern(value, unit) = entrylinedata
+              if(value.contains("-")) {
+                val rangelist = value.split("-")
+                ageunitcnt = rangelist(0).toInt
+                agendrange = rangelist(1).toInt
+              }
+              else {
+                 ageunitcnt = value.toInt
+                 agendrange = ageunitcnt + 1
+              }
+              if((ageunitcnt >= agendrange) ||
+                  (unit == "FW" && ageunitcnt > 40) ||
+                  (unit == "FD" && ageunitcnt > 300))
+                 {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+            }
+           }
         else if (entryline.startsWith("CA   ")) { // Category
             if (!ok_catlist.contains(entrylinedata)) { Console.err.println("Illegal category found at: " + entryline); errcnt += 1 }
             }
@@ -484,6 +560,9 @@ object CelloParser {
                 <terminology name="PubChem" source="PubChem compound database" description="Public repository for information on chemical substances and their biological activities">
                     <url><![CDATA[https://pubchem.ncbi.nlm.nih.gov/]]></url>
                 </terminology>
+    						<terminology name="DrugBank" source="Wishart's group" description="DrugBank database">
+      							<url><![CDATA[https://www.drugbank.ca/]]></url>
+    						</terminology>
            </terminology-list>
          </header>   
            
@@ -500,7 +579,9 @@ object CelloParser {
     var parentac = ""
     var parentid = ""
     var ox = ""
+    var cellAge = ""
     var cellSex = ""
+    var parentAge = ""
     var parentSex = ""
     var parentSpecies = ""
     var category = ""
@@ -512,8 +593,10 @@ object CelloParser {
 
     Entries.foreach(entry => {
       category = ""
+      cellAge = ""
       cellSex = ""
       parentac = ""
+      parentAge = ""
       parentSex = ""
       parentSpecies = ""
       derivedfromcc = ""
@@ -523,7 +606,7 @@ object CelloParser {
       disErrorlist.clear
                                  
       entry.foreach(entryline => {
-       if (entryline.startsWith("AC   ")) { ac = entryline.substring(5); }
+       if (entryline.startsWith("AC   ")) { ac = entryline.substring(5) }
        else if (entryline.startsWith("OX   ")) { ox = entryline.split("=")(1) }
        else if (entryline.contains("Derived from sampling site") || entryline.contains("Derived from metastatic site")) { derivedfromcc = entryline.substring(5).split(": ")(0) }
        else if (entryline.startsWith("DI   ")) { disease = entryline.split("; ")(2); dislist += disease }
@@ -543,7 +626,7 @@ object CelloParser {
                        }
                      }
                 }
-       else if (entryline.startsWith("HI   ")) {
+       else if (entryline.startsWith("HI   ")) { // Entry has a parent
                parentac = entryline.substring(5).split(" ")(0)
                parentid = (entryline.substring(5).split("!")(1)).substring(1)
                if (parentac.equals(ac)) { Console.err.println("Self-referencing HI: " + parentac + "/" + ac); errcnt += 1 }
@@ -556,11 +639,13 @@ object CelloParser {
                              else if (line.startsWith("DI   ")) { if (!dislist.contains(line.split("; ")(2))) { disErrorlist += "Missing parent disease in: " + parentac + "(parent)=" + line.split("; ")(2) + " " + ac + "=" + disease } }
                              else if (line.contains("Derived from sampling site") || line.contains("Derived from metastatic site")) { parentderivedfromcc = line.substring(5).split(": ")(0) }
                              else if (line.startsWith("SX   ")) { parentSex = line.split("   ")(1) }
+                             else if (line.startsWith("AG   ")) { parentAge = line.split("   ")(1) }
                              else if (line.startsWith("HI   ")) { if (line.substring(5).split(" ")(0).equals(ac)) { Console.err.println("Reciprocal HI: " + parentac + "/" + ac); errcnt += 1 } }
                              })
                    }
                }
        else if (entryline.startsWith("SX   ")) { cellSex = entryline.split("   ")(1) }
+       else if (entryline.startsWith("AG   ")) { cellAge = entryline.split("   ")(1) }
        else if (entryline.startsWith("CA   ")) { category = entryline.split("   ")(1) }
       })
       
@@ -575,6 +660,8 @@ object CelloParser {
        if ((parentSpecies != "") && !ox.contains("hybrid") && (parentSpecies != ox)) { Console.err.println("Wrong parent species: " + parentac + "(parent)=" + parentSpecies + " " + ac + "=" + ox) }
        if (disErrorlist.length != 0) { Console.err.println(disErrorlist(0)); errcnt += 1 }
        if ((parentac != "") && cellSex != parentSex) { Console.err.println("Wrong parent's  ( " + parentac + " ) sex match in: " + ac); errcnt += 1 }  
+       if ((parentac != "") && parentAge != "" && cellAge != parentAge) { Console.err.println("Wrong parent's  ( " + parentac + ":" + parentAge + ") age match in: " + ac + ":" +  cellAge); errcnt += 1 }  
+       //else if ((parentac != "") && parentAge == "" && cellAge != parentAge) { Console.err.println("Check sisters  ( " + parentac  + ") for age  in: " + ac); errcnt += 1 }  
        if((parentac != "") && derivedfromcc != parentderivedfromcc) {Console.err.println("Missing parent's (" + parentac + ") 'derived from' CC in: " + ac); errcnt += 1 }
        }
    })
@@ -841,6 +928,7 @@ object CelloParser {
     var category = ""
     var entrycategory = ""
     var sex = ""
+    var age = ""
     var source_pmid = ""
     var alleles = ""
 
@@ -881,6 +969,7 @@ object CelloParser {
       }
       else if (entryline.startsWith("CA   ")) category = entrylinedata // Category  
       else if (entryline.startsWith("SX   ")) sex = entrylinedata // Sex  
+      else if (entryline.startsWith("AG   ")) age = entrylinedata // Age  
       else if (entryline.startsWith("DR   ")) { // xref 
         val db = entrylinedata.split("; ")(0)
         if(!xmap.contains(db)) Console.err.println("Error: no entry for \"" + db + "\" in cellosaurus_xrefs.txt")
@@ -964,7 +1053,7 @@ object CelloParser {
       }
 
     // Instanciate full entry, .reverse in lists to recover original order
-    val entry = new CelloEntry(ac = ac, oldacs = celloOldaclist, id = id, synonyms = celloSynlist.reverse, category = category, sex = sex, dbrefs = celloXreflist.reverse,
+    val entry = new CelloEntry(ac = ac, oldacs = celloOldaclist, id = id, synonyms = celloSynlist.reverse, category = category, sex = sex, age = age, dbrefs = celloXreflist.reverse,
       comments = celloCommentlist.reverse, webpages = celloWebPagelist.reverse, diseases = celloDislist.reverse, species = celloSpeclist.reverse,
       origin = celloOriglist.reverse, derived = celloDerivedlist.reverse, publis = celloPublilist.reverse, sources = celloSourcelist,
       sourcerefs = celloSourcereflist, strmarkers = finalmarkerList)
@@ -982,13 +1071,14 @@ class Author(val name: String) {
     <person name={ name }/>
 }
 
-class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val synonyms: List[Synonym], val category: String, val sex: String,
+class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val synonyms: List[Synonym],
+                 val category: String, val sex: String, val age: String,
                  val dbrefs: List[DbXref], var comments: List[Comment], val webpages: List[WebPage], val diseases: List[CvTerm],
                  val species: List[CvTerm], val origin: List[CvTerm], val derived: List[CvTerm], val publis: List[PubliRef],
                  val sources: List[Source], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker]) {
 
   def toXML =
-    <cell-line category={ category } sex={ if (sex != "") sex else null }>
+    <cell-line category={ category } sex={ if (sex != "") sex else null } age={ if (age != "") age else null }>
       <accession-list>
         <accession type="primary">{ ac }</accession>
         {
