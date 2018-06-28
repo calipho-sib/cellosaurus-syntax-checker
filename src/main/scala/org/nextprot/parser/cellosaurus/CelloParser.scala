@@ -215,6 +215,7 @@ object CelloParser {
       var coreid = ""
       var ac = ""
       var drlist = ArrayBuffer[String]()
+      var localsynlist = List.empty[String] // synonym's list to check against Misspelling comments
       var curr_rank = 0
       var last_rank = 0
       var curr_ccrank = 0
@@ -287,6 +288,7 @@ object CelloParser {
           if (synduplist.size != 0) synduplist.foreach(syn => { Console.err.println("Locally duplicated SY: " + syn); errcnt += 1 })
             locsynlist.foreach(synonym => {
             syncnt += 1
+            localsynlist = localsynlist:+(synonym)
             if (synonym == id) { Console.err.println("Synonym exists as main ID: " + id); errcnt += 1 }
             else if(conflictfilename != "") {
             synoidlist = synoidlist:+((synonym.toLowerCase, synonym))
@@ -354,7 +356,12 @@ object CelloParser {
             if(!drlist.contains(discontinued))
               { Console.err.println("No match for discontinued: '" + discontinued + "' found among DR lines of " + ac); errcnt += 1 }
             }
-          if(cctopic == "Misspelling" && cctoks.size != 2) { Console.err.println("Wrong format for "  + entryline); errcnt += 1 }
+          if(cctopic == "Misspelling") {
+            if (cctoks.size != 2) { Console.err.println("Wrong format for "  + entryline); errcnt += 1 }
+            val misspelledname = cctoks(0)
+            if(id == misspelledname) { Console.err.println("Misspelled name is in current ID at "  + entryline); errcnt += 1 }
+            if(localsynlist.contains(misspelledname)) { Console.err.println("Misspelled name is in current SY at "  + entryline); errcnt += 1 }
+            }
           }
         else if (entryline.startsWith("ST   ")) { // Short tandem repeats
           hasSTR = true
@@ -947,7 +954,7 @@ object CelloParser {
     var celloWebPagelist = List[WebPage]()
 
     flatEntry.foreach(entryline => { // First pass just to get the cell line category, it can influence the urls in DbXrefs
-    if (entryline.startsWith("CC   Part of: ECACC")) entrycategory = entryline.substring(20) // Category    
+    if (entryline.startsWith("CC   Part of: ECACC") || entryline.startsWith("CC   Part of: Motor Neurone Disease")) entrycategory = entryline.substring(20) // Category    
     else if (entryline.startsWith("CA   ") && entrycategory == "") entrycategory = entryline.substring(5) // Category
     })
     
@@ -1320,6 +1327,7 @@ class DbXref(val _db: String, val _ac: String, val _category: String, val _url: 
         if(_entryCategory.equals("Hybridoma")) {urlCategory = "hybridoma"; collection="ecacc_gc";}
         else if(_entryCategory.equals("Induced pluripotent stem cell")) {urlCategory = "ipsc"; collection="ecacc_ipsc";}
         else if(_entryCategory.startsWith("chromosomal")) {urlCategory = "humangeneticca"; collection="ecacc_hgc";}
+        else if(_entryCategory.startsWith("Neurone Disease (MND)")) {urlCategory = "diseaseandnormalcohortcollections"; collection="ecacc_mnd";}
         else if(_entryCategory.startsWith("randomly")) {urlCategory = "humanrandomcontrol"; collection="ecacc_hrc";}
         if(urlCategory != "") modifiedUrl = _url.replace("generalcell", urlCategory).split("&")(0) + "&collection=" + collection
         else modifiedUrl = _url
