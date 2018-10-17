@@ -134,9 +134,10 @@ object CelloParser {
     var cc = ArrayBuffer[String]()
     var dr = ArrayBuffer[String]()
     var st = ArrayBuffer[String]()
+    var hlatypes = ArrayBuffer[String]()
     var valid_element = ""
     for (line <- Source.fromFile(celloCVpath).getLines()) {
-      if (line.matches("[CDS][ACRT]   .*")) {
+      if (line.matches("[CDSH][ACRTL]   .*")) {
         valid_element = line.substring(5).trim()
         if (valid_element.contains("#")) valid_element = valid_element.split("#")(0).trim()
       }
@@ -144,11 +145,14 @@ object CelloParser {
       else if (line.startsWith("CA   ")) ca += valid_element
       else if (line.startsWith("CC   ")) cc += valid_element
       else if (line.startsWith("ST   ")) st += valid_element
+      else if (line.startsWith("HL   ")) hlatypes += valid_element
     }
     val ok_dblist = dr.toList
     val ok_cclist = cc.toList
     val ok_catlist = ca.toList
     val ok_stlist = st.toList
+    val ok_hlatypeslist = hlatypes.toList
+    
     // Prepare subsetdef list from categories (for OBO generation)
     var subsetdefs = ""
     ok_catlist.foreach(cat => { // categories
@@ -356,14 +360,32 @@ object CelloParser {
             if(!drlist.contains(discontinued))
               { Console.err.println("No match for discontinued: '" + discontinued + "' found among DR lines of " + ac); errcnt += 1 }
             }
-          if(cctopic == "Misspelling") {
+          else if(cctopic == "Misspelling") {
             if (cctoks.size != 2) { Console.err.println("Wrong format for "  + entryline); errcnt += 1 }
             val misspelledname = cctoks(0)
             if(id == misspelledname) { Console.err.println("Misspelled name is in current ID at "  + entryline); errcnt += 1 }
             if(localsynlist.contains(misspelledname)) { Console.err.println("Misspelled name is in current SY at "  + entryline); errcnt += 1 }
             }
+          else if(cctopic == "HLA typing") { // Check types            
+            cctoks.foreach(token => {
+                      val onetoklist = token.split("\\*")
+                      if(onetoklist.size != 2) { Console.err.println("Unknown HLA type (" + token + ") found in: " + ac); errcnt += 1 }
+                      else {
+                       val tokstart = onetoklist(0) + "*"
+                       if (!ok_hlatypeslist.contains(tokstart)) { Console.err.println("Unknown HLA type (" + token + ") found in: " + ac); errcnt += 1 }
+                      }
+                    }) 
+            if(!cctoks.last.contains(" ")) {Console.err.println("Wrong format for HLA typing source at "  + entryline); errcnt += 1 }
+            else {
+              val srctoken = cctoks.last.split(" ")(1)
+              if (!(srctoken.endsWith(").") && srctoken.startsWith("("))) {Console.err.println("Wrong format for HLA typing source at "  + entryline); errcnt += 1 }
+              else if (srctoken.contains("PubMed=")) { // check pubmeds in parentheses
+                uniquerefs += srctoken.split("[\\(||\\)]")(1)
+              }
+             }
+            }
           }
-        else if (entryline.startsWith("ST   ")) { // Short tandem repeats
+        else if (entryline.startsWith("ST   ")) { // Short tandem repeats 
           hasSTR = true
           if (!entrylinedata.contains(": ")) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
           else {
@@ -942,6 +964,7 @@ object CelloParser {
     var celloStrmarkerlist = List[Strmarker]()
     var celloSourcelist = List[Source]()
     var celloSourcereflist = List[PubliRef]()
+    var celloHLAlist = List[HLAData]()
     var celloOldaclist = List[OldAc]()
     var celloSynlist = List[Synonym]()
     var celloPublilist = List[PubliRef]()
@@ -991,6 +1014,16 @@ object CelloParser {
         if(!(category.equals("Miscellaneous") || category.equals("Caution") || category.equals("Problematic cell line")) )
           textdata = textdata.dropRight(1) // Drop final dot
           celloCommentlist = new Comment(category = category, text = textdata, xmap) :: celloCommentlist
+        if(category.equals("HLA typing")) { // prepare hla-list of gene/alleles
+          val hlatoks = textdata.split("; ")
+          hlatoks.foreach(hlaItem => {
+          val id = hlaItem.split("\\*")(0) + "*"
+          var hlaAlleles = hlaItem.split("\\*")(1)
+          if(hlaAlleles.contains("(")) hlaAlleles = hlaAlleles.split(" \\(")(0)
+          celloHLAlist = new HLAData(id=id, alleles=hlaAlleles) :: celloHLAlist
+          })
+         //}
+        }
         //else Console.err.println(category + " " + textdata)
       }
       else if (entryline.startsWith("WW   ")) { // web pages  
@@ -1063,7 +1096,7 @@ object CelloParser {
     val entry = new CelloEntry(ac = ac, oldacs = celloOldaclist, id = id, synonyms = celloSynlist.reverse, category = category, sex = sex, age = age, dbrefs = celloXreflist.reverse,
       comments = celloCommentlist.reverse, webpages = celloWebPagelist.reverse, diseases = celloDislist.reverse, species = celloSpeclist.reverse,
       origin = celloOriglist.reverse, derived = celloDerivedlist.reverse, publis = celloPublilist.reverse, sources = celloSourcelist,
-      sourcerefs = celloSourcereflist, strmarkers = finalmarkerList)
+      sourcerefs = celloSourcereflist, strmarkers = finalmarkerList, hla = celloHLAlist.reverse)
  
     entry
   }
@@ -1082,7 +1115,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
                  val category: String, val sex: String, val age: String,
                  val dbrefs: List[DbXref], var comments: List[Comment], val webpages: List[WebPage], val diseases: List[CvTerm],
                  val species: List[CvTerm], val origin: List[CvTerm], val derived: List[CvTerm], val publis: List[PubliRef],
-                 val sources: List[Source], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker]) {
+                 val sources: List[Source], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker], val hla: List[HLAData]) {
 
   def toXML =
     <cell-line category={ category } sex={ if (sex != "") sex else null } age={ if (age != "") age else null }>
@@ -1155,13 +1188,19 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
           </reference-list>
       }
       {
+        if (hla.size > 0)
+          <hla-list>
+            { hla.map(_.toXML) }
+          </hla-list>
+      }
+      {
         if (dbrefs.size > 0)
           <xref-list>
             { dbrefs.map(_.toXML) }
           </xref-list>
       }
     </cell-line>
-      
+       
   def toOBO =  {
   var oboEntryString = "\n[Term]\n"
   var currcomment = ""
@@ -1302,6 +1341,14 @@ class WebPage(val url: String) {
     val drline = "xref: " + url + "\n"
     drline
   }
+}
+
+class HLAData(val id: String, val alleles: String) {
+
+  def toXML =
+    <hla-gene id={ id }>
+			<alleles>{alleles}</alleles>
+    </hla-gene>
 }
 
 class DbXref(val _db: String, val _ac: String, val _category: String, val _url: String, var _property: String, val _entryCategory: String) {
