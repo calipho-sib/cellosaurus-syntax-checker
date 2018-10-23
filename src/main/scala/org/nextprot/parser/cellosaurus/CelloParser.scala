@@ -366,8 +366,14 @@ object CelloParser {
             if(id == misspelledname) { Console.err.println("Misspelled name is in current ID at "  + entryline); errcnt += 1 }
             if(localsynlist.contains(misspelledname)) { Console.err.println("Misspelled name is in current SY at "  + entryline); errcnt += 1 }
             }
-          else if(cctopic == "HLA typing") { // Check types            
-            cctoks.foreach(token => {
+          else if(cctopic == "HLA typing") { // sample HLA typing: A*02:01,02:06; B*40:01:02:01,67:01:01; C*03,07; DPB1*04:01,05:01 (IMGT/HLA).
+            // Retokenize to separate items from source Check types
+            val alltoks = cctext.split(" \\(")
+            if(alltoks.size != 2) { Console.err.println("Wrong format for HLA typing source in " + ac); errcnt += 1 }
+            else {
+            val srctok = alltoks(1).split("\\)")(0)
+            val hlatoks = alltoks(0).split("; ") 
+            hlatoks.foreach(token => {
                       val onetoklist = token.split("\\*")
                       if(onetoklist.size != 2) { Console.err.println("Unknown HLA type (" + token + ") found in: " + ac); errcnt += 1 }
                       else {
@@ -375,15 +381,10 @@ object CelloParser {
                        if (!ok_hlatypeslist.contains(tokstart)) { Console.err.println("Unknown HLA type (" + token + ") found in: " + ac); errcnt += 1 }
                       }
                     }) 
-            if(!cctoks.last.contains(" ")) {Console.err.println("Wrong format for HLA typing source at "  + entryline); errcnt += 1 }
-            else {
-              val srctoken = cctoks.last.split(" ")(1)
-              if (!(srctoken.endsWith(").") && srctoken.startsWith("("))) {Console.err.println("Wrong format for HLA typing source at "  + entryline); errcnt += 1 }
-              else if (srctoken.contains("PubMed=")) { // check pubmeds in parentheses
-                uniquerefs += srctoken.split("[\\(||\\)]")(1)
-              }
-             }
+            if(!alltoks(1).endsWith(").")) {Console.err.println("Wrong format for HLA typing source at "  + entryline); errcnt += 1 }
+            else if (srctok.contains("PubMed=")) { uniquerefs += srctok }// add pubmeds to refs list
             }
+           }
           }
         else if (entryline.startsWith("ST   ")) { // Short tandem repeats 
           hasSTR = true
@@ -964,7 +965,7 @@ object CelloParser {
     var celloStrmarkerlist = List[Strmarker]()
     var celloSourcelist = List[Source]()
     var celloSourcereflist = List[PubliRef]()
-    var celloHLAlist = List[HLAData]()
+    var celloHLAlists = List[HLAlistwithSource]()
     var celloOldaclist = List[OldAc]()
     var celloSynlist = List[Synonym]()
     var celloPublilist = List[PubliRef]()
@@ -1013,16 +1014,19 @@ object CelloParser {
           textdata += ": " + linetokens(2).trim()
         if(!(category.equals("Miscellaneous") || category.equals("Caution") || category.equals("Problematic cell line")) )
           textdata = textdata.dropRight(1) // Drop final dot
+        if(!category.equals("HLA typing"))  
           celloCommentlist = new Comment(category = category, text = textdata, xmap) :: celloCommentlist
-        if(category.equals("HLA typing")) { // prepare hla-list of gene/alleles
-          val hlatoks = textdata.split("; ")
+        else { // skip comment's xml and prepare hla-lists of gene/alleles with sources
+          var hlaSrc = textdata.split("\\(|\\)")(1)
+          var celloHLAlist = List[HLAData]()
+          val hlatoks = textdata.split(" \\(")(0).split("; ")
           hlatoks.foreach(hlaItem => {
-          val id = hlaItem.split("\\*")(0) + "*"
-          var hlaAlleles = hlaItem.split("\\*")(1)
-          if(hlaAlleles.contains("(")) hlaAlleles = hlaAlleles.split(" \\(")(0)
-          celloHLAlist = new HLAData(id=id, alleles=hlaAlleles) :: celloHLAlist
-          })
-         //}
+            val id = hlaItem.split("\\*")(0) + "*"
+            var hlaAlleles = hlaItem.split("\\*")(1)
+            celloHLAlist = new HLAData(id=id, alleles=hlaAlleles) :: celloHLAlist
+            })
+            val celloHLAlistwithSource = new HLAlistwithSource(glist=celloHLAlist.reverse, src=hlaSrc) // add source to list
+            celloHLAlists = celloHLAlistwithSource :: celloHLAlists // add list to list of list  
         }
         //else Console.err.println(category + " " + textdata)
       }
@@ -1096,7 +1100,7 @@ object CelloParser {
     val entry = new CelloEntry(ac = ac, oldacs = celloOldaclist, id = id, synonyms = celloSynlist.reverse, category = category, sex = sex, age = age, dbrefs = celloXreflist.reverse,
       comments = celloCommentlist.reverse, webpages = celloWebPagelist.reverse, diseases = celloDislist.reverse, species = celloSpeclist.reverse,
       origin = celloOriglist.reverse, derived = celloDerivedlist.reverse, publis = celloPublilist.reverse, sources = celloSourcelist,
-      sourcerefs = celloSourcereflist, strmarkers = finalmarkerList, hla = celloHLAlist.reverse)
+      sourcerefs = celloSourcereflist, strmarkers = finalmarkerList, hlalists = celloHLAlists.reverse)
  
     entry
   }
@@ -1115,7 +1119,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
                  val category: String, val sex: String, val age: String,
                  val dbrefs: List[DbXref], var comments: List[Comment], val webpages: List[WebPage], val diseases: List[CvTerm],
                  val species: List[CvTerm], val origin: List[CvTerm], val derived: List[CvTerm], val publis: List[PubliRef],
-                 val sources: List[Source], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker], val hla: List[HLAData]) {
+                 val sources: List[Source], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker], val hlalists: List[HLAlistwithSource]) {
 
   def toXML =
     <cell-line category={ category } sex={ if (sex != "") sex else null } age={ if (age != "") age else null }>
@@ -1188,10 +1192,10 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
           </reference-list>
       }
       {
-        if (hla.size > 0)
-          <hla-list>
-            { hla.map(_.toXML) }
-          </hla-list>
+        if (hlalists.size > 0)
+          <hla-lists>
+            { hlalists.map(_.toXML) }
+          </hla-lists>
       }
       {
         if (dbrefs.size > 0)
@@ -1349,6 +1353,21 @@ class HLAData(val id: String, val alleles: String) {
     <hla-gene id={ id }>
 			<alleles>{alleles}</alleles>
     </hla-gene>
+}
+
+class HLAlistwithSource(val glist: List[HLAData], val src: String) {
+  def toXML =
+    <hla-list>
+      { glist.map(_.toXML) }
+      <hla-list-source>
+          {
+          if (src.contains("PubMed") )
+          <reference resource-internal-ref={ src }/>
+          else
+          <source>{ src }</source>  
+          }
+		  </hla-list-source>
+    </hla-list>
 }
 
 class DbXref(val _db: String, val _ac: String, val _category: String, val _url: String, var _property: String, val _entryCategory: String) {
