@@ -797,7 +797,7 @@ object CelloParser {
       var line = ""
       punctmap.foreach { idac =>
         val stripped = idac._2.filter(!" -/.".contains(_)) 
-        if(dup == stripped) { dupidlist += idac._2; dupaclist += idac._1} //dupfile.write(idac._2 + ", " + idac._1 + " ")
+        if(dup == stripped) { dupidlist += idac._2; dupaclist += idac._1} 
         }
        dupidlist.init foreach{ id => line += id + ", "}
        line +=  dupidlist.last + ": "
@@ -1014,9 +1014,8 @@ object CelloParser {
           textdata += ": " + linetokens(2).trim()
         if(!(category.equals("Miscellaneous") || category.equals("Caution") || category.equals("Problematic cell line")) )
           textdata = textdata.dropRight(1) // Drop final dot
-        if(!category.equals("HLA typing"))  
-          celloCommentlist = new Comment(category = category, text = textdata, xmap) :: celloCommentlist
-        else { // skip comment's xml and prepare hla-lists of gene/alleles with sources
+        if(category.equals("HLA typing"))  
+         { // prepare hla-lists of gene/alleles with sources
           var hlaSrc = textdata.split("\\(|\\)")(1)
           var celloHLAlist = List[HLAData]()
           val hlatoks = textdata.split(" \\(")(0).split("; ")
@@ -1028,7 +1027,7 @@ object CelloParser {
             val celloHLAlistwithSource = new HLAlistwithSource(glist=celloHLAlist.reverse, src=hlaSrc) // add source to list
             celloHLAlists = celloHLAlistwithSource :: celloHLAlists // add list to list of list  
         }
-        //else Console.err.println(category + " " + textdata)
+        celloCommentlist = new Comment(category = category, text = textdata, xmap) :: celloCommentlist
       }
       else if (entryline.startsWith("WW   ")) { // web pages  
         celloWebPagelist = new WebPage(url = entrylinedata.trim()) :: celloWebPagelist
@@ -1510,7 +1509,7 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
     }
   }
 
-  def toXML =
+  def toXML = if(category != "HLA typing") // skip this comment's xml since it appears later in a structured form 
     <comment category={ category }> { if(text != "") {text} } { if (method != "") <method>{ method }</method> } { if (cvterm != null) {cvterm.toXML}} { if (ccXreflist.size > 0) <xref-list> { ccXreflist.map(_.toXML) } </xref-list> }</comment>
 
   def toOBO =  {
