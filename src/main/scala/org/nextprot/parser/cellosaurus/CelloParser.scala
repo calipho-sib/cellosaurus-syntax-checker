@@ -1135,7 +1135,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
         }
       </name-list>
       {
-        if (comments.size > 0)
+        if (comments.size > 0 && !(comments.size == 1 && comments(0).category.equals("HLA typing"))) // HLA tyling has it's own structure
           <comment-list>
             { comments.map(_.toXML) }
           </comment-list>
