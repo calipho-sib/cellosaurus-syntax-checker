@@ -351,7 +351,7 @@ object CelloParser {
           val cctoks = cctext.split("; ")
           if(cctoks.size > 1 ) {
           	val maybedb = cctoks(0)
-           	if (((maybedb == "UniProtKB") || (maybedb == "HGNC") || (ok_dblist.contains(maybedb))) && cctoks.size < 3) { Console.err.println("Missing separator at : " + entryline); errcnt += 1 }
+           	if (((maybedb.startsWith("UniProtKB")) || (maybedb.startsWith("HGNC"))  || (maybedb.startsWith("NCBI_TaxID")) || (ok_dblist.contains(maybedb))) && cctoks.size < 3) { Console.err.println("Missing separator at : " + entryline); errcnt += 1 }
          	 }
           if(cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
             // These discontinued CCs must also exist as DR lines
@@ -538,7 +538,7 @@ object CelloParser {
                  agendrange = ageunitcnt + 1
               }
               if((ageunitcnt >= agendrange) ||
-                  (unit == "FW" && ageunitcnt > 40) ||
+                  (unit == "FW" && ageunitcnt > 42) ||
                   (unit == "FD" && ageunitcnt > 300))
                  {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
             }
@@ -1135,7 +1135,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
         }
       </name-list>
       {
-        if (comments.size > 0 && !(comments.size == 1 && comments(0).category.equals("HLA typing"))) // HLA tyling has it's own structure
+        if (comments.size > 0 && !(comments.size == 1 && comments(0).category.equals("HLA typing"))) // HLA typing has it's own structure
           <comment-list>
             { comments.map(_.toXML) }
           </comment-list>
