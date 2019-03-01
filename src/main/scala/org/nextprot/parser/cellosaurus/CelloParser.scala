@@ -388,7 +388,8 @@ object CelloParser {
           }
         else if (entryline.startsWith("ST   ")) { // Short tandem repeats 
           hasSTR = true
-          if (!entrylinedata.contains(": ")) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
+          //if (!entrylinedata.contains(": ")) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
+          if ("[A-Za-z0-9)]: ".r.findFirstIn(entrylinedata) == None) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
           else {
             val sttopic = entrylinedata.split(":")(0)
             val stdata = entrylinedata.split(": ")(1).trim()
@@ -409,7 +410,8 @@ object CelloParser {
                     toklist.foreach(token => {
                       //Console.err.println("token: " + token)
                       val dottoken = token.split("\\.")
-                      if (dottoken(0).length() > 2) { if(!entrylinedata.contains("Dog ")) {Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }} // no more than 99 except for dog
+                      if (dottoken.size > 2) {Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 } // no more one dot oer token
+                      else if (dottoken(0).length() > 2) { if(!entrylinedata.contains("Dog ")) {Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }} // no more than 99 except for dog
                       else if (dottoken.length > 1 && dottoken(1).length() > 1) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
                     })
                     // check for order and unicity
