@@ -13,6 +13,7 @@ import java.io.File
 import java.util.Arrays
 import java.util.Calendar
 import java.text.SimpleDateFormat
+import java.util.Date;
 import scala.xml._
 //import org.nextprot.parser.cellosaurus.datamodel
 //import org.nextprot.parser.cellosaurus.datamodel.publication
@@ -48,9 +49,9 @@ object CelloParser {
     val emap = Map.empty[String, Int]
     val oxmap = Map.empty[String, Int]
     val line_occmap = Map("ID" -> (1, 1), "AC" -> (1, 1), "AS" -> (0, 1), "SY" -> (0, 1), "DR" -> (0, 1999), "RX" -> (0, 999), "WW" -> (0, 999), "CC" -> (0, 999), "ST" -> (0, 999), "DI" -> (0, 99), "OX" -> (1, 999), "HI" -> (0, 999),
-      "OI" -> (0, 999), "SX" -> (0, 1), "AG" -> (0, 1), "CA" -> (1, 1)) // min and max occurences
+      "OI" -> (0, 999), "SX" -> (0, 1), "AG" -> (0, 1), "CA" -> (1, 1), "DT" -> (0, 1)) // min and max occurences
     val line_ordmap = Map("ID" -> 1, "AC" -> 2, "AS" -> 3, "SY" -> 4, "DR" -> 5, "RX" -> 6, "WW" -> 7, "CC" -> 8, "ST" -> 9, "DI" -> 10, "OX" -> 11, "HI" -> 12, "OI" -> 14,
-      "SX" -> 14, "AG" -> 15, "CA" -> 16)
+      "SX" -> 14, "AG" -> 15, "CA" -> 16, "DT" -> 17)
     val idacmap = Map.empty[String, String]
     var synoaclist = List.empty[(String,String)]
     var synoidlist = List.empty[(String,String)]
@@ -66,7 +67,8 @@ object CelloParser {
     val stdataregexp = new Regex("[0-9][0-9]?(\\.[1-9])?(,[1-9][0-9]?(\\.[1-9]?)?){0,4}( \\([A-Zs][A-Za-z0-9_;=:/\\.\\- ]+\\))?$") // s is for some_subclones
     val ameloregexp = new Regex("X|X,Y|Y|Not_detected( \\([A-Z][A-Za-z0-9_;=:\\- ]+\\))?$")
     val repcntregexp = new Regex("^[0-9\\.,]{1,30}+$")
-
+    val entrydateregexp = new Regex("^[0-3][0-9]-[0-1][0-9]-[0-2][0-9]$")
+    
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_dblist1 = List("ATCC", "BCRC", "BCRJ", "BTO", "BioSample", "CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "ChEMBL-Cells", "ChEMBL-Targets", "CLDB",
       "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DGRC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "GDSC", "hPSCreg", "ICLC",
@@ -75,11 +77,11 @@ object CelloParser {
     val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
     val ok_sxlist = List("Female", "Male", "Mixed sex", "Sex ambiguous", "Sex unspecified")
     // Just a reminder, the actual CV is stored in celloparser.cv file
-    val ok_cclist1 = List("Breed/subspecies", "Caution", "Derived from metastatic site", "Discontinued", "From", "Group", "Knockout cell", "Miscellaneous", "Misspelling",
-      "Monoclonal antibody target", "Omics", "Part of", "Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with")
+    val ok_cclist1 = List("Anecdotal", "Breed/subspecies", "Caution", "Derived from metastatic site", "Derived from sampling site", "Discontinued", "From", "Genome ancestry", "Group", "HLA typing", "Knockout cell", "Microsatellite instability", "Miscellaneous", "Misspelling",
+      "Monoclonal antibody isotype", "Monoclonal antibody target", "Omics", "Part of", "Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_catlist1 = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
-      "Spontaneously immortalized cell line", "Stromal cell line",
+      "Spontaneously immortalized cell line", "Stromal cell line", "Conditionally immortalized cell line",
       "Telomerase immortalized cell line", "Transformed cell line", "Undefined cell line type", "Embryonic stem cell",
       "Factor-dependent cell line", "Finite cell line")
     var errcnt = 0
@@ -135,9 +137,11 @@ object CelloParser {
     var dr = ArrayBuffer[String]()
     var st = ArrayBuffer[String]()
     var hlatypes = ArrayBuffer[String]()
+    var poptypes = ArrayBuffer[String]()
     var valid_element = ""
+    
     for (line <- Source.fromFile(celloCVpath).getLines()) {
-      if (line.matches("[CDSH][ACRTL]   .*")) {
+      if (line.matches("[CDSHP][ACRTLO]   .*")) {
         valid_element = line.substring(5).trim()
         if (valid_element.contains("#")) valid_element = valid_element.split("#")(0).trim()
       }
@@ -146,12 +150,14 @@ object CelloParser {
       else if (line.startsWith("CC   ")) cc += valid_element
       else if (line.startsWith("ST   ")) st += valid_element
       else if (line.startsWith("HL   ")) hlatypes += valid_element
+      else if (line.startsWith("PO   ")) poptypes += valid_element
     }
     val ok_dblist = dr.toList
     val ok_cclist = cc.toList
     val ok_catlist = ca.toList
     val ok_stlist = st.toList
     val ok_hlatypeslist = hlatypes.toList
+    val ok_poptypeslist = poptypes.toList
     
     // Prepare subsetdef list from categories (for OBO generation)
     var subsetdefs = ""
@@ -227,7 +233,7 @@ object CelloParser {
       var strsrcCnt = 0 // count of ST Sources lines in an entry, never > 1
       var hasSTR = false
       val linecntmap = Map("ID" -> 0, "AC" -> 0, "AS" -> 0, "SY" -> 0, "DR" -> 0, "RX" -> 0, "WW" -> 0, "CC" -> 0, "ST" -> 0, "DI" -> 0, "OX" -> 0, "HI" -> 0,
-        "OI" -> 0, "SX" -> 0, "AG" -> 0, "CA" -> 0) // Initialize to 0 the line count for each possible field
+        "OI" -> 0, "SX" -> 0, "AG" -> 0, "CA" -> 0, "DT" -> 0) // Initialize to 0 the line count for each possible field
       if (!(entry(0).startsWith("ID   ") && entry(1).startsWith("AC   "))) { Console.err.println("Severe error: Missing ID/AC line at " + entry(0) + " Please correct before re-check"); sys.exit(2) }
       entry.foreach(entryline => { //println(entryline)
         var entrylinedata = ""
@@ -272,7 +278,6 @@ object CelloParser {
           	   val mappedac = idacmap.find(_._2 == lastid).getOrElse(default)._1
           	   val newcasedup = (List(lastid,id),List(mappedac.toString(),ac))
           	   caseiddups = caseiddups:+newcasedup
-          	   //Console.err.println(id + " === " + lastid)
           	   }
           	}
           entrynb += 1;
@@ -361,11 +366,36 @@ object CelloParser {
               { Console.err.println("No match for discontinued: '" + discontinued + "' found among DR lines of " + ac); errcnt += 1 }
             }
           else if(cctopic == "Misspelling") {
-            if (cctoks.size != 2) { Console.err.println("Wrong format for "  + entryline); errcnt += 1 }
+            if (cctoks.size != 2) { Console.err.println("Wrong format for " + entryline); errcnt += 1 }
             val misspelledname = cctoks(0)
             if(id == misspelledname) { Console.err.println("Misspelled name is in current ID at "  + entryline); errcnt += 1 }
             if(localsynlist.contains(misspelledname)) { Console.err.println("Misspelled name is in current SY at "  + entryline); errcnt += 1 }
             }
+          else if(cctopic == "Registration") { // format like an x-ref, registry then registry number
+            if (cctoks.size != 2) { Console.err.println("Wrong format for " + entryline); errcnt += 1 }
+            }
+          else if(cctopic == "Genome ancestry") { // check populations cv
+            val allpoptoks = cctext.split(" \\(")
+            if(allpoptoks.size != 2) { Console.err.println("Wrong format for Genome ancestry source in " + ac); errcnt += 1 }
+            else {
+            val popsrctok = allpoptoks(1).split("\\)")(0)
+            val poptoks = allpoptoks(0).split("; ") 
+            if(poptoks.size != 7) { Console.err.println("Wrong populatio count for Genome ancestry source in " + ac); errcnt += 1 }
+            var totalpercent = 0.0
+            poptoks.foreach(token => {
+                      val onepoptoklist = token.split("=")
+                      if(onepoptoklist.size != 2) { Console.err.println("Unknown Genome ancestry (" + token + ") found in: " + ac); errcnt += 1 }
+                      else {
+                       if (new Regex("^[0-9.]+%$").findFirstIn(onepoptoklist(1)) == None) { Console.err.println("Wrong population frequency format: " + entryline); errcnt += 1 } 
+                       else totalpercent +=  onepoptoklist(1).dropRight(1).toFloat
+                       if (!ok_poptypeslist.contains(onepoptoklist(0))) { Console.err.println("Unknown Genome ancestry population (" + token + ") found in: " + ac); errcnt += 1 }
+                      }
+                    }) 
+            // check total percent is 100
+            if(totalpercent < 99.8 || totalpercent > 100.2) {Console.err.println("Total count is not 100% at "  + entryline); errcnt += 1 }       
+            if(!allpoptoks(1).endsWith(").")) {Console.err.println("Wrong format for Genome ancestry source at "  + entryline); errcnt += 1 }
+            else if (popsrctok.contains("PubMed=")) { uniquerefs += popsrctok }// add pubmeds to refs list
+            }            }
           else if(cctopic == "HLA typing") { // sample HLA typing: A*02:01,02:06; B*40:01:02:01,67:01:01; C*03,07; DPB1*04:01,05:01 (IMGT/HLA).
             // Retokenize to separate items from source Check types
             val alltoks = cctext.split(" \\(")
@@ -548,6 +578,19 @@ object CelloParser {
         else if (entryline.startsWith("CA   ")) { // Category
             if (!ok_catlist.contains(entrylinedata)) { Console.err.println("Illegal category found at: " + entryline); errcnt += 1 }
             }
+        else if (entryline.startsWith("DT   ")) { // Dates and version
+            val DTlist = entrylinedata.split("; ")
+            if (DTlist.size != 3) { Console.err.println("Illegal subfield count at: " + entryline); errcnt += 1 }
+            val creatlist = DTlist(0).split(": ")
+            if (creatlist(0) != "Created") { Console.err.println("Illegal subfield title at: " + entryline); errcnt += 1 }
+            val updatlist = DTlist(1).split(": ")
+            if (updatlist(0) != "Last updated") { Console.err.println("Illegal subfield title at: " + entryline); errcnt += 1 }
+            if (entrydateregexp.findFirstIn(creatlist(1)) == None ||
+                entrydateregexp.findFirstIn(updatlist(1)) == None) { Console.err.println("Incorrect date format at: " + entryline); errcnt += 1 }
+            val verslist = DTlist(2).split(": ")
+            if (verslist(0) != "Version") { Console.err.println("Illegal subfield title at: " + entryline); errcnt += 1 }
+            else if (new Regex("^[0-9]+$").findFirstIn(verslist(1)) == None) { Console.err.println("Illegal version number: " + entryline); errcnt += 1 }
+           }
         else if (entryline.startsWith("//")) { // Entry terminator, check line occurences in collected entry
             linecntmap.keys.foreach { key =>
             if ((linecntmap(key) < line_occmap(key)._1) || (linecntmap(key) > line_occmap(key)._2))
@@ -862,7 +905,6 @@ object CelloParser {
     var city = ""
     var country = ""
     var institute = ""
-    //var location = ""
     var pubtype = ""
     var internalId = ""
     val editorregexp = new Regex("[A-Z][a-z]+.* .*[A-Z]\\.$") // eg: Saunders S.J., Gruev B., Park J.-G.
@@ -963,9 +1005,12 @@ object CelloParser {
     var age = ""
     var source_pmid = ""
     var alleles = ""
-
+    var celloCreatDat = ""
+    var celloUpdatDat = ""
+    var celloVersion = ""
+    
     var celloStrmarkerlist = List[Strmarker]()
-    var celloSourcelist = List[Source]()
+    var celloSourcelist = List[STsource]()
     var celloSourcereflist = List[PubliRef]()
     var celloHLAlists = List[HLAlistwithSource]()
     var celloOldaclist = List[OldAc]()
@@ -978,7 +1023,9 @@ object CelloParser {
     var celloXreflist = List[DbXref]()
     var celloCommentlist = List[Comment]()
     var celloWebPagelist = List[WebPage]()
-
+    var celloReglist = List[Registration]()
+    var popDatawithSource : PopulistwithSource = null
+    
     flatEntry.foreach(entryline => { // First pass just to get the cell line category, it can influence the urls in DbXrefs
     if (entryline.startsWith("CC   Part of: ECACC") || entryline.startsWith("CC   Part of: Motor Neurone Disease")) entrycategory = entryline.substring(20) // Category    
     else if (entryline.startsWith("CA   ") && entrycategory == "") entrycategory = entryline.substring(5) // Category
@@ -1028,7 +1075,25 @@ object CelloParser {
             })
             val celloHLAlistwithSource = new HLAlistwithSource(glist=celloHLAlist.reverse, src=hlaSrc) // add source to list
             celloHLAlists = celloHLAlistwithSource :: celloHLAlists // add list to list of list  
-        }
+         }
+        else if(category.equals("Genome ancestry"))  
+         { // prepare population lists with sources
+          var popuSrc = textdata.split("\\(|\\)")(1)
+          
+          var cellopoplist = List[PopFreqData]()
+          val poptoks = textdata.split(" \\(")(0).split("; ")
+          poptoks.foreach(popItem => {
+            val popName = popItem.split("=")(0)
+            val popFreq = popItem.split("=")(1).dropRight(1) // Remove the % sign
+            cellopoplist = new PopFreqData(popName=popName, popFreq=popFreq) :: cellopoplist
+            })
+            popDatawithSource = new PopulistwithSource(poplist=cellopoplist.reverse, src=popuSrc) // add source to list
+         }
+        else if(category.equals("Registration"))  
+         { // prepare registration list 
+          var regtoks = textdata.split("; ")
+          celloReglist = new Registration(registry=regtoks(0), regnumber=regtoks(1).dropRight(1)) :: celloReglist
+         }
         celloCommentlist = new Comment(category = category, text = textdata, xmap) :: celloCommentlist
       }
       else if (entryline.startsWith("WW   ")) { // web pages  
@@ -1049,17 +1114,24 @@ object CelloParser {
       else if (entryline.startsWith("RX   ")) { // publications 
         celloPublilist = new PubliRef(db_ac = entrylinedata.split(";")(0)) :: celloPublilist
       }
+      else if (entryline.startsWith("DT   ")) { // dates and version 
+        var orgdatlist = entrylinedata.split("; ")(0).split(": ")(1).split("-")
+        celloCreatDat = (orgdatlist(2).toInt + 2000).toString + "-" + orgdatlist(1) + "-" + orgdatlist(0) // convert to YYYY-MM-DD, the official xs:date
+        orgdatlist = entrylinedata.split("; ")(1).split(": ")(1).split("-")
+        celloUpdatDat = (orgdatlist(2).toInt + 2000).toString + "-" + orgdatlist(1) + "-" + orgdatlist(0) // convert to YYYY-MM-DD, the official xs:date
+        celloVersion = entrylinedata.split("; ")(2).split(": ")(1)
+      }
       else if (entryline.startsWith("ST   Source")) { // short tandem repeats source
         val srcList = entrylinedata.substring(11).split("; ") // skip the 'Source(s):' comment
         srcList.foreach(src => {
           if(src.contains("="))
             celloSourcereflist = new PubliRef(db_ac = src) :: celloSourcereflist
           else  
-            celloSourcelist = new Source(src = src) :: celloSourcelist
+            celloSourcelist = new STsource(src = src) :: celloSourcelist
         })
       }
       else if (entryline.startsWith("ST   ")) { // short tandem repeats 
-        var celloStrMarkerSourcelist = List[Source]()
+        var celloStrMarkerSourcelist = List[STsource]()
         var celloStrMarkerSourcereflist = List[PubliRef]()
         val id = entrylinedata.split(": ")(0)
         val rawdata = entrylinedata.split(": ")(1)
@@ -1071,7 +1143,7 @@ object CelloParser {
           if(alleleref.contains("="))
             celloStrMarkerSourcereflist = new PubliRef(db_ac = alleleref) :: celloStrMarkerSourcereflist
           else  
-            celloStrMarkerSourcelist = new Source(src = alleleref) :: celloStrMarkerSourcelist
+            celloStrMarkerSourcelist = new STsource(src = alleleref) :: celloStrMarkerSourcelist
             })
         }
         else alleles = rawdata
@@ -1098,10 +1170,10 @@ object CelloParser {
       }
 
     // Instanciate full entry, .reverse in lists to recover original order
-    val entry = new CelloEntry(ac = ac, oldacs = celloOldaclist, id = id, synonyms = celloSynlist.reverse, category = category, sex = sex, age = age, dbrefs = celloXreflist.reverse,
+    val entry = new CelloEntry(ac = ac, oldacs = celloOldaclist, id = id, synonyms = celloSynlist.reverse, credat = celloCreatDat, upddat = celloUpdatDat, eversion = celloVersion, category = category, sex = sex, age = age, dbrefs = celloXreflist.reverse,
       comments = celloCommentlist.reverse, webpages = celloWebPagelist.reverse, diseases = celloDislist.reverse, species = celloSpeclist.reverse,
       origin = celloOriglist.reverse, derived = celloDerivedlist.reverse, publis = celloPublilist.reverse, sources = celloSourcelist,
-      sourcerefs = celloSourcereflist, strmarkers = finalmarkerList, hlalists = celloHLAlists.reverse)
+      sourcerefs = celloSourcereflist, strmarkers = finalmarkerList, reglist = celloReglist, hlalists = celloHLAlists.reverse, genomeAncestry = popDatawithSource)
  
     entry
   }
@@ -1117,13 +1189,15 @@ class Author(val name: String) {
 }
 
 class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val synonyms: List[Synonym],
+                 val credat :String, val upddat :String, val eversion :String, 
                  val category: String, val sex: String, val age: String,
                  val dbrefs: List[DbXref], var comments: List[Comment], val webpages: List[WebPage], val diseases: List[CvTerm],
                  val species: List[CvTerm], val origin: List[CvTerm], val derived: List[CvTerm], val publis: List[PubliRef],
-                 val sources: List[Source], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker], val hlalists: List[HLAlistwithSource]) {
+                 val sources: List[STsource], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker],
+                 val reglist: List[Registration], val hlalists: List[HLAlistwithSource], val genomeAncestry: PopulistwithSource) {
 
   def toXML =
-    <cell-line category={ category } sex={ if (sex != "") sex else null } age={ if (age != "") age else null }>
+    <cell-line category={ category } created={ credat } last_updated={ upddat } entry_version={ eversion } sex={ if (sex != "") sex else null } age={ if (age != "") age else null }>
       <accession-list>
         <accession type="primary">{ ac }</accession>
         {
@@ -1137,7 +1211,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
         }
       </name-list>
       {
-        if (comments.size > 0 && !(comments.size == 1 && comments(0).category.equals("HLA typing"))) // HLA typing has it's own structure
+        if (comments.filterNot(_.category.contains("HLA")).filterNot(_.category.contains("ancestry")).filterNot(_.category.contains("Registration")).size > 0) // HLA typing, genome ancestry and Registration have their own structures
           <comment-list>
             { comments.map(_.toXML) }
           </comment-list>
@@ -1199,6 +1273,18 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
           </hla-lists>
       }
       {
+        if (genomeAncestry != null)
+           <genome-ancestry>
+           { genomeAncestry.toXML }
+           </genome-ancestry>
+      }
+      {
+        if (reglist.size > 0)
+          <registration-list>
+            { reglist.map(_.toXML) }
+          </registration-list>
+      }
+      {
         if (dbrefs.size > 0)
           <xref-list>
             { dbrefs.map(_.toXML) }
@@ -1227,6 +1313,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
   if(currcomment != "") oboEntryString += currcomment.replace("..",".") + "\"\n"
   origin.foreach(origin => {oboEntryString += "relationship: originate_from_same_individual_as " + origin._ac + " ! " + origin._name + "\n"})
   derived.foreach(derivedfrom => {oboEntryString += "relationship: derived_from " + derivedfrom._ac + " ! " + derivedfrom._name + "\n"})
+  oboEntryString += "creation_date: \"" + credat + "\"\n"
   oboEntryString
   }
   
@@ -1252,7 +1339,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
   }  
 }
 
-class StrmarkerData(val alleles: String, val strmarkersources: List[Source], val strmarkersourcerefs: List[PubliRef]) {
+class StrmarkerData(val alleles: String, val strmarkersources: List[STsource], val strmarkersourcerefs: List[PubliRef]) {
 
   def toXML =
     <marker-data>
@@ -1282,7 +1369,7 @@ class Strmarker(val id: String, val conflict: String, val markerdatalist: List[S
     </marker>
 }
 
-class Source(val src: String) {
+class STsource(val src: String) {
 
   def toXML =
     <source>{ src }</source>
@@ -1338,7 +1425,6 @@ class CvTerm(val _terminology: String, val _ac: String, val _name: String) {
 }
 
 class WebPage(val url: String) {
-
   def toXML =
     <url>{ scala.xml.PCData(url) }</url>
 
@@ -1348,8 +1434,12 @@ class WebPage(val url: String) {
   }
 }
 
-class HLAData(val id: String, val alleles: String) {
+class Registration(val registry: String, val regnumber: String) {
+  def toXML =
+		<registration registry={ registry } registration_number={ regnumber }/>
+}
 
+class HLAData(val id: String, val alleles: String) {
   def toXML =
     <hla-gene id={ id }>
 			<alleles>{alleles}</alleles>
@@ -1369,6 +1459,27 @@ class HLAlistwithSource(val glist: List[HLAData], val src: String) {
           }
 		  </hla-list-source>
     </hla-list>
+}
+
+class PopFreqData(val popName: String, val popFreq: String) {
+  def toXML =
+    <population>
+      <population_name>{popName}</population_name>
+			<population_percentage>{popFreq}</population_percentage>
+    </population>
+}
+
+class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
+  def toXML =
+      { poplist.map(_.toXML) }
+      <genome-ancestry-source>
+          {
+          if (src.contains("PubMed") )
+          <reference resource-internal-ref={ src }/>
+          else
+          <source>{ src }</source>  
+          }
+		  </genome-ancestry-source>
 }
 
 class DbXref(val _db: String, val _ac: String, val _category: String, val _url: String, var _property: String, val _entryCategory: String) {
@@ -1496,7 +1607,7 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
         ccXreflist = new DbXref(_db = db, _ac = linetoks(1), _category = xmap(db)._2, _url = xmap(db)._1, _property = property,  _entryCategory = "") :: ccXreflist
       }
     }
-    else if ((category.equals("Transformant") || category.equals("Selected for resistance to")) && text.contains(";") ) {
+    else if ((category.equals("Transformant") || category.equals("Selected for resistance to")) && text.contains(";") && !text.contains("v-Myc")) {
       val linetoks = text.split("; ")
       var terminology = linetoks(0);
       val ac = linetoks(1)
@@ -1511,7 +1622,7 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
     }
   }
 
-  def toXML = if(category != "HLA typing") // skip this comment's xml since it appears later in a structured form 
+  def toXML = if(category != "HLA typing" && category != "Genome ancestry" && category != "Registration") // skip thess comment's xml since they appear later in a structured form 
     <comment category={ category }> { if(text != "") {text} } { if (method != "") <method>{ method }</method> } { if (cvterm != null) {cvterm.toXML}} { if (ccXreflist.size > 0) <xref-list> { ccXreflist.map(_.toXML) } </xref-list> }</comment>
 
   def toOBO =  {
