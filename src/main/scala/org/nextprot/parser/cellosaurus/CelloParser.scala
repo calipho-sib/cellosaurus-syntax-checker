@@ -1092,7 +1092,7 @@ object CelloParser {
         else if(category.equals("Registration"))  
          { // prepare registration list 
           var regtoks = textdata.split("; ")
-          celloReglist = new Registration(registry=regtoks(0), regnumber=regtoks(1).dropRight(1)) :: celloReglist
+          celloReglist = new Registration(registry=regtoks(0), regnumber=regtoks(1)) :: celloReglist
          }
         celloCommentlist = new Comment(category = category, text = textdata, xmap) :: celloCommentlist
       }
