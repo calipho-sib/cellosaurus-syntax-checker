@@ -1463,10 +1463,7 @@ class HLAlistwithSource(val glist: List[HLAData], val src: String) {
 
 class PopFreqData(val popName: String, val popFreq: String) {
   def toXML =
-    <population>
-      <population_name>{popName}</population_name>
-			<population_percentage>{popFreq}</population_percentage>
-    </population>
+    <population population_name={popName} population_percentage={popFreq}/>
 }
 
 class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
