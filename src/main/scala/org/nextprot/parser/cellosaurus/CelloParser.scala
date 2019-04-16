@@ -1274,9 +1274,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
       }
       {
         if (genomeAncestry != null)
-           <genome-ancestry>
-           { genomeAncestry.toXML }
-           </genome-ancestry>
+          { genomeAncestry.toXML }
       }
       {
         if (reglist.size > 0)
@@ -1463,11 +1461,12 @@ class HLAlistwithSource(val glist: List[HLAData], val src: String) {
 
 class PopFreqData(val popName: String, val popFreq: String) {
   def toXML =
-    <population population_name={popName} population_percentage={popFreq}/>
+    <population population-name={ popName } population-percentage={ popFreq } />
 }
 
 class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
   def toXML =
+    <genome-ancestry>
       { poplist.map(_.toXML) }
       <genome-ancestry-source>
           {
@@ -1477,6 +1476,7 @@ class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
           <source>{ src }</source>  
           }
 		  </genome-ancestry-source>
+    </genome-ancestry>
 }
 
 class DbXref(val _db: String, val _ac: String, val _category: String, val _url: String, var _property: String, val _entryCategory: String) {
