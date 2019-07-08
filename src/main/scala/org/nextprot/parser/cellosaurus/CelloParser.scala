@@ -632,7 +632,7 @@ object CelloParser {
                 <terminology name="ChEBI" source="European Molecular Biology Laboratory" description="Chemical Entities of Biological Interest">
                     <url><![CDATA[https://www.ebi.ac.uk/chebi/]]></url>
                 </terminology>
-                <terminology name="PubChem" source="PubChem compound database" description="Public repository for information on chemical substances and their biological activities">
+                <terminology name="PubChem" source="National Center for Biotechnology Information" description="Public repository for information on chemical substances and their biological activities">
                     <url><![CDATA[https://pubchem.ncbi.nlm.nih.gov/]]></url>
                 </terminology>
     						<terminology name="DrugBank" source="Wishart's group" description="DrugBank database">
@@ -1311,7 +1311,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
   if(currcomment != "") oboEntryString += currcomment.replace("..",".") + "\"\n"
   origin.foreach(origin => {oboEntryString += "relationship: originate_from_same_individual_as " + origin._ac + " ! " + origin._name + "\n"})
   derived.foreach(derivedfrom => {oboEntryString += "relationship: derived_from " + derivedfrom._ac + " ! " + derivedfrom._name + "\n"})
-  oboEntryString += "creation_date: \"" + credat +  " 12:00\"\n" // OBO format requires useless hours-minutes
+  oboEntryString += "creation_date: \"" + credat +  "T00:00:00Z\"\n" // OBO format requires useless hours-minutes
   oboEntryString
   }
   
