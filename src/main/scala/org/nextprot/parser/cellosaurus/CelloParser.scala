@@ -599,6 +599,7 @@ object CelloParser {
             }
             if(hasSTR && strsrcCnt != 1) { Console.err.println("Illegal ST   Source(s) line count in " + ac); errcnt += 1 }
         }
+        else { Console.err.println("Invalid line at: " + entryline); errcnt += 1 } // catches any line not conforming to above patterns
       })
     })
 
