@@ -101,7 +101,7 @@ object CelloParser {
     val xmlcopyright = 
   <copyright>
         Copyrighted by the SIB Swiss Institute of Bioinformatics.
-        Distributed under the Creative Commons Attribution-NoDerivs License - see http://creativecommons.org/licenses/by-nd/3.0/
+        Distributed under the Creative Commons Attribution 4.0 International (CC BY 4.0) license - see http://creativecommons.org/licenses/by/4.0/ 
   </copyright>
 
     // Parse command line arguments
@@ -197,7 +197,7 @@ object CelloParser {
       if (obostarted && !line.contains("-----")) oboheadercomment += "!" + line + "\n"
       if (line.startsWith("____")) started = true
       else if (line.startsWith(" Description:")) {oboheadercomment += "!" + line + "\n"; obostarted = true}
-      else if (line.endsWith("permission first.")) obostarted = false
+      else if (line.endsWith("cellosaurus@sib.swiss")) obostarted = false
       else if (started) {
         if (line.length() < 2) { println("Warning: blank line at line number " + curr_line_nb); blankcnt += 1 }
         else currEntry += line
@@ -357,6 +357,7 @@ object CelloParser {
           if(cctoks.size > 1 ) {
           	val maybedb = cctoks(0)
            	if (((maybedb.startsWith("UniProtKB")) || (maybedb.startsWith("HGNC"))  || (maybedb.startsWith("NCBI_TaxID")) || (ok_dblist.contains(maybedb))) && cctoks.size < 3) { Console.err.println("Missing separator at : " + entryline); errcnt += 1 }
+           	else if (maybedb.startsWith("CHEBI")) { Console.err.println("Missing 'ChEBI;' database token at: " + entryline); errcnt += 1 } 
          	 }
           if(cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
             // These discontinued CCs must also exist as DR lines
@@ -1579,6 +1580,7 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
       }
     }
     else if (category.equals("Monoclonal antibody target") && text.contains("; ")) {
+      //Console.err.println(text)
       val linetoks = text.split("; ")
       val db = linetoks(0)
       val ac = linetoks(1)
