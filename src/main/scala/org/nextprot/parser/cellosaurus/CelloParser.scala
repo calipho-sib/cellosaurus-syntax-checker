@@ -477,7 +477,7 @@ object CelloParser {
             if (entryline.endsWith(";") || entryline.endsWith(".")) { Console.err.println("DI trailing ; found at: " + entryline); errcnt += 1 }
             val dilist = entrylinedata.split("; ")
             if (dilist.length != 3) { Console.err.println("Illegal disease format found at: " + entryline); errcnt += 1 }
-            if (dilist(0) != "NCIt") { Console.err.println("Illegal disease db:" + dilist(0) + " found at: " + entryline); errcnt += 1 }
+            if (dilist(0) != "NCIt" && dilist(0) != "ORDO") { Console.err.println("Illegal disease db:" + dilist(0) + " found at: " + entryline); errcnt += 1 }
             }
         else if (entryline.startsWith("OX   ")) { // Organisms
             if (entryline.endsWith(";")) { Console.err.println("OX trailing ; found at: " + entryline); errcnt += 1 }
@@ -630,6 +630,9 @@ object CelloParser {
                 </terminology>
                 <terminology name="NCIt" source="National Cancer Institute" description="Terminology of biomedical concepts">
                     <url><![CDATA[https://ncit.nci.nih.gov]]></url>
+                </terminology>
+                <terminology name="ORDO" source="Orphanet" description="Rare diseases ontology">
+                    <url><![CDATA[https://www.ebi.ac.uk/ols/ontologies/ordo]]></url>
                 </terminology>
                 <terminology name="ChEBI" source="European Molecular Biology Laboratory" description="Chemical Entities of Biological Interest">
                     <url><![CDATA[https://www.ebi.ac.uk/chebi/]]></url>
