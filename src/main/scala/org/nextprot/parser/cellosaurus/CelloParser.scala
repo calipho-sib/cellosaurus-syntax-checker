@@ -660,9 +660,11 @@ object CelloParser {
     var parentid = ""
     var ox = ""
     var cellAge = ""
+    var cellPopulation = ""
     var cellSex = ""
     var parentAge = ""
     var parentSex = ""
+    var parentPopulation = ""
     var parentSpecies = ""
     var category = ""
     var derivedfromcc = ""
@@ -675,8 +677,10 @@ object CelloParser {
       category = ""
       cellAge = ""
       cellSex = ""
+      cellPopulation = ""
       parentac = ""
       parentAge = ""
+      parentPopulation = ""
       parentSex = ""
       parentSpecies = ""
       derivedfromcc = ""
@@ -720,12 +724,14 @@ object CelloParser {
                              else if (line.contains("Derived from sampling site") || line.contains("Derived from metastatic site")) { parentderivedfromcc = line.substring(5).split(": ")(0) }
                              else if (line.startsWith("SX   ")) { parentSex = line.split("   ")(1) }
                              else if (line.startsWith("AG   ")) { parentAge = line.split("   ")(1) }
+                             else if (line.startsWith("CC   Population")) { parentPopulation = line.split(":")(1).trim() }
                              else if (line.startsWith("HI   ")) { if (line.substring(5).split(" ")(0).equals(ac)) { Console.err.println("Reciprocal HI: " + parentac + "/" + ac); errcnt += 1 } }
                              })
                    }
                }
        else if (entryline.startsWith("SX   ")) { cellSex = entryline.split("   ")(1) }
        else if (entryline.startsWith("AG   ")) { cellAge = entryline.split("   ")(1) }
+       else if (entryline.startsWith("CC   Population")) { cellPopulation = entryline.split(": ")(1).trim() }
        else if (entryline.startsWith("CA   ")) { category = entryline.split("   ")(1) }
       })
       
@@ -736,10 +742,11 @@ object CelloParser {
       }
     if(toOBO) //if(ac.startsWith ("CVCL_")) Console.err.println(celloentry.toOBO) 
       obofile.write(celloentry.toOBO)
-    if (!category.contains("Hybrid")) { // outside line loop, needs all entry parsed
+    if (!category.contains("Hybrid")) { // check parent's features that must be transmitted in non-hybrids, outside line loop, needs all entry parsed
        if ((parentSpecies != "") && !ox.contains("hybrid") && (parentSpecies != ox)) { Console.err.println("Wrong parent species: " + parentac + "(parent)=" + parentSpecies + " " + ac + "=" + ox) }
        if (disErrorlist.length != 0) { Console.err.println(disErrorlist(0)); errcnt += 1 }
        if ((parentac != "") && cellSex != parentSex) { Console.err.println("Wrong parent's  ( " + parentac + " ) sex match in: " + ac); errcnt += 1 }  
+       if ((parentac != "") && cellPopulation != parentPopulation) { Console.err.println("Wrong or missing parent's  ( " + parentac + ":" + parentPopulation + " ) population match in: " + ac); errcnt += 1 }  
        if ((parentac != "") && parentAge != "" && cellAge != parentAge) { Console.err.println("Wrong parent's  ( " + parentac + ":" + parentAge + ") age match in: " + ac + ":" +  cellAge); errcnt += 1 }  
        //else if ((parentac != "") && parentAge == "" && cellAge != parentAge) { Console.err.println("Check sisters  ( " + parentac  + ") for age  in: " + ac); errcnt += 1 }  
        if((parentac != "") && derivedfromcc != parentderivedfromcc) {Console.err.println("Missing parent's (" + parentac + ") 'derived from' CC in: " + ac); errcnt += 1 }
