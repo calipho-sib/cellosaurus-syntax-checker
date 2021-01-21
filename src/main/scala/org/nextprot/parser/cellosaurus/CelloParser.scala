@@ -306,7 +306,9 @@ object CelloParser {
           }
         else if (entryline.startsWith("DR   ")) { // X-refs
           if (entryline.endsWith(";") || entryline.endsWith(".")) { Console.err.println("DR trailing ; found at: " + entryline); errcnt += 1 }
-          val dbname = entrylinedata.split("; ")(0)
+          val DRtokens = entrylinedata.split("; ")
+          if(DRtokens.length != 2) { Console.err.println("Missing or extra DR argument at: " + entryline); errcnt += 1 }
+          val dbname = DRtokens(0)
           if (!ok_dblist.contains(dbname)) { Console.err.println("Illegal db:" + dbname + " found at: " + entryline); errcnt += 1 }
           drcnt += 1
           drlist += entrylinedata.split("/")(0)
@@ -1065,7 +1067,8 @@ object CelloParser {
       else if (entryline.startsWith("DR   ")) { // xref 
         val db = entrylinedata.split("; ")(0)
         if(!xmap.contains(db)) Console.err.println("Error: no entry for \"" + db + "\" in cellosaurus_xrefs.txt")
-        else celloXreflist = new DbXref(_db = db, _ac = entrylinedata.split(";")(1).trim(), _category = xmap(db)._2, _url = xmap(db)._1, _property = "", _entryCategory = entrycategory) :: celloXreflist
+        else 
+          celloXreflist = new DbXref(_db = db, _ac = entrylinedata.split(";")(1).trim(), _category = xmap(db)._2, _url = xmap(db)._1, _property = "", _entryCategory = entrycategory) :: celloXreflist
       }
       else if (entryline.startsWith("CC   ")) { // comment
         val linetokens = entrylinedata.split(": ")
