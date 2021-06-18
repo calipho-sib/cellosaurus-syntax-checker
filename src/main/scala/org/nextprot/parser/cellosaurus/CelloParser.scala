@@ -75,6 +75,8 @@ object CelloParser {
       "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH",
       "NISES", "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG", "Ximbio")
     val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
+    val ok_seqvarlist = List("Gene amplification", "Gene deletion", "Gene fusion", "Mutation")
+    val ok_zygositylist = List("-", "Hemizygous", "Homoplasmic", "Homozygous", "Mosaic", "Unspecified", "Heteroplasmic", "Heterozygous")
     val ok_sxlist = List("Female", "Male", "Mixed sex", "Sex ambiguous", "Sex unspecified")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_cclist1 = List("Anecdotal", "Breed/subspecies", "Caution", "Derived from metastatic site", "Derived from sampling site", "Discontinued", "From", "Genome ancestry", "Group", "HLA typing", "Knockout cell", "Microsatellite instability", "Miscellaneous", "Misspelling",
@@ -376,6 +378,20 @@ object CelloParser {
             }
           else if(cctopic == "Registration") { // format like an x-ref, registry then registry number
             if (cctoks.size != 2) { Console.err.println("Wrong format for " + entryline); errcnt += 1 }
+            }
+          else if(cctopic == "Sequence variation") { // one of 4 categorie listed in ok_seqvarlist            
+            val allseqvartoks = cctext.split("; ")
+            if (!ok_seqvarlist.contains(allseqvartoks(0))) { Console.err.println("Illegal sequence variation category found at: " + entryline); errcnt += 1 }
+            allseqvartoks.foreach(token => {
+              if(token.contains("y=")) {
+                val tokfields = token.split("=")
+                var zygotype = tokfields(1)
+                if(zygotype.contains(" ")) {zygotype = zygotype.split(" ")(0)}
+                else if(zygotype.contains(".")) {zygotype = zygotype.split("\\.")(0)}
+                if(tokfields(0) != "Zygosity") { Console.err.println("Illegal field name found at: " + entryline); errcnt += 1 }
+                else if (!ok_zygositylist.contains(zygotype)) { Console.err.println("Illegal zygosity found at: " + entryline); errcnt += 1 } 
+              }
+            } )
             }
           else if(cctopic == "Genome ancestry") { // check populations cv
             val allpoptoks = cctext.split(" \\(")
