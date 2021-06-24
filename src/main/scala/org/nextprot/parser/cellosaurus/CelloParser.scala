@@ -77,6 +77,7 @@ object CelloParser {
     val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
     val ok_seqvarlist = List("Gene amplification", "Gene deletion", "Gene fusion", "Mutation")
     val ok_zygositylist = List("-", "Hemizygous", "Homoplasmic", "Homozygous", "Mosaic", "Unspecified", "Heteroplasmic", "Heterozygous")
+    val ok_vartyplist = List("Simple", "Simple_corrected", "Simple_edited", "Repeat_expansion", "Repeat_expansion_corrected", "Unexplicit", "Unexplicit_corrected", "None_reported")
     val ok_sxlist = List("Female", "Male", "Mixed sex", "Sex ambiguous", "Sex unspecified")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_cclist1 = List("Anecdotal", "Breed/subspecies", "Caution", "Derived from metastatic site", "Derived from sampling site", "Discontinued", "From", "Genome ancestry", "Group", "HLA typing", "Knockout cell", "Microsatellite instability", "Miscellaneous", "Misspelling",
@@ -382,6 +383,9 @@ object CelloParser {
           else if(cctopic == "Sequence variation") { // one of 4 categorie listed in ok_seqvarlist            
             val allseqvartoks = cctext.split("; ")
             if (!ok_seqvarlist.contains(allseqvartoks(0))) { Console.err.println("Illegal sequence variation category found at: " + entryline); errcnt += 1 }
+            if(allseqvartoks(0) == "Mutation" && !ok_vartyplist.contains(allseqvartoks(4))) { Console.err.println("Illegal or missing Mutation type found at: " + entryline); errcnt += 1 } 
+            else if(allseqvartoks(0) == "Gene fusion" && !allseqvartoks(3).contains("+")) { Console.err.println("Illegal Gene fusion found at: " + entryline); errcnt += 1 } // implement check for names= ?
+            else if(allseqvartoks(0) == "Gene amplification" && !allseqvartoks(4).contains("plication")) { Console.err.println("Illegal Gene amplification found at: " + entryline); errcnt += 1 } 
             allseqvartoks.foreach(token => {
               if(token.contains("y=")) {
                 val tokfields = token.split("=")
