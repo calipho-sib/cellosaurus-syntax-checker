@@ -1267,7 +1267,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
         }
       </name-list>
       {
-        if (comments.filterNot(_.category.contains("HLA")).filterNot(_.category.contains("ancestry")).filterNot(_.category.contains("Registration")).size > 0) // HLA typing, genome ancestry and Registration have their own structures
+        if (comments.filterNot(_.category.contains("HLA")).filterNot(_.category.contains("ancestry")).filterNot(_.category.contains("Registration")).filterNot(_.category.contains("variation")).size > 0) // HLA typing, genome ancestry, Registration and seq-variations have their own structures
           <comment-list>
             { comments.map(_.toXML) }
           </comment-list>
