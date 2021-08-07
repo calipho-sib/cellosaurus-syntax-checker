@@ -77,7 +77,7 @@ object CelloParser {
     val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
     val ok_seqvarlist = List("Gene amplification", "Gene deletion", "Gene fusion", "Mutation")
     val ok_zygositylist = List("-", "Hemizygous", "Homoplasmic", "Homozygous", "Mosaic", "Unspecified", "Heteroplasmic", "Heterozygous")
-    val ok_vartyplist = List("Simple", "Simple_corrected", "Simple_edited", "Repeat_expansion", "Repeat_expansion_corrected", "Unexplicit", "Unexplicit_corrected", "None_reported")
+    val ok_vartyplist = List("Simple", "Simple_corrected", "Simple_edited", "Repeat_expansion", "Repeat_expansion_corrected", "Repeat_expansion_edited", "Unexplicit", "Unexplicit_corrected", "None_reported")
     val ok_sxlist = List("Female", "Male", "Mixed sex", "Sex ambiguous", "Sex unspecified")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_cclist1 = List("Anecdotal", "Breed/subspecies", "Caution", "Derived from metastatic site", "Derived from sampling site", "Discontinued", "From", "Genome ancestry", "Group", "HLA typing", "Knockout cell", "Microsatellite instability", "Miscellaneous", "Misspelling",
@@ -1057,6 +1057,7 @@ object CelloParser {
     var celloXreflist = List[DbXref]()
     var celloCommentlist = List[Comment]()
     var celloWebPagelist = List[WebPage]()
+    var celloSeqVarlist = List[SequenceVariation]()
     var celloReglist = List[Registration]()
     var popDatawithSource : PopulistwithSource = null
     
@@ -1123,6 +1124,26 @@ object CelloParser {
             cellopoplist = new PopFreqData(popName=popName, popFreq=popFreq) :: cellopoplist
             })
             popDatawithSource = new PopulistwithSource(poplist=cellopoplist.reverse, src=popuSrc) // add source to list
+         }
+        else if(category.equals("Sequence variation"))  
+         { // prepare stuff
+         var seqvartoks = textdata.split("; ")
+         var seqvartype = seqvartoks(0)
+         var zygotype = ""
+         var mutyp=""
+         var srctok = ""
+         if(textdata.contains(")"))  // some source exists (last parenthesis)
+           srctok = textdata.substring(textdata.lastIndexOf('(')+1,textdata.lastIndexOf(')'))
+
+         if(seqvartype == "Mutation" || seqvartype == "Gene amplification") mutyp=seqvartoks(4)
+         seqvartoks.foreach(token => {
+              if(token.contains("Zygosity=")) {
+                zygotype = token.split("=")(1)
+                if(zygotype.contains(" ")) {zygotype = zygotype.split(" ")(0)}
+                else if(zygotype.contains(".")) {zygotype = zygotype.split("\\.")(0)}
+              }              
+            } )         
+         celloSeqVarlist =  new SequenceVariation(vartyp=seqvartype, mutyp=mutyp, zygosity=zygotype, text=textdata, xmap, sources=srctok) :: celloSeqVarlist
          }
         else if(category.equals("Registration"))  
          { // prepare registration list 
@@ -1208,7 +1229,7 @@ object CelloParser {
     val entry = new CelloEntry(ac = ac, oldacs = celloOldaclist, id = id, synonyms = celloSynlist.reverse, credat = celloCreatDat, upddat = celloUpdatDat, eversion = celloVersion, category = category, sex = sex, age = age, dbrefs = celloXreflist.reverse,
       comments = celloCommentlist.reverse, webpages = celloWebPagelist.reverse, diseases = celloDislist.reverse, species = celloSpeclist.reverse,
       origin = celloOriglist.reverse, derived = celloDerivedlist.reverse, publis = celloPublilist.reverse, sources = celloSourcelist,
-      sourcerefs = celloSourcereflist, strmarkers = finalmarkerList, reglist = celloReglist, hlalists = celloHLAlists.reverse, genomeAncestry = popDatawithSource)
+      sourcerefs = celloSourcereflist, strmarkers = finalmarkerList, reglist = celloReglist, hlalists = celloHLAlists.reverse, seqvarlist = celloSeqVarlist.reverse, genomeAncestry = popDatawithSource)
  
     entry
   }
@@ -1229,7 +1250,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
                  val dbrefs: List[DbXref], var comments: List[Comment], val webpages: List[WebPage], val diseases: List[CvTerm],
                  val species: List[CvTerm], val origin: List[CvTerm], val derived: List[CvTerm], val publis: List[PubliRef],
                  val sources: List[STsource], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker],
-                 val reglist: List[Registration], val hlalists: List[HLAlistwithSource], val genomeAncestry: PopulistwithSource) {
+                 val reglist: List[Registration], val hlalists: List[HLAlistwithSource], val seqvarlist: List[SequenceVariation], val genomeAncestry: PopulistwithSource) {
 
   def toXML =
     <cell-line category={ category } created={ credat } last_updated={ upddat } entry_version={ eversion } sex={ if (sex != "") sex else null } age={ if (age != "") age else null }>
@@ -1316,6 +1337,12 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
           <registration-list>
             { reglist.map(_.toXML) }
           </registration-list>
+      }
+      {
+        if (seqvarlist.size > 0)
+          <sequence-variation-list>
+            { seqvarlist.map(_.toXML) }
+          </sequence-variation-list>
       }
       {
         if (dbrefs.size > 0)
@@ -1406,6 +1433,90 @@ class STsource(val src: String) {
 
   def toXML =
     <source>{ src }</source>
+}
+
+class SequenceVariation(val vartyp: String, val mutyp: String, val zygosity: String, var text: String, xmap: scala.collection.mutable.Map[String, (String, String)], val sources: String) {
+  var varXreflist = List[DbXref]()
+  var varSourcelist = List[STsource]()
+  var varSourcereflist = List[PubliRef]()
+  var ac2 = ""
+  var db2 = ""
+  var geneName2 =""
+  var mutdesc = ""
+  var varnote = ""
+ 
+  init  
+  def init = {
+      val toklist = text.split("; ")
+        val db = toklist(1)
+        val ac = toklist(2)
+        var geneName = toklist(3)
+        var srctok = ""
+   if(toklist.size > 5 && vartyp != "Gene amplification" && vartyp != "Gene deletion") mutdesc = toklist(5)
+   if (text.contains(" + ")) { // There is a second dbref: prepare it
+            // like  CC   Sequence variation: Gene fusion; HGNC; 3446; ERG + HGNC; 3508; EWSR1; Name(s)=EWSR1-ERG, EWS-ERG; Note=In frame (PubMed=8162068).
+            geneName = geneName.split(" ")(0)
+            ac2 = toklist(4)
+            geneName2 = toklist(5).split("\\.")(0)
+            mutdesc = toklist(6).split("=")(1)
+          }
+  toklist.foreach(token => {
+    if(token.startsWith("Note=")) varnote = token.substring(5).trim()
+    // CC   Sequence variation: Mutation; HGNC; 11730; TERT; Simple; p.Arg631Gln (c.1892G>A); ClinVar=VCV000029899; Zygosity=Unspecified (Direct_author_submission).
+    else if(token.startsWith("ClinVar=") || token.startsWith("dbSNP=")) {
+      db2 = token.split("=")(0)
+      varXreflist = new DbXref(_db = db2, _ac = token.split("=")(1), _category = xmap(db2)._2, _url = xmap(db2)._1, _property = geneName,  _entryCategory = "") :: varXreflist  
+    }
+  })
+  varXreflist = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = geneName,  _entryCategory = "") :: varXreflist  
+  if (ac2 != "") {
+    varXreflist = new DbXref(_db = db, _ac = ac2, _category = xmap(db)._2, _url = xmap(db)._1, _property = geneName2,  _entryCategory = "")  :: varXreflist 
+    varXreflist = varXreflist.reverse
+      }
+
+  val srcList = sources.split("; ") // split what's parenthesis in last token
+  srcList.foreach(src => {
+     if(src.contains("=")) varSourcereflist = new PubliRef(db_ac = src) :: varSourcereflist
+     else varSourcelist = new STsource(src = src) :: varSourcelist
+    }) 
+
+  }
+  
+  def toXML =
+    <sequence-variation variation-type={vartyp}> 
+     {
+        if (zygosity != "")
+      <zygosity-type>{ zygosity }</zygosity-type>
+      }
+     {
+        if (mutyp != "")
+      <mutation-type>{ mutyp }</mutation-type>
+      }
+     {
+        if (mutdesc != "")
+      <mutation-description>{ mutdesc }</mutation-description>
+      }
+     {
+        if (varnote != "")
+      <variation-note>{ varnote }</variation-note>
+      }
+     
+          <xref-list>
+            { varXreflist.map(_.toXML) }
+          </xref-list>
+      {
+        if (varSourcelist.size > 0 || varSourcereflist.size > 0)
+             <variation-sources>
+              { varSourcelist.map(_.toXML) }
+           {
+          if (varSourcereflist.size > 0 )
+            <reference-list>
+        	    { varSourcereflist.map(_.toXML) }
+						</reference-list>
+          }
+           </variation-sources>
+      }
+</sequence-variation>
 }
 
 class OldAc(val oldac: String) {
@@ -1655,7 +1766,7 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
     }
   }
 
-  def toXML = if(category != "HLA typing" && category != "Genome ancestry" && category != "Registration") // skip thess comment's xml since they appear later in a structured form 
+  def toXML = if(category != "HLA typing" && category != "Genome ancestry" && category != "Registration" && category != "Sequence variation") // skip thess comment's xml since they appear later in a structured form 
     <comment category={ category }> { if(text != "") {text} } { if (method != "") <method>{ method }</method> } { if (cvterm != null) {cvterm.toXML}} { if (ccXreflist.size > 0) <xref-list> { ccXreflist.map(_.toXML) } </xref-list> }</comment>
 
   def toOBO =  {
