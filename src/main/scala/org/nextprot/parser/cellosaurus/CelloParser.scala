@@ -363,6 +363,8 @@ object CelloParser {
           	val maybedb = cctoks(0)
            	if (((maybedb.startsWith("UniProtKB")) || (maybedb.startsWith("HGNC"))  || (maybedb.startsWith("NCBI_TaxID")) || (ok_dblist.contains(maybedb))) && cctoks.size < 3) { Console.err.println("Missing separator at : " + entryline); errcnt += 1 }
            	else if (maybedb.startsWith("CHEBI")) { Console.err.println("Missing 'ChEBI;' database token at: " + entryline); errcnt += 1 } 
+           	else if (cctopic.contains("target") && !maybedb.startsWith("UniProtKB") && !maybedb.startsWith("ChEBI") && !maybedb.startsWith("PubChem")) { Console.err.println("Missing database token at: " + entryline); errcnt += 1 }
+           	else if (cctext.contains("=ZFN") && !xmap.contains(cctoks(1))) { Console.err.println("Wrong database token at: " + entryline + " "); errcnt += 1 }
          	 }
           if(cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
             // These discontinued CCs must also exist as DR lines
@@ -1142,7 +1144,7 @@ object CelloParser {
                 if(zygotype.contains(" ")) {zygotype = zygotype.split(" ")(0)}
                 else if(zygotype.contains(".")) {zygotype = zygotype.split("\\.")(0)}
               }              
-            } )         
+            } )
          celloSeqVarlist =  new SequenceVariation(vartyp=seqvartype, mutyp=mutyp, zygosity=zygotype, text=textdata, xmap, sources=srctok) :: celloSeqVarlist
          }
         else if(category.equals("Registration"))  
@@ -1453,19 +1455,24 @@ class SequenceVariation(val vartyp: String, val mutyp: String, val zygosity: Str
         var geneName = toklist(3)
         var srctok = ""
    if(toklist.size > 5 && vartyp != "Gene amplification" && vartyp != "Gene deletion") mutdesc = toklist(5)
-   if (text.contains(" + ")) { // There is a second dbref: prepare it
+   if (text.contains(" + ")) { // Gene fusion, there is a second dbref: prepare it
             // like  CC   Sequence variation: Gene fusion; HGNC; 3446; ERG + HGNC; 3508; EWSR1; Name(s)=EWSR1-ERG, EWS-ERG; Note=In frame (PubMed=8162068).
             geneName = geneName.split(" ")(0)
             ac2 = toklist(4)
             geneName2 = toklist(5).split("\\.")(0)
             mutdesc = toklist(6).split("=")(1)
+            if(mutdesc.contains(" (")) mutdesc = mutdesc.split(" \\(")(0)
           }
   toklist.foreach(token => {
-    if(token.startsWith("Note=")) varnote = token.substring(5).trim()
+    if(token.startsWith("Note="))  {
+      varnote = token.substring(5).trim()
+      if(varnote.contains(" (")) varnote = varnote.split(" \\(")(0)
+    }
     // CC   Sequence variation: Mutation; HGNC; 11730; TERT; Simple; p.Arg631Gln (c.1892G>A); ClinVar=VCV000029899; Zygosity=Unspecified (Direct_author_submission).
     else if(token.startsWith("ClinVar=") || token.startsWith("dbSNP=")) {
       db2 = token.split("=")(0)
-      varXreflist = new DbXref(_db = db2, _ac = token.split("=")(1), _category = xmap(db2)._2, _url = xmap(db2)._1, _property = geneName,  _entryCategory = "") :: varXreflist  
+      //varXreflist = new DbXref(_db = db2, _ac = token.split("=")(1), _category = xmap(db2)._2, _url = xmap(db2)._1, _property = geneName,  _entryCategory = "") :: varXreflist  
+      varXreflist = new DbXref(_db = db2, _ac = token.split("=")(1), _category = xmap(db2)._2, _url = xmap(db2)._1, _property = "",  _entryCategory = "") :: varXreflist  
     }
   })
   varXreflist = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = geneName,  _entryCategory = "") :: varXreflist  
@@ -1483,15 +1490,10 @@ class SequenceVariation(val vartyp: String, val mutyp: String, val zygosity: Str
   }
   
   def toXML =
-    <sequence-variation variation-type={vartyp}> 
-     {
-        if (zygosity != "")
-      <zygosity-type>{ zygosity }</zygosity-type>
-      }
-     {
-        if (mutyp != "")
-      <mutation-type>{ mutyp }</mutation-type>
-      }
+    <sequence-variation variation-type={vartyp}
+  	zygosity-type={ if (zygosity != "") { zygosity } else null }
+  	mutation-type={ if (mutyp != "") { mutyp } else null }
+     >
      {
         if (mutdesc != "")
       <mutation-description>{ mutdesc }</mutation-description>
