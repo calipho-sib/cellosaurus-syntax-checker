@@ -6,7 +6,7 @@ The Cellosaurus is a knowledge resource on cell lines. It attempt to describe al
 
 # Cellosaurus syntax checker
 
-This project is used to check the syntax of the cellosaurus.txt ASCII file.
+This project is used to check the syntax of the cellosaurus.txt ASCII file and can generate the OBO and XML format file.
 
 ## For developers
 
