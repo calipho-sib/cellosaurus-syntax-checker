@@ -1,11 +1,16 @@
-# Cellosaurus controlled vocabulary for Xrefs, Categories, Comment types and STR markers
+# Cellosaurus controlled vocabulary for Xrefs, Categories, Comment types, STR markers, HLA genes and Populations
 
 # Xrefs
+DR   4DN
+DR   ABCD
+DR   ABM
 DR   AddexBio
+DR   ArrayExpress
 DR   ATCC
 DR   BCGO
 DR   BCRC
 DR   BCRJ
+DR   BEI_Resources
 DR   BTO
 DR   BioSample
 DR   BioSamples
@@ -13,7 +18,9 @@ DR   CBA
 DR   CCLE
 DR   CCLV
 DR   CCRID
+DR   CCTCC
 DR   Cell_Biolabs
+DR   Cell_Model_Passport
 DR   CGH-DB
 DR   ChEMBL-Cells
 DR   ChEMBL-Targets
@@ -25,30 +32,42 @@ DR   Coriell
 DR   Cosmic
 DR   Cosmic-CLP
 DR   dbMHC
+DR   DepMap
 DR   DGRC
 DR   DiscoverX
 DR   DSMZ
+DR   eagle-i
 DR   EBiSC
 DR   ECACC
 DR   EFO
 DR   ENCODE
 DR   ESTDAB
+DR   FCDI
+DR   FCS-free
 DR   FlyBase
 DR   GDSC
 DR   GEO
 DR   HipSci
+DR   HIVReagentProgram
+DR   Horizon_Discovery
 DR   hPSCreg
+DR   IARC_TP53
+DR   IBRC
 DR   ICLC
 DR   IGRhCellID
 DR   IGSR
 DR   IHW
 DR   Imanis
-DR   IMGT/HLA
+DR   IPD-IMGT/HLA
 DR   ISCR
 DR   IZSLER
 DR   JCRB
 DR   KCB
 DR   KCLB
+DR   Kerafast
+DR   KYinno
+DR   LiGeA
+DR   LIMORE
 DR   LINCS_HMS
 DR   LINCS_LDP
 DR   Lonza
@@ -59,14 +78,17 @@ DR   Millipore
 DR   MMRRC
 DR   NCBI_Iran
 DR   NCI-DTP
-DR   NHCDR 
+DR   NHCDR
 DR   NISES
-DR   NIH-ARP
+DR   PerkinElmer
+DR   PharmacoDB
 DR   PRIDE
+DR   Progenetix
 DR   RCB
 DR   RSCB
 DR   SKIP
 DR   SKY/M-FISH/CGH
+DR   SLKBase
 DR   TCB
 DR   TKG
 DR   TNGB
@@ -76,7 +98,6 @@ DR   Wikidata
 DR   Ximbio
 
 # Categories
-CA   Adult stem cell
 CA   Cancer cell line
 CA   Conditionally immortalized cell line
 CA   Embryonic stem cell
@@ -85,6 +106,7 @@ CA   Finite cell line
 CA   Hybrid cell line
 CA   Hybridoma
 CA   Induced pluripotent stem cell
+CA   Somatic stem cell
 CA   Spontaneously immortalized cell line
 CA   Stromal cell line
 CA   Telomerase immortalized cell line
@@ -101,6 +123,8 @@ CC   Population
 CC   Biotechnology
 CC   Characteristics
 CC   Doubling time
+CC   HLA typing
+CC   Karyotypic information
 CC   Knockout cell
 CC   Microsatellite instability
 CC   Monoclonal antibody isotype
@@ -110,6 +134,7 @@ CC   Sequence variation
 CC   Transfected with
 CC   Transformant
 CC   Omics
+CC   Genome ancestry
 CC   Anecdotal
 CC   Miscellaneous
 CC   Caution
@@ -140,11 +165,14 @@ ST   D7S820
 ST   D8S1179
 ST   DXS101
 ST   DYS391
+ST   DYS570
+ST   DYS576
 ST   F13A01
 ST   F13B
 ST   FESFPS
 ST   FGA
 ST   LPL
+ST   Penta C
 ST   Penta D
 ST   Penta E
 ST   SE33
@@ -161,3 +189,48 @@ ST   Dog PEZ6
 ST   Dog PEZ8
 ST   Dog PEZ12
 ST   Dog PEZ20
+ST   Mouse STR 1-1
+ST   Mouse STR 1-2
+ST   Mouse STR 2-1
+ST   Mouse STR 3-2
+ST   Mouse STR 4-2 
+ST   Mouse STR 5-5
+ST   Mouse STR 6-4
+ST   Mouse STR 6-7
+ST   Mouse STR 7-1
+ST   Mouse STR 8-1
+ST   Mouse STR 9-2
+ST   Mouse STR 11-2
+ST   Mouse STR 12-1
+ST   Mouse STR 13-1
+ST   Mouse STR 15-3
+ST   Mouse STR 17-2
+ST   Mouse STR 18-3
+ST   Mouse STR 19-2
+ST   Mouse STR X-1
+
+#HLA typing
+HL   A*
+HL   B*
+HL   C*
+HL   DPA1*
+HL   DPB1*
+HL   DQA1*
+HL   DQB1*
+HL   DRA*
+HL   DRB1*
+HL   DRB2*
+HL   DRB3*
+HL   DRB4*
+HL   DRB5*
+HL   DRB6*
+HL   DRB9*
+
+#Population
+PO   African
+PO   Native American
+PO   East Asian, North
+PO   East Asian, South
+PO   South Asian
+PO   European, North
+PO   European, South
