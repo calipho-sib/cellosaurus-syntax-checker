@@ -1041,9 +1041,9 @@ object CelloParser {
     var age = ""
     var source_pmid = ""
     var alleles = ""
-    var celloCreatDat = ""
-    var celloUpdatDat = ""
-    var celloVersion = ""
+    var celloCreatDat = "1970-01-01"
+    var celloUpdatDat = "1970-01-01"
+    var celloVersion = "0"
     
     var celloStrmarkerlist = List[Strmarker]()
     var celloSourcelist = List[STsource]()
@@ -1255,7 +1255,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
                  val reglist: List[Registration], val hlalists: List[HLAlistwithSource], val seqvarlist: List[SequenceVariation], val genomeAncestry: PopulistwithSource) {
 
   def toXML =
-    <cell-line category={ category } created={ credat } last_updated={ upddat } entry_version={ eversion } sex={ if (sex != "") sex else null } age={ if (age != "") age else null }>
+    <cell-line category={ category } created={ credat } last-updated={ upddat } entry-version={ eversion } sex={ if (sex != "") sex else null } age={ if (age != "") age else null }>
       <accession-list>
         <accession type="primary">{ ac }</accession>
         {
@@ -1405,7 +1405,7 @@ class StrmarkerData(val alleles: String, val strmarkersources: List[STsource], v
 
   def toXML =
     <marker-data>
-			<alleles>{alleles}</alleles>
+			<marker-alleles>{alleles}</marker-alleles>
       {
         if (strmarkersources.size > 0 || strmarkersourcerefs.size > 0)
              <source-list>
@@ -1582,13 +1582,13 @@ class WebPage(val url: String) {
 
 class Registration(val registry: String, val regnumber: String) {
   def toXML =
-		<registration registry={ registry } registration_number={ regnumber }/>
+		<registration registry={ registry } registration-number={ regnumber }/>
 }
 
 class HLAData(val id: String, val alleles: String) {
   def toXML =
     <hla-gene id={ id }>
-			<alleles>{alleles}</alleles>
+			<hla-alleles>{alleles}</hla-alleles>
     </hla-gene>
 }
 
@@ -1794,7 +1794,7 @@ class CelloPublication(val year: String, val name: String, val pubtype: String, 
                        val publisher: String, val institute: String, val city: String, val country: String, val internal_id: String, val title: String, val authors: List[Author], val editors: List[Author], val dbrefs: List[DbXref]) {
 
   def toXML =
-    <publication date={ year } type={ pubtype } name={ if (name != "") name else null } volume={ if (volume != "") volume else null } firstpage={ if (firstpage != "") firstpage else null } lastpage={ if (lastpage != "") lastpage else null } publisher={ if (publisher != "") publisher else null } institute={ if (institute != "") institute else null } city={ if (city != "") city else null } country={ if (country != "") country else null } internal-id={ internal_id }>
+    <publication date={ year } type={ pubtype } journal-name={ if (name != "") name else null } volume={ if (volume != "") volume else null } first-page={ if (firstpage != "") firstpage else null } last-page={ if (lastpage != "") lastpage else null } publisher={ if (publisher != "") publisher else null } institution={ if (institute != "") institute else null } city={ if (city != "") city else null } country={ if (country != "") country else null } internal-id={ internal_id }>
       <title>{ scala.xml.PCData(title) }</title>
       {
         if (editors.size > 0)
