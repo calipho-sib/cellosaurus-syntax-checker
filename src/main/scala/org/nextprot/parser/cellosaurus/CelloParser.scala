@@ -1170,7 +1170,10 @@ object CelloParser {
         celloDerivedlist = new CvTerm(_terminology = "Cellosaurus", _ac = entrylinedata.split(" ! ")(0), _name = entrylinedata.split(" ! ")(1)) :: celloDerivedlist
       }
       else if (entryline.startsWith("RX   ")) { // publications 
-        celloPublilist = new PubliRef(db_ac = entrylinedata.split(";")(0)) :: celloPublilist
+        val ref1 = entrylinedata.split("; ")(0)
+        val ref2 = if (ref1.endsWith(";")) ref1.dropRight(1) else ref1
+        //Console.err.println("RX parsing, building PubliRef: " + entryline + " ->" + ref2.trim() + "<-")
+        celloPublilist = new PubliRef(db_ac = ref2.trim()) :: celloPublilist
       }
       else if (entryline.startsWith("DT   ")) { // dates and version 
         var orgdatlist = entrylinedata.split("; ")(0).split(": ")(1).split("-")
