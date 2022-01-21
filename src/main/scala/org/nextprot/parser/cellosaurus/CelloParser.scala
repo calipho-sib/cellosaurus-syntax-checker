@@ -535,14 +535,14 @@ object CelloParser {
             val AGregexp4 = "^[0-9-]+(F)?[WD]$".r
             val firstchar = entryline.substring(5,6)
             if(AGregexp.findFirstIn(entryline) == None)
-              {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+              {Console.err.println("Illegal age (case 1) found at: " + entryline); errcnt += 1 }
             else if((firstchar == "<" || firstchar == ">") && new Regex("AG   [><][1-9]").findFirstIn(entryline) == None)              
-              {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+              {Console.err.println("Illegal age (case 2) found at: " + entryline); errcnt += 1 }
             else if ("^[1-9]".r.findFirstIn(entrylinedata) != None) { // starts with digit
               if(AGregexp2.findFirstIn(entrylinedata) == None &&
                  AGregexp3.findFirstIn(entrylinedata) == None &&
                  AGregexp4.findFirstIn(entrylinedata) == None)
-              {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+              {Console.err.println("Illegal age (case 3) found at: " + entryline); errcnt += 1 }
             }
            // Further checks for valid ranges/units
             if(AGregexp2.findFirstIn(entrylinedata) != None) { 
@@ -561,7 +561,7 @@ object CelloParser {
                   ageunitcnt > 114 ||
                   (unit2 != null && unit2 != "M") ||
                   (value2 != null && value2.toInt > 11))
-                 {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+                 {Console.err.println("Illegal age (case 4) found at: " + entryline); errcnt += 1 }
             }
             else if(AGregexp3.findFirstIn(entrylinedata) != None) { 
               val parsepattern = "([0-9-]+)([A-Z]+)([0-9-]+)?([A-Z]+)?".r
@@ -575,12 +575,21 @@ object CelloParser {
                  ageunitcnt = value1.toInt
                  agendrange = ageunitcnt + 1
               }
-              if((ageunitcnt >= agendrange) || ageunitcnt > 11 ||
+              if((ageunitcnt >= agendrange) || ageunitcnt > 36 ||
                   (value2 != null && value2.toInt > 50) ||
                   (unit1 == "FM" && unit2 != null && !unit2.startsWith("F")) ||
                   (unit1 == "M" && unit2 != null && unit2.startsWith("F")) ||
                   (unit1 == "FM" && ageunitcnt > 9))
-                 {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+                 {
+                    // Console.err.println("ageunitcnt:" + ageunitcnt); // 22
+                    // Console.err.println("agendrange:" + agendrange); // 24
+                    // Console.err.println("unit1:" + unit1);           // M
+                    // Console.err.println("unit2:" + unit2);           // null
+                    // Console.err.println("value1:" + value1);         // 22-24
+                    // Console.err.println("value2:" + value2);         // null
+                    Console.err.println("Illegal age (case 5) found at: " + entryline); 
+                    errcnt += 1 
+                  }
             }
             else if(AGregexp4.findFirstIn(entrylinedata) != None) { 
               val parsepattern = "([0-9-]+)([A-Z]+)".r
@@ -597,7 +606,7 @@ object CelloParser {
               if((ageunitcnt >= agendrange) ||
                   (unit == "FW" && ageunitcnt > 42) ||
                   (unit == "FD" && ageunitcnt > 300))
-                 {Console.err.println("Illegal age found at: " + entryline); errcnt += 1 }
+                 {Console.err.println("Illegal age (case 6) found at: " + entryline); errcnt += 1 }
             }
            }
         else if (entryline.startsWith("CA   ")) { // Category
