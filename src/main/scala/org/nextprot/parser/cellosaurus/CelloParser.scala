@@ -1118,9 +1118,9 @@ object CelloParser {
           var celloHLAlist = List[HLAData]()
           val hlatoks = textdata.split(" \\(")(0).split("; ")
           hlatoks.foreach(hlaItem => {
-            val id = hlaItem.split("\\*")(0) + "*"
+            val geneSymbol = "HLA-" + hlaItem.split("\\*")(0)
             var hlaAlleles = hlaItem.split("\\*")(1)
-            celloHLAlist = new HLAData(id=id, alleles=hlaAlleles) :: celloHLAlist
+            celloHLAlist = new HLAData(geneSymbol=geneSymbol, alleles=hlaAlleles) :: celloHLAlist
             })
             val celloHLAlistwithSource = new HLAlistwithSource(glist=celloHLAlist.reverse, src=hlaSrc) // add source to list
             celloHLAlists = celloHLAlistwithSource :: celloHLAlists // add list to list of list  
@@ -1600,9 +1600,9 @@ class Registration(val registry: String, val regnumber: String) {
 		<registration registry={ registry } registration-number={ regnumber }/>
 }
 
-class HLAData(val id: String, val alleles: String) {
+class HLAData(val geneSymbol: String, val alleles: String) {
   def toXML =
-    <hla-gene id={ id }>
+    <hla-gene gene-symbol={ geneSymbol }>
 			<hla-alleles>{alleles}</hla-alleles>
     </hla-gene>
 }
