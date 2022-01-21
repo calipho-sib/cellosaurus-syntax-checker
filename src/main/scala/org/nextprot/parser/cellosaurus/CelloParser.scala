@@ -389,7 +389,11 @@ object CelloParser {
             if(allseqvartoks(0) == "Mutation" && !ok_vartyplist.contains(allseqvartoks(4))) { Console.err.println("Illegal or missing Mutation type found at: " + entryline); errcnt += 1 } 
             else if(allseqvartoks(0) == "Gene fusion" && !allseqvartoks(3).contains("+")) { Console.err.println("Illegal Gene fusion found at: " + entryline); errcnt += 1 } // implement check for names= ?
             else if(allseqvartoks(0) == "Gene amplification" && !ok_amplityplist.contains(allseqvartoks(4))) { Console.err.println("Illegal Gene amplification found at: " + entryline); errcnt += 1 } 
-            
+            if (allseqvartoks(0) == "Mutation") { // Zygozity mandatory for Mutation
+              var zygofound = false
+              allseqvartoks.foreach(token => { if (token.startsWith("Zygosity=")) { zygofound = true } })
+              if (!zygofound) {Console.err.println("Zygosity not found at: " + entryline); errcnt += 1 }
+            }
             allseqvartoks.foreach(token => {
               if(token.contains("y=")) {
                 val tokfields = token.split("=")
