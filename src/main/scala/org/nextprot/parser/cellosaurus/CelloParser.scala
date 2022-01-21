@@ -1378,7 +1378,8 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
   if(currcomment != "") oboEntryString += currcomment.replace("..",".") + "\"\n"
   origin.foreach(origin => {oboEntryString += "relationship: originate_from_same_individual_as " + origin._ac + " ! " + origin._name + "\n"})
   derived.foreach(derivedfrom => {oboEntryString += "relationship: derived_from " + derivedfrom._ac + " ! " + derivedfrom._name + "\n"})
-  oboEntryString += "creation_date: \"" + credat +  "T00:00:00Z\"\n" // OBO format requires useless hours-minutes
+  //oboEntryString += "creation_date: \"" + credat +  "T00:00:00Z\"\n" // OBO format requires useless hours-minutes
+  oboEntryString += "creation_date: " + credat +  "T00:00:00Z\n" // OBO format requires useless hours-minutes
   oboEntryString
   }
   
