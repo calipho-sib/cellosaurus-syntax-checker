@@ -77,7 +77,7 @@ object CelloParser {
     val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
     val ok_seqvarlist = List("Gene amplification", "Gene deletion", "Gene fusion", "Mutation")
     val ok_zygositylist = List("-", "Hemizygous", "Homoplasmic", "Homozygous", "Mosaic", "Unspecified", "Heteroplasmic", "Heterozygous")
-    val ok_vartyplist = List("Simple", "Simple_corrected", "Simple_edited", "Repeat_expansion", "Repeat_expansion_corrected", "Repeat_expansion_edited", "Unexplicit", "Unexplicit_corrected", "None_reported")
+    val ok_vartyplist = List("Simple", "Simple_corrected", "Simple_edited", "Repeat_expansion", "Repeat_expansion_corrected", "Repeat_expansion_edited", "Unexplicit", "Unexplicit_corrected", "Unexplicit_edited", "None_reported")
     val ok_sxlist = List("Female", "Male", "Mixed sex", "Sex ambiguous", "Sex unspecified")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_cclist1 = List("Anecdotal", "Breed/subspecies", "Caution", "Derived from metastatic site", "Derived from sampling site", "Discontinued", "From", "Genome ancestry", "Group", "HLA typing", "Knockout cell", "Microsatellite instability", "Miscellaneous", "Misspelling",
@@ -405,7 +405,7 @@ object CelloParser {
             else {
             val popsrctok = allpoptoks(1).split("\\)")(0)
             val poptoks = allpoptoks(0).split("; ") 
-            if(poptoks.size != 7) { Console.err.println("Wrong populatio count for Genome ancestry source in " + ac); errcnt += 1 }
+            if(poptoks.size != 7) { Console.err.println("Wrong population count for Genome ancestry source in " + ac); errcnt += 1 }
             var totalpercent = 0.0
             poptoks.foreach(token => {
                       val onepoptoklist = token.split("=")
@@ -738,7 +738,7 @@ object CelloParser {
                      currEntry.foreach(line => { 
                                        if (line.startsWith("OI   ") && line.contains(ac)) ok = true
                                          })
-                     if (!ok) { Console.err.println("Inexistent reciproque OI/AC: " + oiac + "/" + ac); errcnt += 1 }
+                     if (!ok) { Console.err.println("Inexistent reciprocal OI/AC: " + oiac + "/" + ac); errcnt += 1 }
                      else if (idacmap(oiac) != oiid) { Console.err.println("Incorrect OI AC/ID pair: " + oiac + "/" + oiid); errcnt += 1 }
                        }
                      }
