@@ -78,7 +78,7 @@ object CelloParser {
     val ok_seqvarlist = List("Gene amplification", "Gene deletion", "Gene fusion", "Mutation")
     val ok_zygositylist = List("-", "Hemizygous", "Homoplasmic", "Homozygous", "Mosaic", "Unspecified", "Heteroplasmic", "Heterozygous")
     val ok_vartyplist = List("Simple", "Simple_corrected", "Simple_edited", "Repeat_expansion", "Repeat_expansion_corrected", "Repeat_expansion_edited", "Unexplicit", "Unexplicit_corrected", "Unexplicit_edited", "None_reported")
-    val ok_amplityplist = List ("Duplication", "Triplication", "Quadriplication", "Extensive")
+    val ok_amplityplist = List ("Duplication", "Triplication", "Quadruplication", "Extensive")
     val ok_sxlist = List("Female", "Male", "Mixed sex", "Sex ambiguous", "Sex unspecified")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_cclist1 = List("Anecdotal", "Breed/subspecies", "Caution", "Derived from metastatic site", "Derived from sampling site", "Discontinued", "From", "Genome ancestry", "Group", "HLA typing", "Knockout cell", "Microsatellite instability", "Miscellaneous", "Misspelling",
@@ -1658,8 +1658,6 @@ class DbXref(val _db: String, val _ac: String, val _category: String, val _url: 
         final_url = _url.replace("%s", _ac.substring(4)) // BTO:  %s is the numerical part of the BTO:nnnnnnn identifier
       else if(_db.equals("CGH-DB"))
         final_url = _url.replace("%s", _ac.split("-")(0)).replace("%t", _ac.split("-")(1)) // CGH-DB: Note: %s and %t are respectively the values before and after the dash in the DR line.
-      else if(_db.equals("CLS"))
-        final_url = _url.replace("%s", _ac.split("/")(1)) // CLS: Note: %s is the value after the slash "/" in the DR line.
       else if(_db.equals("AddexBio"))
         final_url = _url.replace("%s", _ac.split("/")(1)) // AddexBio: Note: %s is the value after the slash "/" in the DR line.
       else if(_db.equals("ECACC")) {
@@ -1675,8 +1673,6 @@ class DbXref(val _db: String, val _ac: String, val _category: String, val _url: 
         else modifiedUrl = _url
         final_url = modifiedUrl.replace("%s", _ac)
         }
-      else if(_db.equals("NIH-ARP"))
-        final_url = _url.replace("%s", _ac.split("-")(1)) // NIH-ARP: Note: %s is the value after the dash in the DR line.
       else if(_db.equals("TKG")) {// TKG: Note: n% is the second digit of the cell line AC and %s is the cell line AC without the 'TKG'
         val digits = _ac.split(" ")(1)
         final_url = _url.replace("%n", digits.substring(1,2)).replace("%s", digits); // wtf! digits.substring(1,1) is empty!!!
