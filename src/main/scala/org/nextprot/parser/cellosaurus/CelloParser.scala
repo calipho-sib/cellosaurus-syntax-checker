@@ -45,6 +45,7 @@ object CelloParser {
     var idlist = ArrayBuffer[String]()
     var hilist = ArrayBuffer[String]()
     var duplist = ArrayBuffer[String]()
+    var oigroupmap = Map[String,List[OiEntry]]()
     var drmap = ArrayBuffer[String]()
     val emap = Map.empty[String, Int]
     val oxmap = Map.empty[String, Int]
@@ -126,10 +127,11 @@ object CelloParser {
 
     // Load CVs for cc, ca, st, and xref dbs
     var jarpath = new File(System.getProperty("java.class.path"));
-    //Console.err.println("jar path is: " + jarpath)
+    Console.err.println("jar path is: " + jarpath)
     var celloCVpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "celloparser.cv"
     var celloXrefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_xrefs.txt"
     var celloRefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_refs.txt"
+
     //var celloCVpath = "/home/agateau/workspace/cellosaurus-syntax-checker/celloparser.cv"
     if (!new File(celloCVpath).exists) { Console.err.println("celloparser.cv not found at: " + celloCVpath); sys.exit(1) }
     //var celloXrefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_xrefs.txt"
@@ -774,7 +776,20 @@ object CelloParser {
        else if (entryline.startsWith("CA   ")) { category = entryline.split("   ")(1) }
       })
       
-    if (toxml || toOBO) celloentry = toCelloEntry(entry, xmap) // generate model representation
+    if (toxml || toOBO) {
+      celloentry = toCelloEntry(entry, xmap) // generate model representation
+      
+      // pam
+      val oiGroup = celloentry.getOiGroup()
+      if (oiGroup.length > 0) {
+        if (! oigroupmap.contains(oiGroup)) {
+          var newList = List[OiEntry]()
+          oigroupmap(oiGroup) = newList
+        }
+        oigroupmap(oiGroup) = celloentry.toOiEntry() :: oigroupmap(oiGroup)
+      }
+
+    } 
     if (toxml) {//if(ac.startsWith ("CVCL_G193")) 
       celloentry.updatDBrefs // Add a property flag to discontinued cell line dbrefs
       xmlfile.write(prettyXMLprinter.format(celloentry.toXML) + "\n") 
@@ -920,6 +935,32 @@ object CelloParser {
       drmap.sortWith(_ < _).foreach { line => drmapfile.write(line) }
       drmapfile.close()
     }
+
+
+    // pam
+    // check OI consistency
+    var differCount = 0
+    oigroupmap.keys.foreach(gr => {
+      var expectedCellCount = 1
+      gr.foreach(ch => {if (ch == ',') expectedCellCount += 1})
+      val cellList = oigroupmap(gr)
+      val actualCellCount = cellList.size
+      var actualCellList = List[String]()
+      cellList.foreach(el => { actualCellList = el.ac :: actualCellList })      
+      if (expectedCellCount != actualCellCount) {
+        Console.err.println("Inconsistent OI group " + gr + ": contains these members: " + actualCellList.sortWith(_ < _).mkString(","))
+      }
+      val oiList = oigroupmap(gr)
+      val max = oiList.size - 1
+      var idx = 0
+      while (idx < max) {
+        if (! oiList(idx).similar(oiList(idx+1), gr)) differCount += 1
+        idx += 1
+      }
+    })
+    if (differCount>0) Console.err.println("Sister cells with unexpected differences in Sex, Species, Population or Breed/subspecies: " + differCount)
+
+    Console.err.println("Parsing End")    
     
     if (stats) {
       println("\n ===== Statistics =====\n")
@@ -1043,9 +1084,11 @@ object CelloParser {
     // .reverse in author lists to recover original order
     val publiEntry = new CelloPublication(year = year, name = journal, pubtype = pubtype, volume = volume, firstpage = firstpage, lastpage = lastpage, publisher = publisher, institute = institute, city = city, country = country, internal_id = internalId,
       title = title.split("\"")(1), authors = celloPubAuthorlist.reverse, editors = celloPubEditorlist.reverse, dbrefs = pubXreflist)
+
     publiEntry
   }
   
+
    def toCelloEntry(flatEntry: ArrayBuffer[String], xmap: scala.collection.mutable.Map[String, (String, String)]): CelloEntry = {
     var entrylinedata = ""
     var ac = ""
@@ -1264,6 +1307,26 @@ class Author(val name: String) {
     <person name={ name }/>
 }
 
+// pam
+class OiEntry(val ac:String, val sex: String, val species: String, val population: String, val subspecies: String ) {
+  override def toString: String = {
+    return ac + ": sex=" + sex + ", species=" + species + ", population:" + population + ", breed/subspecies:" + subspecies
+  }
+  def similar(other: OiEntry, group: String) : Boolean = {
+    var ok = true
+    if (this.sex != other.sex) ok = false
+    if (this.species != other.species) ok = false
+    if (this.population != other.population) ok = false
+    if (this.subspecies != other.subspecies) ok = false
+    if (!ok) {
+      Console.err.println("Sister cells in OI group " + group + " are not similar: " + this.ac + " and " + other.ac)
+      Console.err.println("Sister cell " + this.toString)
+      Console.err.println("Sister cell " + other.toString)
+    }
+    return ok
+  }
+}
+
 class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val synonyms: List[Synonym],
                  val credat :String, val upddat :String, val eversion :String, 
                  val category: String, val sex: String, val age: String,
@@ -1271,6 +1334,33 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
                  val species: List[CvTerm], val origin: List[CvTerm], val derived: List[CvTerm], val publis: List[PubliRef],
                  val sources: List[STsource], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker],
                  val reglist: List[Registration], val hlalists: List[HLAlistwithSource], val seqvarlist: List[SequenceVariation], val genomeAncestry: PopulistwithSource) {
+
+
+  // pam
+  def getOiGroup(): String = {
+    var result = List[String]()
+    if (origin.size > 0) {
+      origin.foreach(el => { result = el._ac :: result })
+      if (result.size>0) result = ac :: result 
+    }
+    val sorted = result.sortWith((s: String, t: String)  => {s < t})
+    return sorted.mkString(",")
+  }
+
+  def toOiEntry() : OiEntry = { 
+    var species = List[String]()
+    var populations = List[String]()
+    var subspecies = List[String]()
+    this.species.foreach(el => { species = el._ac :: species})
+    this.comments.foreach(el => { if (el.category == "Population") { populations = el.text :: populations }})
+    this.comments.foreach(el => { if (el.category == "Breed/subspecies") { subspecies = el.text :: subspecies }})
+    val spc = species.sortWith((s: String, t: String)  => {s < t}).mkString(",")
+    val pop = populations.sortWith((s: String, t: String)  => {s < t}).mkString(",")
+    val sub = subspecies.sortWith((s: String, t: String)  => {s < t}).mkString(",")
+    val oiEntry = new OiEntry(ac = this.ac, sex= this.sex, species=spc, population=pop, subspecies=sub)
+    return oiEntry
+  }
+
 
   def toXML =
     <cell-line category={ category } created={ credat } last-updated={ upddat } entry-version={ eversion } sex={ if (sex != "") sex else null } age={ if (age != "") age else null }>
