@@ -1,6 +1,6 @@
 # Cellosaurus - A knowledge resources on cell lines
 
-From the CALIPHO gropu of the SIB Swiss Institute of Bioinformatics; neXtProt project
+From the CALIPHO gropu of the SIB Swiss Institute of Bioinformatics
 
 The Cellosaurus is a knowledge resource on cell lines. It attempt to describe all cell lines used in biomedical research.
 
@@ -9,8 +9,6 @@ The Cellosaurus is a knowledge resource on cell lines. It attempt to describe al
 This project is used to check the syntax of the cellosaurus.txt ASCII file and can generate the OBO and XML format file.
 
 ## For developers
-
-
 
 Build the jar make
 
