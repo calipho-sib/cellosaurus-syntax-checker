@@ -24,6 +24,16 @@ object CelloParser {
   codec.onMalformedInput(CodingErrorAction.REPLACE)
   // grep -n --color='auto' -P "[\x80-\xFF]" cellosaurus.txt
 
+  def escape_chars_for_obo(s: String) :String = {
+    // prefix these characters with a backslash
+    // \ -> \\
+    // { -> \{
+    // } -> \}
+    // " -> \"
+    // see also https://owlcollab.github.io/oboformat/doc/GO.format.obo-1_4.html#S.1.5
+    return s.replace("\\", "\\\\").replace("{","\\{").replace("}","\\}").replace("\"", "\\\"")
+  }
+
   def main(args: Array[String]) = {
     val today = Calendar.getInstance().getTime()
     var todaystring: String = new SimpleDateFormat("yyyy-MM-dd").format(today)
@@ -1464,29 +1474,31 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
     </cell-line>
        
   def toOBO =  {
-  var oboEntryString = "\n[Term]\n"
-  var currcomment = ""
-  
-  oboEntryString += "id: " + ac + "\n"
-  oboEntryString += "name: " + id.replace('{','(').replace('}',')') + "\n" // obo doesn't like curly brackets
-  synonyms.foreach(syno => {oboEntryString += syno.toOBO})
-  oboEntryString += "subset: " + category.replace(' ','_') + "\n"
-  if(sex != "") oboEntryString += "subset: " + sex.replace(' ','_') + "\n"
-  dbrefs.foreach(dbref => {oboEntryString += dbref.toOBO})
-  publis.foreach(publi => {oboEntryString += publi.toOBO})
-  webpages.foreach(webpage => {oboEntryString += webpage.toOBO})
-  diseases.foreach(disease => {oboEntryString += disease.toOBO})
-  species.foreach(specie => {oboEntryString += specie.toOBO})
-  comments.foreach(comment => { // stick them all in one line
-    if(currcomment == "") currcomment = "comment: \""
-    else currcomment += " "
-    currcomment += comment.toOBO})
-  if(currcomment != "") oboEntryString += currcomment.replace("..",".") + "\"\n"
-  origin.foreach(origin => {oboEntryString += "relationship: originate_from_same_individual_as " + origin._ac + " ! " + origin._name + "\n"})
-  derived.foreach(derivedfrom => {oboEntryString += "relationship: derived_from " + derivedfrom._ac + " ! " + derivedfrom._name + "\n"})
-  //oboEntryString += "creation_date: \"" + credat +  "T00:00:00Z\"\n" // OBO format requires useless hours-minutes
-  oboEntryString += "creation_date: " + credat +  "T00:00:00Z\n" // OBO format requires useless hours-minutes
-  oboEntryString
+    var oboEntryString = "\n[Term]\n"
+    var currcomment = ""
+    
+    oboEntryString += "id: " + ac + "\n"
+    //oboEntryString += "name: " + id.replace('{','(').replace('}',')') + "\n" // alain: obo doesn't like curly brackets
+    oboEntryString += "name:" + CelloParser.escape_chars_for_obo(id) + "\n"                // pam:   escape chars for obo
+    synonyms.foreach(syno => {oboEntryString += syno.toOBO})
+    oboEntryString += "subset: " + category.replace(' ','_') + "\n"
+    if(sex != "") oboEntryString += "subset: " + sex.replace(' ','_') + "\n"
+    dbrefs.foreach(dbref => {oboEntryString += dbref.toOBO})
+    publis.foreach(publi => {oboEntryString += publi.toOBO})
+    webpages.foreach(webpage => {oboEntryString += webpage.toOBO})
+    diseases.foreach(disease => {oboEntryString += disease.toOBO})
+    species.foreach(specie => {oboEntryString += specie.toOBO})
+    comments.foreach(comment => { // stick them all in one line
+      if(currcomment == "") currcomment = "comment: \""
+      else currcomment += " "
+      currcomment += comment.toOBO
+    })
+    if(currcomment != "") oboEntryString += currcomment.replace("..",".") + "\"\n"
+    origin.foreach(origin => {oboEntryString += "relationship: originate_from_same_individual_as " + origin._ac + " ! " + origin._name + "\n"})
+    derived.foreach(derivedfrom => {oboEntryString += "relationship: derived_from " + derivedfrom._ac + " ! " + derivedfrom._name + "\n"})
+    //oboEntryString += "creation_date: \"" + credat +  "T00:00:00Z\"\n" // OBO format requires useless hours-minutes
+    oboEntryString += "creation_date: " + credat +  "T00:00:00Z\n" // OBO format requires useless hours-minutes
+    oboEntryString
   }
   
   def updatDBrefs =  { // find dbrefs associated with 'Discontinued' comments, set their property flags and remove urls
@@ -1643,7 +1655,8 @@ class Synonym(val syno: String) {
     <name type="synonym">{ syno }</name>
   
   def toOBO =  {
-    val synoline = "synonym: \"" + syno.replace('\\','/') + "\" RELATED []\n"
+    // val synoline = "synonym: \"" + syno.replace('\\','/') + "\" RELATED []\n"   // Alain
+    val synoline = "synonym: \"" + CelloParser.escape_chars_for_obo(syno) + "\" RELATED []\n"  // Pam
     synoline
   }
 }
@@ -1894,7 +1907,7 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
       }
     else    
       commtext += text + "."
-    commtext
+    CelloParser.escape_chars_for_obo(commtext)
   }
 }
 
