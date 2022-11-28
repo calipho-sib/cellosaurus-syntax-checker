@@ -1278,21 +1278,22 @@ object CelloParser {
     val duplIdlist = markerIdList.diff(markerIdList.distinct).toSet
     var finalmarkerList = celloStrmarkerlist.filter(marker => !duplIdlist.contains(marker.id))
     if(duplIdlist.size > 0 ) {
-         duplIdlist.foreach(markerid => { // merge strmarkers with same id
-         var newmarkdatalist  = List[StrmarkerData]() 
-         val tomergemarkersList = celloStrmarkerlist.filter(marker => markerid == marker.id)
-         tomergemarkersList.foreach(strmarker => {
-         newmarkdatalist =  strmarker.markerdatalist(0) :: newmarkdatalist 
-          })
-          finalmarkerList = new Strmarker(id = markerid, conflict = "true", markerdatalist = newmarkdatalist) :: finalmarkerList
-       })
-      }
-
+      duplIdlist.foreach(markerid => { // merge strmarkers with same id
+        var newmarkdatalist  = List[StrmarkerData]() 
+        val tomergemarkersList = celloStrmarkerlist.filter(marker => markerid == marker.id)
+        tomergemarkersList.foreach(strmarker => {
+          newmarkdatalist =  strmarker.markerdatalist(0) :: newmarkdatalist 
+        })
+        finalmarkerList = new Strmarker(id = markerid, conflict = "true", markerdatalist = newmarkdatalist) :: finalmarkerList
+      })
+    }
+    // issue CP-012: sort by marker id
+    val sortedMarkerList = finalmarkerList.sortBy(x => x.id.toLowerCase)
     // Instanciate full entry, .reverse in lists to recover original order
     val entry = new CelloEntry(ac = ac, oldacs = celloOldaclist, id = id, synonyms = celloSynlist.reverse, credat = celloCreatDat, upddat = celloUpdatDat, eversion = celloVersion, category = category, sex = sex, age = age, dbrefs = celloXreflist.reverse,
       comments = celloCommentlist.reverse, webpages = celloWebPagelist.reverse, diseases = celloDislist.reverse, species = celloSpeclist.reverse,
       origin = celloOriglist.reverse, derived = celloDerivedlist.reverse, publis = celloPublilist.reverse, sources = celloSourcelist,
-      sourcerefs = celloSourcereflist, strmarkers = finalmarkerList, reglist = celloReglist, hlalists = celloHLAlists.reverse, seqvarlist = celloSeqVarlist.reverse, genomeAncestry = popDatawithSource)
+      sourcerefs = celloSourcereflist, strmarkers = sortedMarkerList, reglist = celloReglist, hlalists = celloHLAlists.reverse, seqvarlist = celloSeqVarlist.reverse, genomeAncestry = popDatawithSource)
  
     entry
   }
@@ -1724,7 +1725,9 @@ class PopFreqData(val popName: String, val popFreq: String) {
 class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
   def toXML =
     <genome-ancestry>
-      { poplist.map(_.toXML) }
+      <population-list>
+        { poplist.map(_.toXML) }
+      </population-list>
       <genome-ancestry-source>
           {
           if (src.contains("PubMed") )
