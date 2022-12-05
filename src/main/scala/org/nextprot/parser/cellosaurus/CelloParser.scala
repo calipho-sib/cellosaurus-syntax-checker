@@ -441,18 +441,14 @@ object CelloParser {
             }            }
           else if(cctopic == "HLA typing") { // sample HLA typing: A*02:01,02:06; B*40:01:02:01,67:01:01; C*03,07; DPB1*04:01,05:01 (IMGT/HLA).
             // Retokenize to separate items from source Check types
-            // Console.err.println("cctext: " + cctext)
             val alltoks = cctext.split(" \\(")
-            // Console.err.println("alltoks.size:" + alltoks.size)
             if(alltoks.size != 2) {
               Console.err.println("Wrong format for HLA typing source in " + ac);
               errcnt += 1
             } else {
               val srctok = alltoks(1).split("\\)")(0)
-              //Console.err.println("srctok: " + srctok )
               val hlatoks = alltoks(0).split("; ")
               hlatoks.foreach(token => {
-                // Console.err.println("token:" + token)
                 val onetoklist = token.split("\\*")
                 if(onetoklist.size != 2) { Console.err.println("Unknown HLA type (" + token + ") found in: " + ac); errcnt += 1 }
                 else {
@@ -1178,7 +1174,7 @@ object CelloParser {
 
         if(category.equals("HLA typing")) { // prepare hla-lists of gene/alleles with sources
           var hlaSrc = textdata.split(" \\(")(1).split("\\)")(0)
-          Console.err.println("===hlaSrc:" + hlaSrc)
+          // Console.err.println("===hlaSrc:" + hlaSrc)
           var celloHLAlist = List[HLAData]()
           val hlatoks = textdata.split(" \\(")(0).split("; ")
           hlatoks.foreach(hlaItem => {
