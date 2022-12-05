@@ -1449,9 +1449,9 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
       }
       {
         if (hlalists.size > 0)
-          <hla-lists>
+          <hla-typing-list>
             { hlalists.map(_.toXML) }
-          </hla-lists>
+          </hla-typing-list>
       }
       {
         if (genomeAncestry != null)
@@ -1714,24 +1714,24 @@ class Registration(val registry: String, val regnumber: String) {
 
 class HLAData(val geneSymbol: String, val alleles: String) {
   def toXML =
-    <hla-gene gene-symbol={ geneSymbol }>
-			<hla-alleles>{alleles}</hla-alleles>
-    </hla-gene>
+    <hla-gene-alleles gene={geneSymbol} alleles={alleles} />
 }
 
 class HLAlistwithSource(val glist: List[HLAData], val src: String) {
   def toXML =
-    <hla-list>
+    <hla-typing>
+      <hla-gene-alleles-list>
       { glist.map(_.toXML) }
-      <hla-list-source>
+      </hla-gene-alleles-list>
+      <hla-typing-source>
           {
           if (src.contains("PubMed") )
           <reference resource-internal-ref={ src }/>
           else
           <source>{ src }</source>
           }
-		  </hla-list-source>
-    </hla-list>
+		  </hla-typing-source>
+    </hla-typing>
 }
 
 class PopFreqData(val popName: String, val popFreq: String) {
