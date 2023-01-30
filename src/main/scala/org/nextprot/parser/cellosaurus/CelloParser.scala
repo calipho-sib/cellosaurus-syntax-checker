@@ -20,9 +20,12 @@ import scala.xml._
 //import org.nextprot.parser.cellosaurus.utils._
 
 object CelloParser {
+
   implicit val codec = Codec("UTF-8")
   codec.onMalformedInput(CodingErrorAction.REPLACE)
   // grep -n --color='auto' -P "[\x80-\xFF]" cellosaurus.txt
+
+  val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation")
 
   def escape_chars_for_obo(s: String) :String = {
     // prefix these characters with a backslash
@@ -34,7 +37,50 @@ object CelloParser {
     return s.replace("\\", "\\\\").replace("{","\\{").replace("}","\\}").replace("\"", "\\\"")
   }
 
+  def parse_misspelling(data: String)  = {
+    val idx = data.indexOf("; ")
+    val label = data.substring(0,idx)
+    val tail = data.substring(idx+2)
+    Console.println(" ")
+    Console.println("data : <" + data + ">")
+    Console.println("label: <" + label + ">")
+    var xrefs = ArrayBuffer[String]()
+    var notes = ArrayBuffer[String]()
+      tail.split("\\. ").foreach(sen => {
+      if (sen.startsWith("In ") && sen.contains("=")) {
+        // remove "In " and final dot if any
+        val senx = if (sen.endsWith(".")) sen.substring(3, sen.length()-1) else sen.substring(3)
+        // split xref list on ", "
+        val tokens = senx.split(", ")
+        tokens.foreach(token => {
+          if (token.contains("=")) {
+            // further split tokens on " and " and add to xrefs array
+            token.split(" and ").foreach(xrefs.append(_))
+          }          
+        })
+      } else {
+        notes.append(sen)
+      }
+    })
+    val note = notes.mkString(". ")
+    xrefs.foreach(x => { Console.println("xref : " + x) })
+    Console.println("note : " + note)
+  }
+
+
+
+
+
   def main(args: Array[String]) = {
+
+    val examples = List("32D:c13; Occasionally.", "MGB3E9; In ATCC=PTA-6724.", "M41; In GEO=GSM851922, toto=happy and jack=too.", "M41CisR; In GEO=GSM851923.", 
+    "FK99-487; In IARC_TP53=11552. Not really a misspelling. Assignment of a name based on first author of publication.")
+/*
+    examples.foreach(parse_misspelling(_))
+    Console.println("End")
+    System.exit(0)
+*/
+
     val today = Calendar.getInstance().getTime()
     var todaystring: String = new SimpleDateFormat("yyyy-MM-dd").format(today)
     var started: Boolean = false
@@ -1376,6 +1422,14 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
     return oiEntry
   }
 
+  def hasNormalCCTopics() : Boolean = {
+    // HLA typing, genome ancestry, Registration and seq-variations have their own structures
+    // if (comments.filterNot(_.category.contains("HLA")).filterNot(_.category.contains("ancestry"))
+    // .filterNot(_.category.contains("Registration")).filterNot(_.category.contains("variation")).size > 0) 
+    return comments
+      .filterNot(cc => { CelloParser.specialCCTopics.contains(cc.category) })
+      .size > 0
+  }
 
   def toXML =
     <cell-line category={ category } created={ credat } last-updated={ upddat } entry-version={ eversion } sex={ if (sex != "") sex else null } age={ if (age != "") age else null }>
@@ -1392,7 +1446,8 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
         }
       </name-list>
       {
-        if (comments.filterNot(_.category.contains("HLA")).filterNot(_.category.contains("ancestry")).filterNot(_.category.contains("Registration")).filterNot(_.category.contains("variation")).size > 0) // HLA typing, genome ancestry, Registration and seq-variations have their own structures
+        // HLA typing, genome ancestry, Registration and seq-variations have their own structures
+        if (hasNormalCCTopics() )
           <comment-list>
             { comments.map(_.toXML) }
           </comment-list>
@@ -1893,8 +1948,16 @@ class Comment(val category: String, var text: String, xmap: scala.collection.mut
     }
   }
 
-  def toXML = if(category != "HLA typing" && category != "Genome ancestry" && category != "Registration" && category != "Sequence variation") // skip thess comment's xml since they appear later in a structured form
-    <comment category={ category }> { if(text != "") {text} } { if (method != "") <method>{ method }</method> } { if (cvterm != null) {cvterm.toXML}} { if (ccXreflist.size > 0) <xref-list> { ccXreflist.map(_.toXML) } </xref-list> }</comment>
+  def toXML = 
+     // skip these comment's xml since they appear later in a structured form
+    // if (category != "HLA typing" && category != "Genome ancestry" && category != "Registration" && category != "Sequence variation")
+    if (! CelloParser.specialCCTopics.contains(category))
+    <comment category={ category }> 
+    { if (text != "") {text} } 
+    { if (method != "") <method>{ method }</method> } 
+    { if (cvterm != null) {cvterm.toXML} } 
+    { if (ccXreflist.size > 0) <xref-list> { ccXreflist.map(_.toXML) } </xref-list> }
+    </comment>
 
   def toOBO =  {
     var commtext = category + ": "
