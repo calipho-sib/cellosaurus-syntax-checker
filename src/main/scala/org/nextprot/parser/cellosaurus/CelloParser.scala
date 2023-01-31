@@ -25,7 +25,7 @@ object CelloParser {
   codec.onMalformedInput(CodingErrorAction.REPLACE)
   // grep -n --color='auto' -P "[\x80-\xFF]" cellosaurus.txt
 
-  val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation")
+  val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation", "Misspelling")
 
   def escape_chars_for_obo(s: String) :String = {
     // prefix these characters with a backslash
@@ -36,6 +36,7 @@ object CelloParser {
     // see also https://owlcollab.github.io/oboformat/doc/GO.format.obo-1_4.html#S.1.5
     return s.replace("\\", "\\\\").replace("{","\\{").replace("}","\\}").replace("\"", "\\\"")
   }
+
 
   def parse_misspelling(data: String)  = {
     val idx = data.indexOf("; ")
@@ -66,10 +67,6 @@ object CelloParser {
     xrefs.foreach(x => { Console.println("xref : " + x) })
     Console.println("note : " + note)
   }
-
-
-
-
 
   def main(args: Array[String]) = {
 
@@ -1177,6 +1174,7 @@ object CelloParser {
     var celloWebPagelist = List[WebPage]()
     var celloSeqVarlist = List[SequenceVariation]()
     var celloReglist = List[Registration]()
+    var celloMisspellingList = List[Misspelling]()
     var popDatawithSource : PopulistwithSource = null
 
     flatEntry.foreach(entryline => { // First pass just to get the cell line category, it can influence the urls in DbXrefs
@@ -1270,7 +1268,17 @@ object CelloParser {
           var regtoks = textdata.split("; ")
           celloReglist = new Registration(registry=regtoks(0), regnumber=regtoks(1)) :: celloReglist
          }
+
+      // TODO misspell
+        else if(category.equals("Misspelling"))
+          {
+            celloMisspellingList = new Misspelling(textdata, xmap) :: celloMisspellingList
+          }
+
+        // default handler for normal comments
         celloCommentlist = new Comment(category = category, text = textdata, xmap) :: celloCommentlist
+
+
       }
       else if (entryline.startsWith("WW   ")) { // web pages
         celloWebPagelist = new WebPage(url = entrylinedata.trim()) :: celloWebPagelist
@@ -1350,11 +1358,12 @@ object CelloParser {
     // issue CP-012: sort by marker id
     val sortedMarkerList = finalmarkerList.sortBy(x => x.id.toLowerCase)
     // Instanciate full entry, .reverse in lists to recover original order
-    val entry = new CelloEntry(ac = ac, oldacs = celloOldaclist, id = id, synonyms = celloSynlist.reverse, credat = celloCreatDat, upddat = celloUpdatDat, eversion = celloVersion, category = category, sex = sex, age = age, dbrefs = celloXreflist.reverse,
+    val entry = new CelloEntry(ac = ac, oldacs = celloOldaclist, id = id, synonyms = celloSynlist.reverse, credat = celloCreatDat, 
+      upddat = celloUpdatDat, eversion = celloVersion, category = category, sex = sex, age = age, dbrefs = celloXreflist.reverse,
       comments = celloCommentlist.reverse, webpages = celloWebPagelist.reverse, diseases = celloDislist.reverse, species = celloSpeclist.reverse,
       origin = celloOriglist.reverse, derived = celloDerivedlist.reverse, publis = celloPublilist.reverse, sources = celloSourcelist,
-      sourcerefs = celloSourcereflist, strmarkers = sortedMarkerList, reglist = celloReglist, hlalists = celloHLAlists.reverse, seqvarlist = celloSeqVarlist.reverse, genomeAncestry = popDatawithSource)
-
+      sourcerefs = celloSourcereflist, strmarkers = sortedMarkerList, reglist = celloReglist, hlalists = celloHLAlists.reverse, 
+      seqvarlist = celloSeqVarlist.reverse, genomeAncestry = popDatawithSource, misspellinglist = celloMisspellingList)
     entry
   }
 
@@ -1394,7 +1403,8 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
                  val dbrefs: List[DbXref], var comments: List[Comment], val webpages: List[WebPage], val diseases: List[CvTerm],
                  val species: List[CvTerm], val origin: List[CvTerm], val derived: List[CvTerm], val publis: List[PubliRef],
                  val sources: List[STsource], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker],
-                 val reglist: List[Registration], val hlalists: List[HLAlistwithSource], val seqvarlist: List[SequenceVariation], val genomeAncestry: PopulistwithSource) {
+                 val reglist: List[Registration], val hlalists: List[HLAlistwithSource], val seqvarlist: List[SequenceVariation], 
+                 val genomeAncestry: PopulistwithSource, val misspellinglist: List[Misspelling]) {
 
 
   // pam
@@ -1423,9 +1433,6 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
   }
 
   def hasNormalCCTopics() : Boolean = {
-    // HLA typing, genome ancestry, Registration and seq-variations have their own structures
-    // if (comments.filterNot(_.category.contains("HLA")).filterNot(_.category.contains("ancestry"))
-    // .filterNot(_.category.contains("Registration")).filterNot(_.category.contains("variation")).size > 0) 
     return comments
       .filterNot(cc => { CelloParser.specialCCTopics.contains(cc.category) })
       .size > 0
@@ -1517,6 +1524,12 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
           <registration-list>
             { reglist.map(_.toXML) }
           </registration-list>
+      }
+      {
+        if (misspellinglist.size > 0)
+          <misspelling-list>
+            { misspellinglist.map(_.toXML) }
+          </misspelling-list>
       }
       {
         if (seqvarlist.size > 0)
@@ -1770,6 +1783,87 @@ class Registration(val registry: String, val regnumber: String) {
 class HLAData(val geneSymbol: String, val alleles: String) {
   def toXML =
     <hla-gene-alleles gene={geneSymbol} alleles={alleles} />
+}
+
+// TODO misspell
+class Misspelling(val data: String,  xmap: scala.collection.mutable.Map[String, (String, String)]) {
+
+  val result = parse()
+
+  val line = data
+  val label = result._1
+  val note = result._2
+  val xrefs = result._3
+  val ref_ids = result._4
+
+  def parse() : (String,String, List[DbXref], List[String]) = {
+    val idx = data.indexOf("; ")
+    val xlabel = data.substring(0,idx)
+    val tail = data.substring(idx+2)
+    Console.println(" ")
+    Console.println("data : <" + data + ">")
+    Console.println("label: <" + xlabel + ">")
+    var xrefs = List[DbXref]()
+    var refs = List[String]()
+    var notes = ArrayBuffer[String]()
+      tail.split("\\. ").foreach(sen => {
+      if (sen.startsWith("In ") && sen.contains("=")) {
+        // remove "In " and final dot if any
+        val senx = if (sen.endsWith(".")) sen.substring(3, sen.length()-1) else sen.substring(3)
+        // split xref list on ", "
+        val tokens = senx.split(", ")
+        tokens.foreach(token => {
+          if (token.contains("=")) {
+            // further split tokens on " and " and add to xrefs array
+            token.split(" and ").foreach(xref => {
+              if (xref.startsWith("PubMed") || xref.startsWith("DOI")) {
+                refs = xref :: refs
+              } else {
+                val dbac = xref.split("=")
+                val db = dbac(0)
+                val ac = dbac(1)
+                val xr = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = "",  _entryCategory = "")
+                xrefs = xr :: xrefs
+              }
+            })
+          }          
+        })
+      } else {
+        notes.append(sen)
+      }
+    })
+    val xnote = notes.mkString(". ")
+    xrefs.foreach(x => { Console.println("xref : " + x) })
+    Console.println("note : " + note)
+
+    return (xlabel, xnote, xrefs, refs)
+  }
+
+  def toXML = 
+
+    <misspelling> 
+      {line}
+      <label>{label}</label>
+      {
+        if (note.length>0) {
+          <note>{note}</note>
+        }
+      }
+      {
+        if (xrefs.size>0) {
+          <xref-list>
+          { xrefs.map(_.toXML) }
+          </xref-list>
+        }
+      }
+      {
+        if (ref_ids.size>0) {
+          <reference-list>
+            { ref_ids.map( id =>  <reference resource-internal-ref={ id }/> )}
+          </reference-list>
+        }
+      }
+    </misspelling>
 }
 
 class HLAlistwithSource(val glist: List[HLAData], val src: String) {
