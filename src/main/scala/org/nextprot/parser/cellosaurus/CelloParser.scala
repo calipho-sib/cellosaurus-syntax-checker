@@ -1487,16 +1487,16 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
           { genomeAncestry.toXML }
       }
       {
-        if (reglist.size > 0)
-          <registration-list>
-            { reglist.map(_.toXML) }
-          </registration-list>
-      }
-      {
         if (misspellinglist.size > 0)
           <misspelling-list>
             { misspellinglist.map(_.toXML) }
           </misspelling-list>
+      }
+      {
+        if (reglist.size > 0)
+          <registration-list>
+            { reglist.map(_.toXML) }
+          </registration-list>
       }
       {
         if (seqvarlist.size > 0)
