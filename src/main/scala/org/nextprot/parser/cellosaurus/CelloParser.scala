@@ -37,46 +37,7 @@ object CelloParser {
     return s.replace("\\", "\\\\").replace("{","\\{").replace("}","\\}").replace("\"", "\\\"")
   }
 
-
-  def parse_misspelling(data: String)  = {
-    val idx = data.indexOf("; ")
-    val label = data.substring(0,idx)
-    val tail = data.substring(idx+2)
-    Console.println(" ")
-    Console.println("data : <" + data + ">")
-    Console.println("label: <" + label + ">")
-    var xrefs = ArrayBuffer[String]()
-    var notes = ArrayBuffer[String]()
-      tail.split("\\. ").foreach(sen => {
-      if (sen.startsWith("In ") && sen.contains("=")) {
-        // remove "In " and final dot if any
-        val senx = if (sen.endsWith(".")) sen.substring(3, sen.length()-1) else sen.substring(3)
-        // split xref list on ", "
-        val tokens = senx.split(", ")
-        tokens.foreach(token => {
-          if (token.contains("=")) {
-            // further split tokens on " and " and add to xrefs array
-            token.split(" and ").foreach(xrefs.append(_))
-          }          
-        })
-      } else {
-        notes.append(sen)
-      }
-    })
-    val note = notes.mkString(". ")
-    xrefs.foreach(x => { Console.println("xref : " + x) })
-    Console.println("note : " + note)
-  }
-
   def main(args: Array[String]) = {
-
-    val examples = List("32D:c13; Occasionally.", "MGB3E9; In ATCC=PTA-6724.", "M41; In GEO=GSM851922, toto=happy and jack=too.", "M41CisR; In GEO=GSM851923.", 
-    "FK99-487; In IARC_TP53=11552. Not really a misspelling. Assignment of a name based on first author of publication.")
-/*
-    examples.foreach(parse_misspelling(_))
-    Console.println("End")
-    System.exit(0)
-*/
 
     val today = Calendar.getInstance().getTime()
     var todaystring: String = new SimpleDateFormat("yyyy-MM-dd").format(today)
@@ -430,7 +391,13 @@ object CelloParser {
               { Console.err.println("No match for discontinued: '" + discontinued + "' found among DR lines of " + ac); errcnt += 1 }
             }
           else if(cctopic == "Misspelling") {
-            if (cctoks.size != 2) { Console.err.println("Wrong format for " + entryline); errcnt += 1 }
+            val ms = new Misspelling(cctext, xmap)
+            val ms_err = ms.errors
+            ms_err.foreach(err => {
+              errcnt += 1
+              Console.err.println(err)
+            })
+            //if (cctoks.size < 2) { Console.err.println("Wrong format for " + entryline); errcnt += 1 }
             val misspelledname = cctoks(0)
             if(id == misspelledname) { Console.err.println("Misspelled name is in current ID at "  + entryline); errcnt += 1 }
             if(localsynlist.contains(misspelledname)) { Console.err.println("Misspelled name is in current SY at "  + entryline); errcnt += 1 }
@@ -1785,10 +1752,9 @@ class HLAData(val geneSymbol: String, val alleles: String) {
     <hla-gene-alleles gene={geneSymbol} alleles={alleles} />
 }
 
-// TODO misspell
 class Misspelling(val data: String,  xmap: scala.collection.mutable.Map[String, (String, String)]) {
 
-  val result = parse()
+  val result = parse(data, xmap)
 
   val line = data
   // mandatory misspelled label
@@ -1799,58 +1765,68 @@ class Misspelling(val data: String,  xmap: scala.collection.mutable.Map[String, 
   val xrefs = result._3
   // optional list of internal reference id (publi, patent,...)
   val ref_ids = result._4
+  val errors = result._5
 
-  def parse() : (String,String, List[DbXref], List[String]) = {
-    val idx = data.indexOf("; ")
-    val xlabel = data.substring(0,idx)
-    val tail = data.substring(idx+2)
-    Console.println(" ")
-    Console.println("data : <" + data + ">")
-    Console.println("label: <" + xlabel + ">")
+  def parse(data: String, xmap: scala.collection.mutable.Map[String, (String, String)]) : (String, String, List[DbXref], List[String], List[String]) = {
+
+    // parsing result variables
+    var xlabel = ""
+    var note = ""
     var xrefs = List[DbXref]()
     var refs = List[String]()
-    var notes = ArrayBuffer[String]()
-      tail.split("\\. ").foreach(sen => {
-      if (sen.startsWith("In ") && sen.contains("=")) {
-        // remove "In " and final dot if any
-        val senx = if (sen.endsWith(".")) sen.substring(3, sen.length()-1) else sen.substring(3)
-        // split xref list on ", "
-        val tokens = senx.split(", ")
-        tokens.foreach(token => {
-          if (token.contains("=")) {
-            // further split tokens on " and " and add to xrefs array
-            token.split(" and ").foreach(xref => {
-              if (xref.startsWith("PubMed") || xref.startsWith("DOI") || xref.startsWith("CelloPub") || xref.startsWith("Patent")) {
-                refs = xref :: refs
-              } else {
-                val dbac = xref.split("=")
-                val db = dbac(0)
-                val ac = dbac(1)
-                val xr = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = "",  _entryCategory = "")
-                xrefs = xr :: xrefs
-              }
-            })
-          }          
-        })
-      } else {
-        notes.append(sen)
-      }
-    })
-    val xnote = notes.mkString(". ")
-    xrefs.foreach(x => { Console.println("xref : " + x) })
-    Console.println("note : " + note)
+    var errors = List[String]()
 
-    return (xlabel, xnote, xrefs, refs)
+    // we should have at least the name and either a note, a xref or a publi reference
+    var parts = data.split("; ")
+    if (parts.size < 2) {
+      errors = ("Invalid Misspelling format, note, dr_ref or rx_ref is missing in : " + data) :: errors
+      return (xlabel, note, xrefs, refs, errors) 
+    }
+
+    var idx = 0
+    while (idx<parts.size) {
+      // first retrieve the misspelling name (xlabel)
+      if (idx==0) {
+        xlabel = parts(0)
+      // for parts after first part, check if we get a note, a xref or a reference
+      } else {
+        val token = parts(idx)
+        val dbac = token.split("=")
+        if (dbac.size < 2) {
+          errors = ("Invalid Misspelling format of note, dr_ref or rx_ref in : " + data) :: errors
+        } else {
+          val db = dbac(0)
+          // case for the note 
+          if (db=="Note") {
+            note = dbac(1)
+            if (!note.endsWith(".")) note += "."
+          // case for a reference
+          } else if (db=="PubMed" || db=="DOI" || db=="Patent" || db=="CelloPub") {
+            val ref = if (token.endsWith(".")) token.substring(0, token.length-1) else token
+            refs = ref :: refs
+          // case for a xref if check of db is known (contained in xmap)
+          } else if (xmap.contains(db)) {
+            val ac = if (dbac(1).endsWith(".")) dbac(1).substring(0, dbac(1).length-1) else dbac(1)
+            val xref = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = "",  _entryCategory = "")
+            xrefs = xref :: xrefs
+          // case with something unexpected 
+          } else {
+            errors = ("Invalid Misspelling, Unknown db resource name in : " + data) :: errors
+          }
+        }
+      }
+      idx += 1
+    }
+    return (xlabel, note, xrefs, refs, errors)
   }
 
   def toXML = 
 
     <misspelling> 
-      {line}
-      <label>{label}</label>
+      <misspelling-name>{label}</misspelling-name>
       {
         if (note.length>0) {
-          <note>{note}</note>
+          <misspelling-note>{note}</misspelling-note>
         }
       }
       {
