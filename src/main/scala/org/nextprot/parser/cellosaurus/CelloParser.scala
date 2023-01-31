@@ -1791,9 +1791,13 @@ class Misspelling(val data: String,  xmap: scala.collection.mutable.Map[String, 
   val result = parse()
 
   val line = data
+  // mandatory misspelled label
   val label = result._1
+  // optional note
   val note = result._2
+  // optional DbXref list 
   val xrefs = result._3
+  // optional list of internal reference id (publi, patent,...)
   val ref_ids = result._4
 
   def parse() : (String,String, List[DbXref], List[String]) = {
@@ -1816,7 +1820,7 @@ class Misspelling(val data: String,  xmap: scala.collection.mutable.Map[String, 
           if (token.contains("=")) {
             // further split tokens on " and " and add to xrefs array
             token.split(" and ").foreach(xref => {
-              if (xref.startsWith("PubMed") || xref.startsWith("DOI")) {
+              if (xref.startsWith("PubMed") || xref.startsWith("DOI") || xref.startsWith("CelloPub") || xref.startsWith("Patent")) {
                 refs = xref :: refs
               } else {
                 val dbac = xref.split("=")
