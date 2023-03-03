@@ -1190,7 +1190,9 @@ object CelloParser {
           if (dbAc.length==2) {
             val db = dbAc(0)
             val ac = dbAc(1)
-            if (! ok_rxdblist.contains(db) && xmap.contains(db) ) { 
+            if (! xmap.contains(db)) {
+              Console.err.println("Error: no entry for \"" + db + "\" in cellosaurus_xrefs.txt")
+            } else if (! ok_rxdblist.contains(db) && xmap.contains(db) ) { 
               hlaSrc = null
               hlaSrcXref = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = "",  _entryCategory = "")
             }
