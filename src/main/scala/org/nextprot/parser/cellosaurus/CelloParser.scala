@@ -26,6 +26,7 @@ object CelloParser {
   // grep -n --color='auto' -P "[\x80-\xFF]" cellosaurus.txt
 
   val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation", "Misspelling")
+  val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
 
   def escape_chars_for_obo(s: String) :String = {
     // prefix these characters with a backslash
@@ -88,8 +89,7 @@ object CelloParser {
     val ok_dblist1 = List("ATCC", "BCRC", "BCRJ", "BTO", "BioSample", "CBA", "CCLE", "CCLV", "CCRID", "CGH-DB", "ChEMBL-Cells", "ChEMBL-Targets", "CLDB",
       "CLO", "Coriell", "Cosmic", "Cosmic-CLP", "dbMHC", "DGRC", "DSMZ", "ECACC", "EFO", "ENCODE", "ESTDAB", "GDSC", "hPSCreg", "ICLC",
       "IFO", "IGRhCellID", "IHW", "IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCLB", "LINCS", "Lonza", "MCCL", "MeSH",
-      "NISES", "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG", "Ximbio")
-    val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
+      "NISES", "NIH-ARP", "RCB", "RSCB", "SKIP", "SKY/M-FISH/CGH", "TKG", "Ximbio")    
     val ok_seqvarlist = List("Gene amplification", "Gene deletion", "Gene fusion", "Mutation")
     val ok_zygositylist = List("-", "Hemizygous", "Homoplasmic", "Homozygous", "Mosaic", "Unspecified", "Heteroplasmic", "Heterozygous")
     val ok_vartyplist = List("Simple", "Simple_corrected", "Simple_edited", "Repeat_expansion", "Repeat_expansion_corrected", "Repeat_expansion_edited", "Unexplicit", "Unexplicit_corrected", "Unexplicit_edited", "None_reported")
@@ -456,8 +456,8 @@ object CelloParser {
               Console.err.println("Wrong format for HLA typing source in " + ac);
               errcnt += 1
             } else {
-              val srctok = alltoks(1).split("\\)")(0)
-              val hlatoks = alltoks(0).split("; ")
+              val srctok = alltoks(1).split("\\)")(0) // content of parentheses at the end of the line (source / xref)
+              val hlatoks = alltoks(0).split("; ")    // first part of the line
               hlatoks.foreach(token => {
                 val onetoklist = token.split("\\*")
                 if(onetoklist.size != 2) { Console.err.println("Unknown HLA type (" + token + ") found in: " + ac); errcnt += 1 }
@@ -467,7 +467,7 @@ object CelloParser {
                 }
               })
             if(!alltoks(1).endsWith(").")) {Console.err.println("Wrong format for HLA typing source at "  + entryline); errcnt += 1 }
-            else if (srctok.contains("PubMed=")) { uniquerefs += srctok }// add pubmeds to refs list
+            else if (srctok.contains("PubMed=") || srctok.contains("Patent=") || srctok.contains("DOI=") || srctok.contains("CelloPub=")) { uniquerefs += srctok }// add references
             }
            }
           }
@@ -1185,6 +1185,16 @@ object CelloParser {
 
         if(category.equals("HLA typing")) { // prepare hla-lists of gene/alleles with sources
           var hlaSrc = textdata.split(" \\(")(1).split("\\)")(0)
+          val dbAc = hlaSrc.split("=")
+          var hlaSrcXref : DbXref = null
+          if (dbAc.length==2) {
+            val db = dbAc(0)
+            val ac = dbAc(1)
+            if (! ok_rxdblist.contains(db) && xmap.contains(db) ) { 
+              hlaSrc = null
+              hlaSrcXref = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = "",  _entryCategory = "")
+            }
+          }
           // Console.err.println("===hlaSrc:" + hlaSrc)
           var celloHLAlist = List[HLAData]()
           val hlatoks = textdata.split(" \\(")(0).split("; ")
@@ -1193,9 +1203,10 @@ object CelloParser {
             var hlaAlleles = hlaItem.split("\\*")(1)
             celloHLAlist = new HLAData(geneSymbol=geneSymbol, alleles=hlaAlleles) :: celloHLAlist
             })
-            val celloHLAlistwithSource = new HLAlistwithSource(glist=celloHLAlist.reverse, src=hlaSrc) // add source to list
+            val celloHLAlistwithSource = new HLAlistwithSource(glist=celloHLAlist.reverse, src=hlaSrc, srcXref=hlaSrcXref) // add source or source xref to list
             celloHLAlists = celloHLAlistwithSource :: celloHLAlists // add list to list of list
-         }
+        
+        } 
 
         else if(category.equals("Genome ancestry"))
          { // prepare population lists with sources
@@ -1611,24 +1622,24 @@ class SequenceVariation(val vartyp: String, val mutyp: String, val zygosity: Str
   init
   def init = {
       val toklist = text.split("; ")
-        val db = toklist(1)
-        val ac = toklist(2)
-        var geneName = toklist(3)
-        var srctok = ""
-   if(toklist.size > 5 && vartyp != "Gene amplification" && vartyp != "Gene deletion") mutdesc = toklist(5)
-   if (text.contains(" + ")) { // Gene fusion, there is a second dbref: prepare it
+      val db = toklist(1)
+      val ac = toklist(2)
+      var geneName = toklist(3)
+      var srctok = ""
+      if(toklist.size > 5 && vartyp != "Gene amplification" && vartyp != "Gene deletion") mutdesc = toklist(5)
+      if (text.contains(" + ")) { // Gene fusion, there is a second dbref: prepare it
             // like  CC   Sequence variation: Gene fusion; HGNC; 3446; ERG + HGNC; 3508; EWSR1; Name(s)=EWSR1-ERG, EWS-ERG; Note=In frame (PubMed=8162068).
             geneName = geneName.split(" ")(0)
             ac2 = toklist(4)
             geneName2 = toklist(5).split("\\.")(0)
             mutdesc = toklist(6).split("=")(1)
             if(mutdesc.contains(" (")) mutdesc = mutdesc.split(" \\(")(0)
-          }
-  toklist.foreach(token => {
-    if(token.startsWith("Note="))  {
-      varnote = token.substring(5).trim()
-      if(varnote.contains(" (")) varnote = varnote.split(" \\(")(0)
-    }
+      }
+      toklist.foreach(token => {
+        if(token.startsWith("Note="))  {
+          varnote = token.substring(5).trim()
+          if(varnote.contains(" (")) varnote = varnote.split(" \\(")(0)
+      }
     // CC   Sequence variation: Mutation; HGNC; 11730; TERT; Simple; p.Arg631Gln (c.1892G>A); ClinVar=VCV000029899; Zygosity=Unspecified (Direct_author_submission).
     else if(token.startsWith("ClinVar=") || token.startsWith("dbSNP=")) {
       db2 = token.split("=")(0)
@@ -1846,7 +1857,7 @@ class Misspelling(val data: String,  xmap: scala.collection.mutable.Map[String, 
     </misspelling>
 }
 
-class HLAlistwithSource(val glist: List[HLAData], val src: String) {
+class HLAlistwithSource(val glist: List[HLAData], val src: String, val srcXref: DbXref) {
   def toXML =
     <hla-typing>
       <hla-gene-alleles-list>
@@ -1854,7 +1865,9 @@ class HLAlistwithSource(val glist: List[HLAData], val src: String) {
       </hla-gene-alleles-list>
       <hla-typing-source>
           {
-          if (src.contains("PubMed") )
+          if (srcXref != null) 
+          { srcXref.toXML }
+          else if (src.contains("PubMed") || src.contains("Patent") || src.contains("DOI") || src.contains("CelloPub") )
           <reference resource-internal-ref={ src }/>
           else
           <source>{ src }</source>
