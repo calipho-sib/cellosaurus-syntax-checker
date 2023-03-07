@@ -383,12 +383,18 @@ object CelloParser {
            	else if (cctopic.contains("target") && !maybedb.startsWith("UniProtKB") && !maybedb.startsWith("ChEBI") && !maybedb.startsWith("PubChem")) { Console.err.println("Missing database token at: " + entryline); errcnt += 1 }
            	else if (cctext.contains("=ZFN") && !xmap.contains(cctoks(1))) { Console.err.println("Wrong database token at: " + entryline + " "); errcnt += 1 }
          	 }
+  
           if(cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
             // These discontinued CCs must also exist as DR lines
             var discontinued = entrylinedata.split(": ")(1) // just keep db reference
             discontinued = (discontinued.substring(0,discontinued.lastIndexOf(';')).trim())
             if(!drlist.contains(discontinued))
               { Console.err.println("No match for discontinued: '" + discontinued + "' found among DR lines of " + ac); errcnt += 1 }
+            }
+          else if(cctopic == "From") {
+            if (cctoks.size < 3 || cctoks.size > 4) {
+                 Console.err.println("Invalid number of elements in 'From' comment at: " + entryline); errcnt += 1
+            }
             }
           else if(cctopic == "Misspelling") {
             val ms = new Misspelling(cctext, xmap)
