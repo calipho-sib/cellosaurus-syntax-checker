@@ -15,6 +15,8 @@ import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.util.Date;
 import scala.xml._
+import org.nextprot.parser.cellosaurus._
+
 //import org.nextprot.parser.cellosaurus.datamodel
 //import org.nextprot.parser.cellosaurus.datamodel.publication
 //import org.nextprot.parser.cellosaurus.utils._
@@ -25,7 +27,9 @@ object CelloParser {
   codec.onMalformedInput(CodingErrorAction.REPLACE)
   // grep -n --color='auto' -P "[\x80-\xFF]" cellosaurus.txt
 
-  val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation", "Misspelling")
+  val xmap = scala.collection.mutable.Map[String, (String, String)]()
+
+  val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation", "Misspelling", "Doubling time")
   val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
 
   def escape_chars_for_obo(s: String) :String = {
@@ -97,7 +101,7 @@ object CelloParser {
     val ok_sxlist = List("Female", "Male", "Mixed sex", "Sex ambiguous", "Sex unspecified")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_cclist1 = List("Anecdotal", "Breed/subspecies", "Caution", "Derived from metastatic site", "Derived from sampling site", "Discontinued", "From", "Genome ancestry", "Group", "HLA typing", "Knockout cell", "Microsatellite instability", "Miscellaneous", "Misspelling",
-      "Monoclonal antibody isotype", "Monoclonal antibody target", "Omics", "Part of", "Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with")
+      "Monoclonal antibody isotype", "Monoclonal antibody target", "Omics", "Part of", "Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with", "Doubling time")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_catlist1 = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
       "Spontaneously immortalized cell line", "Stromal cell line", "Conditionally immortalized cell line",
@@ -193,7 +197,7 @@ object CelloParser {
     subsetdefs = subsetdefs.split("\n").sortWith(_ < _).mkString("\n")
 
     // Parse cellosaurus xref file to get databases categories and urls, and put in a map
-    val xmap = scala.collection.mutable.Map[String, (String, String)]()
+    // val xmap = scala.collection.mutable.Map[String, (String, String)]()
     var xdb = ""
     var xcat = ""
     var xurl = ""
@@ -395,7 +399,19 @@ object CelloParser {
             if (cctoks.size < 3 || cctoks.size > 4) {
                  Console.err.println("Invalid number of elements in 'From' comment at: " + entryline); errcnt += 1
             }
+          }
+          else if (cctopic == "Doubling time") {
+              try {
+                val elems = DoublingTimeStateAutomaton.parseLine(cctext.trim)
+                val dtlist = DoublingTimeStateAutomaton.buildDtList(elems)
+            } catch {
+              case e: Exception => {
+                errcnt += 1 
+                println(s"ERROR while parsing Doubling time comment: ${e.getMessage}")
+              }
             }
+
+          } 
           else if(cctopic == "Misspelling") {
             val ms = new Misspelling(cctext, xmap)
             val ms_err = ms.errors
@@ -1135,6 +1151,7 @@ object CelloParser {
     var celloSourcelist = List[STsource]()
     var celloSourcereflist = List[PubliRef]()
     var celloHLAlists = List[HLAlistwithSource]()
+    var celloDoublingTimeList = List[DoublingTime]()
     var celloOldaclist = List[OldAc]()
     var celloSynlist = List[Synonym]()
     var celloPublilist = List[PubliRef]()
@@ -1186,8 +1203,10 @@ object CelloParser {
         var textdata = linetokens(1).trim()
         if(linetokens.size > 2) // The text token may contain a colon which is not a separator
           textdata += ": " + linetokens(2).trim()
-        if(!(category.equals("Miscellaneous") || category.equals("Caution") || category.equals("Problematic cell line")) )
+        if(!(category.equals("Miscellaneous") || category.equals("Doubling time")  || category.equals("Caution") || category.equals("Problematic cell line")) )
           textdata = textdata.dropRight(1) // Drop final dot
+
+
 
         if(category.equals("HLA typing")) { // prepare hla-lists of gene/alleles with sources
           var hlaSrc = textdata.split(" \\(")(1).split("\\)")(0)
@@ -1206,15 +1225,36 @@ object CelloParser {
           // Console.err.println("===hlaSrc:" + hlaSrc)
           var celloHLAlist = List[HLAData]()
           val hlatoks = textdata.split(" \\(")(0).split("; ")
+          //Console.err.println("HLA textdata: " + textdata)
           hlatoks.foreach(hlaItem => {
-            val geneSymbol = "HLA-" + hlaItem.split("\\*")(0)
-            var hlaAlleles = hlaItem.split("\\*")(1)
-            celloHLAlist = new HLAData(geneSymbol=geneSymbol, alleles=hlaAlleles) :: celloHLAlist
-            })
-            val celloHLAlistwithSource = new HLAlistwithSource(glist=celloHLAlist.reverse, src=hlaSrc, srcXref=hlaSrcXref) // add source or source xref to list
-            celloHLAlists = celloHLAlistwithSource :: celloHLAlists // add list to list of list
-        
+            //Console.err.println("HLA hlaItem: " + hlaItem)
+            val hlaItemParts = hlaItem.split("\\*")
+            val geneSymbol = "HLA-" + hlaItemParts(0)
+            if (hlaItemParts.length>1) {
+              var hlaAlleles = hlaItemParts(1)
+              celloHLAlist = new HLAData(geneSymbol=geneSymbol, alleles=hlaAlleles) :: celloHLAlist
+            } else {
+              Console.err.println("Error: missing '*' in HLA typing line: " + textdata)
+            }
+          })
+          val celloHLAlistwithSource = new HLAlistwithSource(glist=celloHLAlist.reverse, src=hlaSrc, srcXref=hlaSrcXref) // add source or source xref to list
+          celloHLAlists = celloHLAlistwithSource :: celloHLAlists // add list to list of list
         } 
+
+
+
+        else if(category.equals("Doubling time")) {
+          try {
+              val elems = DoublingTimeStateAutomaton.parseLine(textdata)
+              val dtlist = DoublingTimeStateAutomaton.buildDtList(elems)
+              dtlist.foreach(dt => {
+                val doublingTime = new DoublingTime(value=dt("value"), note = dt("note"), refs = dt("refs"))
+                celloDoublingTimeList = doublingTime :: celloDoublingTimeList
+              })
+          } catch {
+            case e: Exception => { }
+          }
+        }
 
         else if(category.equals("Genome ancestry"))
          { // prepare population lists with sources
@@ -1349,7 +1389,7 @@ object CelloParser {
       comments = celloCommentlist.reverse, webpages = celloWebPagelist.reverse, diseases = celloDislist.reverse, species = celloSpeclist.reverse,
       origin = celloOriglist.reverse, derived = celloDerivedlist.reverse, publis = celloPublilist.reverse, sources = celloSourcelist,
       sourcerefs = celloSourcereflist, strmarkers = sortedMarkerList, reglist = celloReglist, hlalists = celloHLAlists.reverse, 
-      seqvarlist = celloSeqVarlist.reverse, genomeAncestry = popDatawithSource, misspellinglist = celloMisspellingList)
+      seqvarlist = celloSeqVarlist.reverse, genomeAncestry = popDatawithSource, misspellinglist = celloMisspellingList, doublingTimeList = celloDoublingTimeList)
     entry
   }
 
@@ -1390,7 +1430,8 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
                  val species: List[CvTerm], val origin: List[CvTerm], val derived: List[CvTerm], val publis: List[PubliRef],
                  val sources: List[STsource], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker],
                  val reglist: List[Registration], val hlalists: List[HLAlistwithSource], val seqvarlist: List[SequenceVariation], 
-                 val genomeAncestry: PopulistwithSource, val misspellinglist: List[Misspelling]) {
+                 val genomeAncestry: PopulistwithSource, val misspellinglist: List[Misspelling], 
+                 val doublingTimeList: List[DoublingTime]) {
 
 
   // pam
@@ -1501,6 +1542,13 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
             { hlalists.map(_.toXML) }
           </hla-typing-list>
       }
+      {
+        if (doublingTimeList.size > 0)
+          <doubling-time-list>
+            { doublingTimeList.map(_.toXML) }
+          </doubling-time-list>
+      }
+
       {
         if (genomeAncestry != null)
           { genomeAncestry.toXML }
@@ -1629,44 +1677,43 @@ class SequenceVariation(val vartyp: String, val mutyp: String, val zygosity: Str
 
   init
   def init = {
-      val toklist = text.split("; ")
-      val db = toklist(1)
-      val ac = toklist(2)
-      var geneName = toklist(3)
-      var srctok = ""
-      if(toklist.size > 5 && vartyp != "Gene amplification" && vartyp != "Gene deletion") mutdesc = toklist(5)
-      if (text.contains(" + ")) { // Gene fusion, there is a second dbref: prepare it
-            // like  CC   Sequence variation: Gene fusion; HGNC; 3446; ERG + HGNC; 3508; EWSR1; Name(s)=EWSR1-ERG, EWS-ERG; Note=In frame (PubMed=8162068).
-            geneName = geneName.split(" ")(0)
-            ac2 = toklist(4)
-            geneName2 = toklist(5).split("\\.")(0)
-            mutdesc = toklist(6).split("=")(1)
-            if(mutdesc.contains(" (")) mutdesc = mutdesc.split(" \\(")(0)
-      }
-      toklist.foreach(token => {
-        if(token.startsWith("Note="))  {
-          varnote = token.substring(5).trim()
-          if(varnote.contains(" (")) varnote = varnote.split(" \\(")(0)
-      }
-    // CC   Sequence variation: Mutation; HGNC; 11730; TERT; Simple; p.Arg631Gln (c.1892G>A); ClinVar=VCV000029899; Zygosity=Unspecified (Direct_author_submission).
-    else if(token.startsWith("ClinVar=") || token.startsWith("dbSNP=")) {
-      db2 = token.split("=")(0)
-      //varXreflist = new DbXref(_db = db2, _ac = token.split("=")(1), _category = xmap(db2)._2, _url = xmap(db2)._1, _property = geneName,  _entryCategory = "") :: varXreflist
-      varXreflist = new DbXref(_db = db2, _ac = token.split("=")(1), _category = xmap(db2)._2, _url = xmap(db2)._1, _property = "",  _entryCategory = "") :: varXreflist
+    val toklist = text.split("; ")
+    val db = toklist(1)
+    val ac = toklist(2)
+    var geneName = toklist(3)
+    var srctok = ""
+    if(toklist.size > 5 && vartyp != "Gene amplification" && vartyp != "Gene deletion") mutdesc = toklist(5)
+    if (text.contains(" + ")) { // Gene fusion, there is a second dbref: prepare it
+          // like  CC   Sequence variation: Gene fusion; HGNC; 3446; ERG + HGNC; 3508; EWSR1; Name(s)=EWSR1-ERG, EWS-ERG; Note=In frame (PubMed=8162068).
+          geneName = geneName.split(" ")(0)
+          ac2 = toklist(4)
+          geneName2 = toklist(5).split("\\.")(0)
+          mutdesc = toklist(6).split("=")(1)
+          if(mutdesc.contains(" (")) mutdesc = mutdesc.split(" \\(")(0)
     }
-  })
-  varXreflist = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = geneName,  _entryCategory = "") :: varXreflist
-  if (ac2 != "") {
-    varXreflist = new DbXref(_db = db, _ac = ac2, _category = xmap(db)._2, _url = xmap(db)._1, _property = geneName2,  _entryCategory = "")  :: varXreflist
-    varXreflist = varXreflist.reverse
+    toklist.foreach(token => {
+      if(token.startsWith("Note="))  {
+        varnote = token.substring(5).trim()
+        if(varnote.contains(" (")) varnote = varnote.split(" \\(")(0)
       }
-
-  val srcList = sources.split("; ") // split what's parenthesis in last token
-  srcList.foreach(src => {
-     if(src.contains("=")) varSourcereflist = new PubliRef(db_ac = src) :: varSourcereflist
-     else varSourcelist = new STsource(src = src) :: varSourcelist
+      // CC   Sequence variation: Mutation; HGNC; 11730; TERT; Simple; p.Arg631Gln (c.1892G>A); ClinVar=VCV000029899; Zygosity=Unspecified (Direct_author_submission).
+      else if(token.startsWith("ClinVar=") || token.startsWith("dbSNP=")) {
+        db2 = token.split("=")(0)
+        //varXreflist = new DbXref(_db = db2, _ac = token.split("=")(1), _category = xmap(db2)._2, _url = xmap(db2)._1, _property = geneName,  _entryCategory = "") :: varXreflist
+        varXreflist = new DbXref(_db = db2, _ac = token.split("=")(1), _category = xmap(db2)._2, _url = xmap(db2)._1, _property = "",  _entryCategory = "") :: varXreflist
+      }
     })
+    varXreflist = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = geneName,  _entryCategory = "") :: varXreflist
+    if (ac2 != "") {
+      varXreflist = new DbXref(_db = db, _ac = ac2, _category = xmap(db)._2, _url = xmap(db)._1, _property = geneName2,  _entryCategory = "")  :: varXreflist
+      varXreflist = varXreflist.reverse
+    }
 
+    val srcList = sources.split("; ") // split what's parenthesis in last token
+    srcList.foreach(src => {
+      if(src.contains("=")) varSourcereflist = new PubliRef(db_ac = src) :: varSourcereflist
+      else varSourcelist = new STsource(src = src) :: varSourcelist
+    })
   }
 
   def toXML =
@@ -1865,6 +1912,60 @@ class Misspelling(val data: String,  xmap: scala.collection.mutable.Map[String, 
     </misspelling>
 }
 
+class DoublingTime(val value: String, val note: String, val refs: String) {
+
+  var xrefList = List[DbXref]()
+  var refList = List[String]()
+  var srcList = List[String]()
+
+    init
+
+  def init = {
+    val items = refs.split("; ")
+    items.foreach(item => {
+      val itemParts = item.split("=")
+      if (itemParts.length==1) {
+        srcList = item :: srcList
+      } else {
+        val db = itemParts(0)
+        if (db=="PubMed" || db=="DOI" || db=="Patent" || db=="CelloPub") {
+          refList = item :: refList
+        } else {
+          val ac = itemParts(1)
+          val xmap = CelloParser.xmap
+          val xref = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = "",  _entryCategory = "")
+          xrefList = xref :: xrefList
+        }
+      }
+    })
+  }
+
+  def toXML = 
+    <doubling-time>
+      <doubling-time-value>{value}</doubling-time-value>
+      { if (note!=null) {
+      <doubling-time-note>{note}</doubling-time-note>
+      }}
+      <doubling-time-source-list>
+      { if (xrefList.size>0) {
+        <xref-list>
+          { xrefList.map(_.toXML) }
+        </xref-list>
+      }}
+      { if (refList.size>0) {
+        <reference-list>
+          { refList.map( id =>  <reference resource-internal-ref={ id }/> )}
+        </reference-list>
+      }}
+      { if (srcList.size>0) {
+        <source-list>
+          { srcList.map( src =>  <source>{ src }</source> ) }
+        </source-list>
+      }}
+      </doubling-time-source-list>
+    </doubling-time>
+}
+
 class HLAlistwithSource(val glist: List[HLAData], val src: String, val srcXref: DbXref) {
   def toXML =
     <hla-typing>
@@ -1897,7 +1998,7 @@ class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
       </population-list>
       <genome-ancestry-source>
           {
-          if (src.contains("PubMed") )
+          if (src.contains("PubMed") || src.contains("Patent") || src.contains("DOI") || src.contains("CelloPub") )
           <reference resource-internal-ref={ src }/>
           else
           <source>{ src }</source>

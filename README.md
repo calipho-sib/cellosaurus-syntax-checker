@@ -20,8 +20,8 @@ mvn assembly:assembly
 
 ```
 java -jar jar-file cellosaurus-file
-java -jar jar-file cellosaurus-file -OBO (Also generates the OBO format file, cellosaurus.obo)
-java -jar jar-file cellosaurus-file -XML (Also generates the XML format file, cellosaurus.xml)
+java -jar jar-file cellosaurus-file -obo (Also generates the OBO format file, cellosaurus.obo)
+java -jar jar-file cellosaurus-file -xml (Also generates the XML format file, cellosaurus.xml)
 java -jar jar-file cellosaurus-file -stats (Also generates some stats, directly on stdout)
 java -jar jar-file cellosaurus-file conflicts=conflicts_file (Also creates a file with the cell lines with identical names/synonyms)
 java -jar jar-file cellosaurus-file DRmap=mapfile (Also creates a file with all cross-references (DR) and publications (RX))
