@@ -1946,7 +1946,7 @@ class DoublingTime(val value: String, val note: String, val refs: String) {
       { if (note!=null) {
       <doubling-time-note>{note}</doubling-time-note>
       }}
-      <doubling-time-source-list>
+      <doubling-time-sources>
       { if (xrefList.size>0) {
         <xref-list>
           { xrefList.map(_.toXML) }
@@ -1962,7 +1962,7 @@ class DoublingTime(val value: String, val note: String, val refs: String) {
           { srcList.map( src =>  <source>{ src }</source> ) }
         </source-list>
       }}
-      </doubling-time-source-list>
+      </doubling-time-sources>
     </doubling-time>
 }
 
@@ -2008,6 +2008,7 @@ class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
 }
 
 class DbXref(val _db: String, val _ac: String, val _category: String, val _url: String, var _property: String, val _entryCategory: String) {
+
   var final_url = _url
   var propname = "gene/protein designation" // default value, overriden in comments.updatDBrefs for discontinued cell lines
 
