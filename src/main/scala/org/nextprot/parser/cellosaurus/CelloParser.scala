@@ -161,6 +161,7 @@ object CelloParser {
     var dr = ArrayBuffer[String]()
     var st = ArrayBuffer[String]()
     var hlatypes = ArrayBuffer[String]()
+    var hlatype2hgnc = Map[String,String]()
     var poptypes = ArrayBuffer[String]()
     var valid_element = ""
 
@@ -169,12 +170,23 @@ object CelloParser {
         valid_element = line.substring(5).trim()
         if (valid_element.contains("#")) valid_element = valid_element.split("#")(0).trim()
       }
-      if (line.startsWith("DR   ")) dr += valid_element
-      else if (line.startsWith("CA   ")) ca += valid_element
-      else if (line.startsWith("CC   ")) cc += valid_element
-      else if (line.startsWith("ST   ")) st += valid_element
-      else if (line.startsWith("HL   ")) hlatypes += valid_element
-      else if (line.startsWith("PO   ")) poptypes += valid_element
+      if (line.startsWith("DR   ")) {
+        dr += valid_element
+      } else if (line.startsWith("CA   ")) {
+        ca += valid_element
+      } else if (line.startsWith("CC   ")) {
+        cc += valid_element
+      } else if (line.startsWith("ST   ")) {
+        st += valid_element
+      } else if (line.startsWith("HL   ")) {
+        val items = valid_element.split("\t")
+        val key = items(0).trim()
+        val value = "HGNC=" + items(1).trim()
+        hlatypes += key
+        hlatype2hgnc.put(key, value)
+      } else if (line.startsWith("PO   ")) {
+        poptypes += valid_element
+      }
     }
     val ok_dblist = dr.toList
     val ok_cclist = cc.toList
