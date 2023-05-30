@@ -29,7 +29,7 @@ object CelloParser {
 
   val xmap = scala.collection.mutable.Map[String, (String, String)]()
 
-  val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation", "Misspelling", "Doubling time")
+  val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation", "Misspelling", "Doubling time", "Derived from site", "Cell type")
   val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
 
   def escape_chars_for_obo(s: String) :String = {
@@ -101,7 +101,7 @@ object CelloParser {
     val ok_sxlist = List("Female", "Male", "Mixed sex", "Sex ambiguous", "Sex unspecified")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_cclist1 = List("Anecdotal", "Breed/subspecies", "Caution", "Derived from metastatic site", "Derived from sampling site", "Discontinued", "From", "Genome ancestry", "Group", "HLA typing", "Knockout cell", "Microsatellite instability", "Miscellaneous", "Misspelling",
-      "Monoclonal antibody isotype", "Monoclonal antibody target", "Omics", "Part of", "Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with", "Doubling time")
+      "Monoclonal antibody isotype", "Monoclonal antibody target", "Omics", "Part of", "Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with", "Doubling time", "Derived from site", "Cell type")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_catlist1 = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
       "Spontaneously immortalized cell line", "Stromal cell line", "Conditionally immortalized cell line",
@@ -264,6 +264,7 @@ object CelloParser {
       var localsynlist = List.empty[String] // synonym's list to check against Misspelling comments
       var curr_rank = 0
       var last_rank = 0
+      var cell_type_count = 0
       var curr_ccrank = 0
       var last_ccrank = 0
       var strsrcCnt = 0 // count of ST Sources lines in an entry, never > 1
@@ -422,8 +423,35 @@ object CelloParser {
                 println(s"ERROR while parsing Doubling time comment: ${e.getMessage}")
               }
             }
-
           } 
+
+          else if (cctopic == "Derived from site") {
+            try {
+                val result = DerivedFromSiteParser.parseLine(cctext.trim)
+            } catch {
+              case e: Exception => {
+                errcnt += 1 
+                println(s"ERROR while parsing Derived from site comment: ${e.getMessage}")
+              }
+            }
+          } 
+
+          else if (cctopic == "Cell type") {
+            try {
+              new CellType(cctext.trim) // just try to create the element
+              cell_type_count += 1
+              if (cell_type_count>1) {
+                throw new Exception("More than one cell type for " + ac)
+              }
+            } catch {
+              case e: Exception => {
+                errcnt += 1 
+                println(s"ERROR while parsing Cell type comment: ${e.getMessage}")
+              }
+            }
+          } 
+
+
           else if(cctopic == "Misspelling") {
             val ms = new Misspelling(cctext, xmap)
             val ms_err = ms.errors
@@ -740,6 +768,13 @@ object CelloParser {
     						<terminology name="DrugBank" source="Wishart's group" description="DrugBank database">
       							<url><![CDATA[https://www.drugbank.ca/]]></url>
     						</terminology>
+    						<terminology name="UBERON" source="Uberon/CL team" description="Uber-anatomy ontology">
+      							<url><![CDATA[https://uberon.github.io/]]></url>
+    						</terminology>
+    						<terminology name="CL" source="Uberon/CL team" description="The Cell Ontology">
+      							<url><![CDATA[https://obophenotype.github.io/cell-ontology/]]></url>
+    						</terminology>
+
            </terminology-list>
          </header>
 
@@ -789,7 +824,9 @@ object CelloParser {
       entry.foreach(entryline => {
        if (entryline.startsWith("AC   ")) { ac = entryline.substring(5) }
        else if (entryline.startsWith("OX   ")) { ox = entryline.split("=")(1) }
-       else if (entryline.contains("Derived from sampling site") || entryline.contains("Derived from metastatic site")) { derivedfromcc = entryline.substring(5).split(": ")(0) }
+       else if (entryline.contains("Derived from sampling site") || entryline.contains("Derived from metastatic site") || entryline.contains("Derived from site") ) { 
+        derivedfromcc = entryline.substring(5).split(": ")(1)
+      }
        else if (entryline.startsWith("DI   ")) { disease = entryline.split("; ")(2); dislist += disease }
        else if (entryline.startsWith("OI   ")) {
                oiac = entryline.substring(5).split(" ")(0)
@@ -818,7 +855,9 @@ object CelloParser {
                    currEntry.foreach(line => { //if(ac=="CVCL_A121") println("scanning parent of CVCL_A121: " + line)
                              if (line.startsWith("OX   ")) { parentSpecies = line.split("=")(1) }
                              else if (line.startsWith("DI   ")) { if (!dislist.contains(line.split("; ")(2))) { disErrorlist += "Missing parent disease in: " + parentac + "(parent)=" + line.split("; ")(2) + " " + ac + "=" + disease } }
-                             else if (line.contains("Derived from sampling site") || line.contains("Derived from metastatic site")) { parentderivedfromcc = line.substring(5).split(": ")(0) }
+                             else if (line.contains("Derived from sampling site") || line.contains("Derived from metastatic site") || line.contains("Derived from site")) { 
+                              parentderivedfromcc = line.substring(5).split(": ")(1) 
+                            }
                              else if (line.startsWith("SX   ")) { parentSex = line.split("   ")(1) }
                              else if (line.startsWith("AG   ")) { parentAge = line.split("   ")(1) }
                              else if (line.startsWith("CC   Population")) { parentPopulation = line.split(":")(1).trim() }
@@ -859,9 +898,11 @@ object CelloParser {
        if ((parentac != "") && cellPopulation != parentPopulation) { Console.err.println("Wrong or missing parent's  ( " + parentac + ":" + parentPopulation + " ) population match in: " + ac); errcnt += 1 }
        if ((parentac != "") && parentAge != "" && cellAge != parentAge) { Console.err.println("Wrong parent's  ( " + parentac + ":" + parentAge + ") age match in: " + ac + ":" +  cellAge); errcnt += 1 }
        //else if ((parentac != "") && parentAge == "" && cellAge != parentAge) { Console.err.println("Check sisters  ( " + parentac  + ") for age  in: " + ac); errcnt += 1 }
-       if((parentac != "") && derivedfromcc != parentderivedfromcc) {Console.err.println("Missing parent's (" + parentac + ") 'derived from' CC in: " + ac); errcnt += 1 }
-       }
-   })
+       if((parentac != "") && derivedfromcc != parentderivedfromcc) {
+        Console.err.println("Missing or conflicting parent's (" + parentac + ") 'derived from' CC in: " + ac); errcnt += 1 
+      }
+    }
+  })
 
 
       if (toxml) {
@@ -1164,6 +1205,8 @@ object CelloParser {
     var celloSourcereflist = List[PubliRef]()
     var celloHLAlists = List[HLAlistwithSource]()
     var celloDoublingTimeList = List[DoublingTime]()
+    var celloDerivedFromSiteList = List[DerivedFromSite]()
+    var celloCellType : CellType = null
     var celloOldaclist = List[OldAc]()
     var celloSynlist = List[Synonym]()
     var celloPublilist = List[PubliRef]()
@@ -1217,9 +1260,6 @@ object CelloParser {
           textdata += ": " + linetokens(2).trim()
         if(!(category.equals("Miscellaneous") || category.equals("Doubling time")  || category.equals("Caution") || category.equals("Problematic cell line")) )
           textdata = textdata.dropRight(1) // Drop final dot
-
-
-
         if(category.equals("HLA typing")) { // prepare hla-lists of gene/alleles with sources
           var hlaSrc = textdata.split(" \\(")(1).split("\\)")(0)
           val dbAc = hlaSrc.split("=")
@@ -1253,8 +1293,6 @@ object CelloParser {
           celloHLAlists = celloHLAlistwithSource :: celloHLAlists // add list to list of list
         } 
 
-
-
         else if(category.equals("Doubling time")) {
           try {
               val elems = DoublingTimeStateAutomaton.parseLine(textdata)
@@ -1264,7 +1302,28 @@ object CelloParser {
                 celloDoublingTimeList = doublingTime :: celloDoublingTimeList
               })
           } catch {
-            case e: Exception => { }
+            case e: Exception => { } // handled earlier
+          }
+        }
+
+        else if(category.equals("Derived from site")) {
+          try {
+            val el = DerivedFromSiteParser.parseLine(textdata)
+            if (el != null) {
+              val derivedFromSite = new DerivedFromSite(site=el("site"), name = el("name"), note = el("note"), uber = el("uber"))
+              celloDerivedFromSiteList = derivedFromSite :: celloDerivedFromSiteList
+            }
+          } catch {
+            case e: Exception => { } // handled earlier
+          }
+        }
+
+        else if(category.equals("Cell type")) {
+          try {
+            val ct = new CellType(textdata)
+            celloCellType = ct
+          } catch {
+            case e: Exception => { } // handled earlier
           }
         }
 
@@ -1401,7 +1460,8 @@ object CelloParser {
       comments = celloCommentlist.reverse, webpages = celloWebPagelist.reverse, diseases = celloDislist.reverse, species = celloSpeclist.reverse,
       origin = celloOriglist.reverse, derived = celloDerivedlist.reverse, publis = celloPublilist.reverse, sources = celloSourcelist,
       sourcerefs = celloSourcereflist, strmarkers = sortedMarkerList, reglist = celloReglist, hlalists = celloHLAlists.reverse, 
-      seqvarlist = celloSeqVarlist.reverse, genomeAncestry = popDatawithSource, misspellinglist = celloMisspellingList, doublingTimeList = celloDoublingTimeList)
+      seqvarlist = celloSeqVarlist.reverse, genomeAncestry = popDatawithSource, misspellinglist = celloMisspellingList, 
+      doublingTimeList = celloDoublingTimeList, derivedFromSiteList = celloDerivedFromSiteList, cellType = celloCellType)
     entry
   }
 
@@ -1443,7 +1503,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
                  val sources: List[STsource], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker],
                  val reglist: List[Registration], val hlalists: List[HLAlistwithSource], val seqvarlist: List[SequenceVariation], 
                  val genomeAncestry: PopulistwithSource, val misspellinglist: List[Misspelling], 
-                 val doublingTimeList: List[DoublingTime]) {
+                 val doublingTimeList: List[DoublingTime], val derivedFromSiteList: List[DerivedFromSite], val cellType: CellType) {
 
 
   // pam
@@ -1560,7 +1620,16 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
             { doublingTimeList.map(_.toXML) }
           </doubling-time-list>
       }
-
+      {
+      if (derivedFromSiteList.size > 0)
+          <derived-from-site-list>
+            { derivedFromSiteList.map(_.toXML) }
+          </derived-from-site-list>
+      }
+      {
+      if (cellType != null)
+          { cellType.toXML }
+      }
       {
         if (genomeAncestry != null)
           { genomeAncestry.toXML }
@@ -1830,6 +1899,41 @@ class HLAData(val geneSymbol: String, val alleles: String) {
     <hla-gene-alleles gene={geneSymbol} alleles={alleles} />
 }
 
+
+class CellType(val data: String) {
+
+  val ct = parse(data)
+
+  def parse(data: String) : Map[String,Object] = {
+    val res = scala.collection.mutable.Map[String,Object]()
+    res("name") = null
+    res("term") = null
+    val elems = data.split("; ")
+    res("name") = elems(0)
+    if (elems.size>1) {
+      val cl_term = elems(1).split("=")
+      if (cl_term.size != 2 || cl_term(0) != "CL" || ! cl_term(1).startsWith("CL_")) {
+        throw new Exception("Invalid CL term")
+      }
+      var ac =  cl_term(1)
+      if (ac.endsWith(".")) ac = ac.substring(0, ac.length-1)
+      res("term") = new CvTerm(_terminology = "CL", _ac = ac, _name = "-")
+    }
+    return res
+  }
+
+  def toXML = {
+     <cell-type>{ct("name")}
+      {
+        val term: CvTerm = ct("term").asInstanceOf[CvTerm]
+        if (term != null) {
+          term.toXML
+        }
+      }
+    </cell-type>
+  }
+}
+
 class Misspelling(val data: String,  xmap: scala.collection.mutable.Map[String, (String, String)]) {
 
   val result = parse(data, xmap)
@@ -1924,13 +2028,47 @@ class Misspelling(val data: String,  xmap: scala.collection.mutable.Map[String, 
     </misspelling>
 }
 
+class DerivedFromSite(val site: String, val name: String, val note: String, val uber: String) {
+
+  var terms = List[CvTerm]()
+  init
+
+  def init = {
+    if (uber != null && uber.length > 0 ) {
+      val items = uber.split('+') // use split on char rather on string (would be double escaped "\\+")
+      items.foreach(item => {
+        val term = new CvTerm(_terminology = "UBERON", _ac = item, _name = "-")
+        terms = term :: terms
+      })
+    }
+  }
+
+  def toXML = 
+    <derived-from-site>
+      <site site-type={site}>{name}
+      {
+        if (terms.size>0) {
+          terms.map(_.toXML)
+        }
+      }
+      </site>
+      { 
+        if (note != null && note.length>0) {
+      <site-note>{note}</site-note>
+        }
+      }
+    </derived-from-site>
+    
+
+}
+
 class DoublingTime(val value: String, val note: String, val refs: String) {
 
   var xrefList = List[DbXref]()
   var refList = List[String]()
   var srcList = List[String]()
 
-    init
+  init
 
   def init = {
     val items = refs.split("; ")
