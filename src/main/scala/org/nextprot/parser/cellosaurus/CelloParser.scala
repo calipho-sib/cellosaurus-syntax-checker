@@ -149,8 +149,10 @@ object CelloParser {
     var celloCVpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "celloparser.cv"
     var celloXrefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_xrefs.txt"
     var celloRefpath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "cellosaurus_refs.txt"
+    var celloSiteMappingPath = jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty("file.separator") + "site_mapping_to_cl_uberon"
 
     //var celloCVpath = "/home/agateau/workspace/cellosaurus-syntax-checker/celloparser.cv"
+    if (!new File(celloSiteMappingPath).exists) { Console.err.println("site_mapping_to_cl_uberon not found at: " + celloSiteMappingPath); sys.exit(1) }
     if (!new File(celloCVpath).exists) { Console.err.println("celloparser.cv not found at: " + celloCVpath); sys.exit(1) }
     //var celloXrefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_xrefs.txt"
     if (!new File(celloXrefpath).exists) { Console.err.println("cellosaurus_xrefs.txt not found at: " + celloXrefpath); sys.exit(1) }
@@ -164,6 +166,8 @@ object CelloParser {
     var hlatype2hgnc = Map[String,String]()
     var poptypes = ArrayBuffer[String]()
     var valid_element = ""
+
+    SiteMapping.load(celloSiteMappingPath)
 
     for (line <- Source.fromFile(celloCVpath).getLines()) {
       if (line.matches("[CDSHP][ACRTLO]   .*")) {
@@ -1917,7 +1921,7 @@ class CellType(val data: String) {
       }
       var ac =  cl_term(1)
       if (ac.endsWith(".")) ac = ac.substring(0, ac.length-1)
-      res("term") = new CvTerm(_terminology = "CL", _ac = ac, _name = "-")
+      res("term") = new CvTerm(_terminology = "CL", _ac = ac, _name = SiteMapping.getLabel(ac))
     }
     return res
   }
@@ -2037,7 +2041,7 @@ class DerivedFromSite(val site: String, val name: String, val note: String, val 
     if (uber != null && uber.length > 0 ) {
       val items = uber.split('+') // use split on char rather on string (would be double escaped "\\+")
       items.foreach(item => {
-        val term = new CvTerm(_terminology = "UBERON", _ac = item, _name = "-")
+        val term = new CvTerm(_terminology = "UBERON", _ac = item, _name = SiteMapping.getLabel(item))
         terms = term :: terms
       })
     }
