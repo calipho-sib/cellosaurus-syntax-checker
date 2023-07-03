@@ -167,7 +167,7 @@ object CelloParser {
     var poptypes = ArrayBuffer[String]()
     var valid_element = ""
 
-    SiteMapping.load(celloSiteMappingPath)
+    if (toxml) SiteMapping.load(celloSiteMappingPath)
 
     for (line <- Source.fromFile(celloCVpath).getLines()) {
       if (line.matches("[CDSHP][ACRTLO]   .*")) {
