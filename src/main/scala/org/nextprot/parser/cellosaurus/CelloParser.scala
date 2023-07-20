@@ -29,7 +29,7 @@ object CelloParser {
 
   val xmap = scala.collection.mutable.Map[String, (String, String)]()
 
-  val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation", "Misspelling", "Doubling time", "Derived from site", "Cell type")
+  val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation", "Misspelling", "Doubling time", "Derived from site", "Cell type", "Transformant")
   val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
 
   def escape_chars_for_obo(s: String) :String = {
@@ -101,7 +101,7 @@ object CelloParser {
     val ok_sxlist = List("Female", "Male", "Mixed sex", "Sex ambiguous", "Sex unspecified")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_cclist1 = List("Anecdotal", "Breed/subspecies", "Caution", "Derived from metastatic site", "Derived from sampling site", "Discontinued", "From", "Genome ancestry", "Group", "HLA typing", "Knockout cell", "Microsatellite instability", "Miscellaneous", "Misspelling",
-      "Monoclonal antibody isotype", "Monoclonal antibody target", "Omics", "Part of", "Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with", "Doubling time", "Derived from site", "Cell type")
+      "Monoclonal antibody isotype", "Monoclonal antibody target", "Omics", "Part of", "Population", "Problematic cell line", "Registration", "Selected for resistance to", "Transfected with", "Doubling time", "Derived from site", "Cell type", "Transformant")
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_catlist1 = List("Cancer cell line", "Hybrid cell line", "Hybridoma", "Induced pluripotent stem cell", "Adult stem cell",
       "Spontaneously immortalized cell line", "Stromal cell line", "Conditionally immortalized cell line",
@@ -436,6 +436,16 @@ object CelloParser {
               case e: Exception => {
                 errcnt += 1 
                 println(s"ERROR while parsing Derived from site comment: ${e.getMessage}")
+              }
+            }
+          } 
+          else if (cctopic == "Transformant") {
+            try {
+                val result = TransformantParser.parseLine(cctext.trim)
+            } catch {
+              case e: Exception => {
+                errcnt += 1 
+                println(s"ERROR while parsing Transformantcomment: ${e.getMessage}")
               }
             }
           } 
@@ -1210,6 +1220,7 @@ object CelloParser {
     var celloHLAlists = List[HLAlistwithSource]()
     var celloDoublingTimeList = List[DoublingTime]()
     var celloDerivedFromSiteList = List[DerivedFromSite]()
+    var celloTransformantList = List[Transformant]()
     var celloCellType : CellType = null
     var celloOldaclist = List[OldAc]()
     var celloSynlist = List[Synonym]()
@@ -1316,6 +1327,18 @@ object CelloParser {
             if (el != null) {
               val derivedFromSite = new DerivedFromSite(site=el("site"), name = el("name"), note = el("note"), uber = el("uber"))
               celloDerivedFromSiteList = derivedFromSite :: celloDerivedFromSiteList
+            }
+          } catch {
+            case e: Exception => { } // handled earlier
+          }
+        }
+
+        else if(category.equals("Transformant")) {
+          try {
+            val el = TransformantParser.parseLine(textdata)
+            if (el != null) {
+              val transformant = new Transformant(db=el("db"), ac = el("ac"), name = el("name"), note = el("note"))
+              celloTransformantList = transformant :: celloTransformantList
             }
           } catch {
             case e: Exception => { } // handled earlier
@@ -1465,7 +1488,7 @@ object CelloParser {
       origin = celloOriglist.reverse, derived = celloDerivedlist.reverse, publis = celloPublilist.reverse, sources = celloSourcelist,
       sourcerefs = celloSourcereflist, strmarkers = sortedMarkerList, reglist = celloReglist, hlalists = celloHLAlists.reverse, 
       seqvarlist = celloSeqVarlist.reverse, genomeAncestry = popDatawithSource, misspellinglist = celloMisspellingList, 
-      doublingTimeList = celloDoublingTimeList, derivedFromSiteList = celloDerivedFromSiteList, cellType = celloCellType)
+      doublingTimeList = celloDoublingTimeList, derivedFromSiteList = celloDerivedFromSiteList, cellType = celloCellType, transformantList=celloTransformantList)
     entry
   }
 
@@ -1507,7 +1530,7 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
                  val sources: List[STsource], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker],
                  val reglist: List[Registration], val hlalists: List[HLAlistwithSource], val seqvarlist: List[SequenceVariation], 
                  val genomeAncestry: PopulistwithSource, val misspellinglist: List[Misspelling], 
-                 val doublingTimeList: List[DoublingTime], val derivedFromSiteList: List[DerivedFromSite], val cellType: CellType) {
+                 val doublingTimeList: List[DoublingTime], val derivedFromSiteList: List[DerivedFromSite], val cellType: CellType, val transformantList: List[Transformant]) {
 
 
   // pam
@@ -1638,6 +1661,14 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
         if (genomeAncestry != null)
           { genomeAncestry.toXML }
       }
+
+      {
+        if (transformantList.size > 0)
+          <transformant-list>
+            { transformantList.map(_.toXML) }
+          </transformant-list>
+      }
+
       {
         if (misspellinglist.size > 0)
           <misspelling-list>
@@ -2032,6 +2063,37 @@ class Misspelling(val data: String,  xmap: scala.collection.mutable.Map[String, 
     </misspelling>
 }
 
+class Transformant(val db: String, val ac: String, val name: String, val note: String) {
+
+  var term : CvTerm = null
+  init
+
+  def init = {
+    if (db != null && db.length > 0 ) {
+      var terminology = db
+      if (terminology=="NCBI_TaxID") terminology = "NCBI-Taxonomy"
+      term = new CvTerm(_terminology = terminology, _ac = ac, _name = name)
+    }
+  }
+
+  def toXML = 
+    <transformant>
+      {
+        if (term != null) {
+          term.toXML
+        } else {
+          {name}
+        }
+      }
+      { 
+        if (note != null && note.length>0) {
+      <transformant-note>{note}</transformant-note>
+        }
+      }
+    </transformant>
+}
+
+
 class DerivedFromSite(val site: String, val name: String, val note: String, val uber: String) {
 
   var terms = List[CvTerm]()
@@ -2062,8 +2124,6 @@ class DerivedFromSite(val site: String, val name: String, val note: String, val 
         }
       }
     </derived-from-site>
-    
-
 }
 
 class DoublingTime(val value: String, val note: String, val refs: String) {
