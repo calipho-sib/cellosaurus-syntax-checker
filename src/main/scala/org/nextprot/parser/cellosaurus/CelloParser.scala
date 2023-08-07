@@ -29,7 +29,7 @@ object CelloParser {
 
   val xmap = scala.collection.mutable.Map[String, (String, String)]()
 
-  val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation", "Misspelling", "Doubling time", "Derived from site", "Cell type", "Transformant")
+  val specialCCTopics = List("HLA typing", "Genome ancestry", "Registration", "Sequence variation", "Misspelling", "Doubling time", "Derived from site", "Cell type", "Transformant", "Selected for resistance to")
   val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
 
   def escape_chars_for_obo(s: String) :String = {
@@ -445,10 +445,22 @@ object CelloParser {
             } catch {
               case e: Exception => {
                 errcnt += 1 
-                println(s"ERROR while parsing Transformantcomment: ${e.getMessage}")
+                println(s"ERROR while parsing Transformant comment: ${e.getMessage}")
               }
             }
           } 
+
+          else if (cctopic == "Selected for resistance to") {
+            try {
+                val result = ResistanceParser.parseLine(cctext.trim)
+            } catch {
+              case e: Exception => {
+                errcnt += 1 
+                println(s"ERROR while parsing Selected for resistance to comment: ${e.getMessage}")
+              }
+            }
+          } 
+
 
           else if (cctopic == "Cell type") {
             try {
@@ -1221,6 +1233,7 @@ object CelloParser {
     var celloDoublingTimeList = List[DoublingTime]()
     var celloDerivedFromSiteList = List[DerivedFromSite]()
     var celloTransformantList = List[Transformant]()
+    var celloResistanceList = List[Resistance]()
     var celloCellType : CellType = null
     var celloOldaclist = List[OldAc]()
     var celloSynlist = List[Synonym]()
@@ -1339,6 +1352,18 @@ object CelloParser {
             if (el != null) {
               val transformant = new Transformant(db=el("db"), ac = el("ac"), name = el("name"), note = el("note"))
               celloTransformantList = transformant :: celloTransformantList
+            }
+          } catch {
+            case e: Exception => { } // handled earlier
+          }
+        }
+
+        else if(category.equals("Selected for resistance to")) {
+          try {
+            val el = ResistanceParser.parseLine(textdata)
+            if (el != null) {
+              val resistance = new Resistance(db=el("db"), ac = el("ac"), name = el("name"))
+              celloResistanceList = resistance :: celloResistanceList
             }
           } catch {
             case e: Exception => { } // handled earlier
@@ -1488,7 +1513,8 @@ object CelloParser {
       origin = celloOriglist.reverse, derived = celloDerivedlist.reverse, publis = celloPublilist.reverse, sources = celloSourcelist,
       sourcerefs = celloSourcereflist, strmarkers = sortedMarkerList, reglist = celloReglist, hlalists = celloHLAlists.reverse, 
       seqvarlist = celloSeqVarlist.reverse, genomeAncestry = popDatawithSource, misspellinglist = celloMisspellingList, 
-      doublingTimeList = celloDoublingTimeList, derivedFromSiteList = celloDerivedFromSiteList, cellType = celloCellType, transformantList=celloTransformantList)
+      doublingTimeList = celloDoublingTimeList, derivedFromSiteList = celloDerivedFromSiteList, cellType = celloCellType, 
+      transformantList=celloTransformantList, resistanceList=celloResistanceList)
     entry
   }
 
@@ -1530,7 +1556,8 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
                  val sources: List[STsource], val sourcerefs: List[PubliRef], val strmarkers: List[Strmarker],
                  val reglist: List[Registration], val hlalists: List[HLAlistwithSource], val seqvarlist: List[SequenceVariation], 
                  val genomeAncestry: PopulistwithSource, val misspellinglist: List[Misspelling], 
-                 val doublingTimeList: List[DoublingTime], val derivedFromSiteList: List[DerivedFromSite], val cellType: CellType, val transformantList: List[Transformant]) {
+                 val doublingTimeList: List[DoublingTime], val derivedFromSiteList: List[DerivedFromSite], val cellType: CellType, 
+                 val transformantList: List[Transformant], val resistanceList: List[Resistance]) {
 
 
   // pam
@@ -1667,6 +1694,13 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
           <transformant-list>
             { transformantList.map(_.toXML) }
           </transformant-list>
+      }
+
+      {
+        if (resistanceList.size > 0)
+          <selected-for-resistance-list>
+            { resistanceList.map(_.toXML) }
+          </selected-for-resistance-list>
       }
 
       {
@@ -2092,6 +2126,39 @@ class Transformant(val db: String, val ac: String, val name: String, val note: S
       }
     </transformant>
 }
+
+
+class Resistance(val db: String, val ac: String, val name: String) {
+
+  var term : CvTerm = null
+  var xref : DbXref = null
+  init
+
+  def init = {
+    if (db != null && db.length > 0 ) {
+      if (db=="UniProtKB") {
+        val xmap = CelloParser.xmap
+        xref = new DbXref(_db = db, _ac = ac, _category = xmap(db)._2, _url = xmap(db)._1, _property = name, _entryCategory = "")
+      } else {
+        term = new CvTerm(_terminology = db, _ac = ac, _name = name)
+      }
+    }
+  }
+
+  def toXML = 
+    <selected-for-resistance>
+      {
+        if (term != null) {
+          term.toXML
+        } else if (xref != null) {
+          xref.toXML
+        } else {
+          {name}
+        }
+      }
+    </selected-for-resistance>
+}
+
 
 
 class DerivedFromSite(val site: String, val name: String, val note: String, val uber: String) {
