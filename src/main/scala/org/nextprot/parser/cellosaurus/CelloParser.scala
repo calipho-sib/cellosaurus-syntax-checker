@@ -1698,9 +1698,9 @@ class CelloEntry(val ac: String, val oldacs: List[OldAc], val id: String, val sy
 
       {
         if (resistanceList.size > 0)
-          <selected-for-resistance-list>
+          <resistance-list>
             { resistanceList.map(_.toXML) }
-          </selected-for-resistance-list>
+          </resistance-list>
       }
 
       {
@@ -2146,7 +2146,7 @@ class Resistance(val db: String, val ac: String, val name: String) {
   }
 
   def toXML = 
-    <selected-for-resistance>
+    <resistance>
       {
         if (term != null) {
           term.toXML
@@ -2156,7 +2156,7 @@ class Resistance(val db: String, val ac: String, val name: String) {
           {name}
         }
       }
-    </selected-for-resistance>
+    </resistance>
 }
 
 
