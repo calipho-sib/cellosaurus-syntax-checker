@@ -745,9 +745,13 @@ object CelloParser {
            }
         else if (entryline.startsWith("//")) { // Entry terminator, check line occurences in collected entry
             linecntmap.keys.foreach { key =>
-            if ((linecntmap(key) < line_occmap(key)._1) || (linecntmap(key) > line_occmap(key)._2))
-              if (key == "AC" || key == "ID") { Console.err.println("Severe error: " + key + " in entry " + id + " Please correct before re-check"); sys.exit(3) }
-              else { Console.err.println("Illegal line count for: " + key + " in entry " + id); errcnt += 1 }
+              if ((linecntmap(key) < line_occmap(key)._1) || (linecntmap(key) > line_occmap(key)._2)) {
+                  if (key == "AC" || key == "ID") { 
+                    Console.err.println("Severe error: " + key + " in entry " + id + " Please correct before re-check"); 
+                    sys.exit(3) 
+                  } else { Console.err.println("Illegal line count for: " + key + " in entry " + id); errcnt += 1 
+                }
+              }
             }
             if(hasSTR && strsrcCnt != 1) { Console.err.println("Illegal ST   Source(s) line count in " + ac); errcnt += 1 }
         }
@@ -828,6 +832,7 @@ object CelloParser {
     var derivedfromcc = ""
     var parentderivedfromcc = ""
     var disease = ""
+    var hiCnt = 0
     var dislist = ArrayBuffer[String]()
     var disErrorlist = ArrayBuffer[String]()
 
@@ -844,6 +849,7 @@ object CelloParser {
       derivedfromcc = ""
       parentderivedfromcc = ""
       disease = ""
+      hiCnt = 0
       dislist.clear
       disErrorlist.clear
 
@@ -871,6 +877,7 @@ object CelloParser {
                      }
                 }
        else if (entryline.startsWith("HI   ")) { // Entry has a parent
+               hiCnt += 1
                parentac = entryline.substring(5).split(" ")(0)
                parentid = (entryline.substring(5).split("!")(1)).substring(1)
                if (parentac.equals(ac)) { Console.err.println("Self-referencing HI: " + parentac + "/" + ac); errcnt += 1 }
@@ -918,6 +925,7 @@ object CelloParser {
     if(toOBO) //if(ac.startsWith ("CVCL_")) Console.err.println(celloentry.toOBO)
       obofile.write(celloentry.toOBO)
     if (!category.contains("Hybrid")) { // check parent's features that must be transmitted in non-hybrids, outside line loop, needs all entry parsed
+       if (hiCnt>1) { Console.err.println("More than one parent for non hybrid in : " + ac); errcnt += 1 }
        if ((parentSpecies != "") && !ox.contains("hybrid") && (parentSpecies != ox)) { Console.err.println("Wrong parent species: " + parentac + "(parent)=" + parentSpecies + " " + ac + "=" + ox) }
        if (disErrorlist.length != 0) { Console.err.println(disErrorlist(0)); errcnt += 1 }
        if ((parentac != "") && cellSex != parentSex) { Console.err.println("Wrong parent's  ( " + parentac + " ) sex match in: " + ac); errcnt += 1 }
