@@ -21,7 +21,7 @@ object ResistanceParser {
     if (elems.length >= 3) {
       // first element should be one of ChEBI, DrugBank, NCIt, UniProtKB
       db = elems(0)
-      if (db != "NCIt" && db != "UniProtKB" && db != "ChEBI" && db != "DrugBank") {
+      if (db != "NCIt" && db != "UniProtKB" && db != "ChEBI" && db != "DrugBank" && db != "PubChem") {
         throw new Exception("Invalid database " + db + " in " + line)
       }
       // second element is the accession
