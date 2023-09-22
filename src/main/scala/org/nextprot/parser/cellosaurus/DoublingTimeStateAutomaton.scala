@@ -29,13 +29,14 @@ object DoublingTimeStateAutomaton {
       Map("pattern" -> ").", "next_state" -> "END")))
 
   def findFirstMatch(line: String, pos: Int, transitions: List[Map[String, String]]): Map[String, Any] = {
+    
     // store transition pattern matches
     val pmList = transitions.flatMap { trans =>
       val pattern = trans("pattern")
       val matchPos = line.indexOf(pattern, pos + 1)
       if (matchPos >= 0) {
         val next_pos = matchPos + pattern.length
-        Some(Map("next_state" -> trans("next_state"), "pattern" -> pattern, "match_pos" -> matchPos, "next_pos" -> next_pos))
+        Some(Map[String,Any]("next_state" -> trans("next_state"), "pattern" -> pattern, "match_pos" -> matchPos, "next_pos" -> next_pos))
       } else {
         None
       }
@@ -52,7 +53,10 @@ object DoublingTimeStateAutomaton {
       val pm1Key = s"${(pos1).formatted("%05d")}/${pm1("pattern")}"
       val pm2Key = s"${(pos2).formatted("%05d")}/${pm2("pattern")}"
       pm1Key > pm2Key
-    }.head // return first match (the only one which is relevant)
+    }
+
+    // return first match (the only one which is relevant)
+    return pmList(0)
   }
 
   def parseLine(line: String): List[Map[String,String]] = {

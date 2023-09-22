@@ -23,7 +23,7 @@ import org.nextprot.parser.cellosaurus._
 
 object CelloParser {
 
-  implicit val codec = Codec("UTF-8")
+  val codec = Codec("UTF-8")
   codec.onMalformedInput(CodingErrorAction.REPLACE)
   // grep -n --color='auto' -P "[\x80-\xFF]" cellosaurus.txt
 
@@ -1828,16 +1828,15 @@ object CelloParser {
     for (line <- publiFlatentry) {
       if (line.size > 5) linedata = line.substring(5).trim()
       if (line.startsWith("RX   ")) { // The line occurs only once per entry in cellosaurus refs
-        xreflist =
-          linedata.substring(0, linedata.size - 1).split("; ").to[ArrayBuffer]
+        val xref_arr : Array[String] = linedata.substring(0, linedata.size - 1).split("; ") 
+        for (xref <- xref_arr) xreflist.append(xref)
         internalId = xreflist(0) // Pubmed comes first when PubMed + DOI
       } else if (line.startsWith("RA   "))
-        authorlist ++= linedata
-          .substring(0, linedata.size - 1)
-          .split(", ")
-          .to[ArrayBuffer]
+        val auth_arr = linedata.substring(0, linedata.size - 1).split(", ")
+        for (auth <- auth_arr) authorlist.append(auth)
       else if (line.startsWith("RG   "))
-        authorlist = linedata.split(";").to[ArrayBuffer]
+        val rg_arr = linedata.split(";")
+        for (rg <-rg_arr) authorlist.append(rg)
       else if (line.startsWith("RT   ")) {
         if (title == "") title = linedata.trim()
         else title += " " + linedata.trim() // Titles can span several lines
@@ -1865,7 +1864,8 @@ object CelloParser {
               firstpage = rltoken.substring(3).split("-")(0)
               lastpage = rltoken.substring(3).split("-")(1)
             } else if (rltoken.contains("(eds.)")) { // Collect editors (Hiddemann W., Haferlach T., Unterhalt M., Buechner T., Ritter J. (eds.))
-              editorlist = rltoken.dropRight(7).split(", ").to[ArrayBuffer]
+              val ed_arr = rltoken.dropRight(7).split(", ")
+              for (ed <- ed_arr) editorlist.append(ed)
             }
           }
           publisher = rltokens(rltokens.size - 2)
