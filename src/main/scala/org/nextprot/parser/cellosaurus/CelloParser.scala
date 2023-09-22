@@ -1192,7 +1192,7 @@ object CelloParser {
           // Further checks for valid ranges/units
           if (AGregexp2.findFirstIn(entrylinedata) != None) {
             val parsepattern = "([0-9-]+)([A-Z]+)([0-9-]+)?([A-Z]+)?".r
-            val parsepattern(value1, unit1, value2, unit2) = entrylinedata
+            val parsepattern(value1, unit1, value2, unit2) = entrylinedata : @unchecked
             if (value1.contains("-")) {
               val rangelist = value1.split("-")
               ageunitcnt = rangelist(0).toInt
@@ -1213,7 +1213,7 @@ object CelloParser {
             }
           } else if (AGregexp3.findFirstIn(entrylinedata) != None) {
             val parsepattern = "([0-9-]+)([A-Z]+)([0-9-]+)?([A-Z]+)?".r
-            val parsepattern(value1, unit1, value2, unit2) = entrylinedata
+            val parsepattern(value1, unit1, value2, unit2) = entrylinedata : @unchecked
             if (value1.contains("-")) {
               val rangelist = value1.split("-")
               ageunitcnt = rangelist(0).toInt
@@ -1242,7 +1242,7 @@ object CelloParser {
             }
           } else if (AGregexp4.findFirstIn(entrylinedata) != None) {
             val parsepattern = "([0-9-]+)([A-Z]+)".r
-            val parsepattern(value, unit) = entrylinedata
+            val parsepattern(value, unit) = entrylinedata : @unchecked
             if (value.contains("-")) {
               val rangelist = value.split("-")
               ageunitcnt = rangelist(0).toInt
@@ -1622,10 +1622,8 @@ object CelloParser {
       obofile.close
     }
 
-    println(Entries.length + " entries: " + errcnt + " error(s)")
-    println(
-      nonUTF8cnt + " non-UTF8 character containing line(s), " + blankcnt + " blank line(s)"
-    )
+    println(s"${Entries.length} entries: $errcnt error(s)")
+    println(s"$nonUTF8cnt non-UTF8 character containing line(s), $blankcnt blank line(s)")
 
     if (conflictfilename != "") { // Output five tables in reference file
       val dupfile = new PrintWriter(new File(conflictfilename))
@@ -1781,11 +1779,11 @@ object CelloParser {
 
     if (stats) {
       println("\n ===== Statistics =====\n")
-      println(drcnt + " Xrefs")
-      println(rxcnt + " RX refs (" + pmids.size + " unique PMIDs)")
-      println(wwcnt + " Web links")
-      println(syncnt + " synonyms")
-      println(oxmap.size + " different species")
+      println(s"$drcnt Xrefs")
+      println(s"$rxcnt RX refs (${pmids.size} unique PMIDs)")
+      println(s"$wwcnt Web links")
+      println(s"$syncnt synonyms")
+      println(s"${oxmap.size} different species")
       oxmap.keys.foreach { i =>
         if (i == "9606") println("Human: " + oxmap(i))
         else if (i == "10090") println("Mouse: " + oxmap(i))

@@ -50,8 +50,8 @@ object DoublingTimeStateAutomaton {
     pmList.sortWith { (pm1, pm2) =>
       val pos1 = 99999 - pm1("match_pos").asInstanceOf[Int]
       val pos2 = 99999 - pm2("match_pos").asInstanceOf[Int]
-      val pm1Key = s"${(pos1).formatted("%05d")}/${pm1("pattern")}"
-      val pm2Key = s"${(pos2).formatted("%05d")}/${pm2("pattern")}"
+      val pm1Key = f"${pos1}%05d/${pm1("pattern")}"
+      val pm2Key = f"${pos2}%05d/${pm2("pattern")}"
       pm1Key > pm2Key
     }
 
