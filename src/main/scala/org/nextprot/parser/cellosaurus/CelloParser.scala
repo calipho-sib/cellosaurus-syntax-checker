@@ -2003,6 +2003,7 @@ object CelloParser {
 
     flatEntry.foreach(entryline => {
       if (entryline.length() > 5) entrylinedata = entryline.substring(5)
+
       if (entryline.startsWith("AC   ")) ac = entrylinedata // primary accession
       else if (entryline.startsWith("AS   ")) { // secundary accession
         val asList = entrylinedata.split("; ")
@@ -2419,6 +2420,7 @@ class OiEntry(
   }
 }
 
+
 class CelloEntry(
     val ac: String,
     val oldacs: List[OldAc],
@@ -2493,151 +2495,187 @@ class CelloEntry(
     return oiEntry
   }
 
+  
+
   def hasNormalCCTopics(): Boolean = {
     return comments
       .filterNot(cc => { CelloParser.specialCCTopics.contains(cc.category) })
       .size > 0
   }
 
+
+  def aclist_toXML(ac:String, oldacs: List[OldAc]) : xml.Elem = {
+    val buf = new xml.NodeBuffer
+    buf += <accession type="primary">{ac}</accession>
+    oldacs.foreach( x => { buf += x.toXML })
+    val result = <accession-list>{buf}</accession-list>
+    return result
+  }
+
+
+  def namelist_toXML(id: String, syns: List[Synonym]): xml.Elem = {
+    val buf = new xml.NodeBuffer
+    buf += <name type="identifier">{id}</name>
+    syns.foreach( s => {buf += s.toXML })
+    var list = <name-list>{buf}</name-list>
+    return list
+  }
+
   def toXML =
-    <cell-line category={category} created={credat} last-updated={
-      upddat
-    } entry-version={eversion} sex={if (sex != "") sex else null} age={
-      if (age != "") age else null
-    }>
-      <accession-list>
-        <accession type="primary">{ac}</accession>
-        {
-      if (oldacs.size > 0) { oldacs.map(_.toXML) }
-    }
-      </accession-list>
-      <name-list>
-        <name type="identifier">{id}</name>
-        {
-      if (synonyms.size > 0) { synonyms.map(_.toXML) }
-    }
-      </name-list>
+
+    <cell-line 
+      category={category} 
+      created={credat} 
+      last-updated={upddat} 
+      entry-version={eversion} 
+      sex={if (sex != "") sex else null} 
+      age={if (age != "") age else null} >
+
+      {aclist_toXML(ac, oldacs)}
+
+      {namelist_toXML(id, synonyms)}
+
       {
-      // HLA typing, genome ancestry, Registration and seq-variations have their own structures
       if (hasNormalCCTopics())
-        <comment-list>
-            {comments.map(_.toXML)}
-          </comment-list>
-    }
+         <comment-list>{comments.map(_.toXML)}</comment-list>
+       else 
+        Null
+      }
+
       {
       if (sources.size > 0 || sourcerefs.size > 0)
         <str-list>
-            <source-list>
-              {sources.map(_.toXML)}
-          {
-          if (sourcerefs.size > 0)
-            <reference-list>
-        	    {sourcerefs.map(_.toXML)}
-						</reference-list>
-        }
-            </source-list>
-            <marker-list>
-              {strmarkers.map(_.toXML)}
-            </marker-list>
-          </str-list>
-    }
+          <source-list>
+            {sources.map(_.toXML)}
+            {
+            if (sourcerefs.size > 0)
+              <reference-list>{sourcerefs.map(_.toXML)}</reference-list>
+            else 
+              Null
+            }
+          </source-list>
+          <marker-list>{strmarkers.map(_.toXML)}</marker-list>
+        </str-list>
+      else
+        Null
+      }
+
+
       {
       if (diseases.size > 0)
-        <disease-list>
-            {diseases.map(_.toXML)}
-          </disease-list>
-    }
-      <species-list>
-        {species.map(_.toXML)}
-      </species-list>
+        <disease-list>{diseases.map(_.toXML)}</disease-list>
+      else
+        Null
+      }
+
+      <species-list>{species.map(_.toXML)}</species-list>
+
       {
       if (derived.size > 0)
-        <derived-from>
-            {derived.map(_.toXML)}
-          </derived-from>
-    }
+        <derived-from>{derived.map(_.toXML)}</derived-from>
+      else
+        Null
+      }
+      
       {
       if (origin.size > 0)
-        <same-origin-as>
-            {origin.map(_.toXML)}
-          </same-origin-as>
-    }
+        <same-origin-as>{origin.map(_.toXML)}</same-origin-as>
+      else
+        Null
+      }
+
       {
       if (webpages.size > 0)
-        <web-page-list>
-            {webpages.map(_.toXML)}
-          </web-page-list>
-    }
+        <web-page-list>{webpages.map(_.toXML)}</web-page-list>
+      else
+        Null
+      }
+      
       {
       if (publis.size > 0)
-        <reference-list>
-            {publis.map(_.toXML)}
-          </reference-list>
-    }
+        <reference-list>{publis.map(_.toXML)}</reference-list>
+      else
+        Null
+      }
+
       {
       if (hlalists.size > 0)
-        <hla-typing-list>
-            {hlalists.map(_.toXML)}
-          </hla-typing-list>
-    }
+        <hla-typing-list>{hlalists.map(_.toXML)}</hla-typing-list>
+      else
+        Null
+      }
+
       {
       if (doublingTimeList.size > 0)
-        <doubling-time-list>
-            {doublingTimeList.map(_.toXML)}
-          </doubling-time-list>
-    }
+        <doubling-time-list>{doublingTimeList.map(_.toXML)}</doubling-time-list>
+      else
+        Null
+      }
+
       {
       if (derivedFromSiteList.size > 0)
-        <derived-from-site-list>
-            {derivedFromSiteList.map(_.toXML)}
-          </derived-from-site-list>
-    }
+        <derived-from-site-list>{derivedFromSiteList.map(_.toXML)}</derived-from-site-list>
+      else
+        Null
+      }
+  
       {
-      if (cellType != null) { cellType.toXML }
-    }
+      if (cellType != null) 
+        cellType.toXML
+      else
+        Null
+      }
+
       {
-      if (genomeAncestry != null) { genomeAncestry.toXML }
-    }
+      if (genomeAncestry != null) 
+        genomeAncestry.toXML
+      else
+        Null
+      }
 
       {
       if (transformantList.size > 0)
-        <transformant-list>
-            {transformantList.map(_.toXML)}
-          </transformant-list>
-    }
+        <transformant-list>{transformantList.map(_.toXML)}</transformant-list>
+      else
+        Null
+      }
 
       {
       if (resistanceList.size > 0)
-        <resistance-list>
-            {resistanceList.map(_.toXML)}
-          </resistance-list>
-    }
+        <resistance-list>{resistanceList.map(_.toXML)}</resistance-list>
+      else
+        Null
+      }
 
       {
       if (misspellinglist.size > 0)
-        <misspelling-list>
-            {misspellinglist.map(_.toXML)}
-          </misspelling-list>
-    }
+        <misspelling-list>{misspellinglist.map(_.toXML)}</misspelling-list>
+      else
+        Null
+      }
+  
       {
       if (reglist.size > 0)
-        <registration-list>
-            {reglist.map(_.toXML)}
-          </registration-list>
-    }
+        <registration-list>{reglist.map(_.toXML)}</registration-list>
+      else
+        Null
+      }
+
       {
       if (seqvarlist.size > 0)
-        <sequence-variation-list>
-            {seqvarlist.map(_.toXML)}
-          </sequence-variation-list>
-    }
+        <sequence-variation-list>{seqvarlist.map(_.toXML)}</sequence-variation-list>
+      else
+        Null
+      }
+  
       {
       if (dbrefs.size > 0)
-        <xref-list>
-            {dbrefs.map(_.toXML)}
-          </xref-list>
-    }
+        <xref-list>{dbrefs.map(_.toXML)}</xref-list>
+      else 
+        Null
+      }
     </cell-line>
+
 
   def toOBO = {
     var oboEntryString = "\n[Term]\n"
@@ -2710,15 +2748,17 @@ class StrmarkerData(
       {
       if (strmarkersources.size > 0 || strmarkersourcerefs.size > 0)
         <source-list>
-              {strmarkersources.map(_.toXML)}
-           {
+          {strmarkersources.map(_.toXML)}
+          {
           if (strmarkersourcerefs.size > 0)
-            <reference-list>
-        	    {strmarkersourcerefs.map(_.toXML)}
-						</reference-list>
-        }
-           </source-list>
-    }
+            <reference-list>{strmarkersourcerefs.map(_.toXML)}</reference-list>
+          else
+            Null
+          }
+        </source-list>
+      else
+        Null
+      }
     </marker-data>
 }
 
@@ -2825,40 +2865,47 @@ class SequenceVariation(
   }
 
   def toXML =
-    <sequence-variation variation-type={vartyp}
-  	zygosity-type={
-      if (zygosity != "") { zygosity }
-      else null
-    }
-  	mutation-type={
-      if (mutyp != "") { mutyp }
-      else null
-    }
-     >
-     {
+    <sequence-variation 
+      variation-type={vartyp}
+  	  zygosity-type={ if (zygosity != "") { zygosity } else null }
+    	mutation-type={ if (mutyp != "") { mutyp } else null } >
+
+      {
       if (mutdesc != "")
         <mutation-description>{mutdesc}</mutation-description>
-    }
-     {
+      else
+        Null
+      }
+      {
       if (varnote != "")
         <variation-note>{varnote}</variation-note>
-    }
-
-          <xref-list>
-            {varXreflist.map(_.toXML)}
-          </xref-list>
+      else 
+        Null
+      }
+      <xref-list>
+        {varXreflist.map(_.toXML)}
+      </xref-list>
       {
-      if (varSourcelist.size > 0 || varSourcereflist.size > 0)
+      if (varSourcelist.size > 0 || varSourcereflist.size > 0) 
         <variation-sources>
-              {varSourcelist.map(_.toXML)}
-           {
+          {
+          if (varSourcelist.size > 0) 
+            {varSourcelist.map(_.toXML)}
+          else
+            Null          
+          }
+          {
           if (varSourcereflist.size > 0)
             <reference-list>
         	    {varSourcereflist.map(_.toXML)}
 						</reference-list>
-        }
-           </variation-sources>
-    }
+          else
+            Null
+          }
+        </variation-sources>        
+      else 
+        Null
+      }
 </sequence-variation>
 }
 
@@ -2964,12 +3011,13 @@ class CellType(val data: String) {
   }
 
   def toXML = {
+    val term: CvTerm = ct("term").asInstanceOf[CvTerm]
     <cell-type>{ct("name")}
-      {
-      val term: CvTerm = ct("term").asInstanceOf[CvTerm]
-      if (term != null) {
-        term.toXML
-      }
+    {
+    if (term != null)
+      term.toXML
+    else
+      Null
     }
     </cell-type>
   }
@@ -3070,24 +3118,27 @@ class Misspelling(
     <misspelling> 
       <misspelling-name>{label}</misspelling-name>
       {
-      if (note.length > 0) {
+      if (note.length > 0) 
         <misspelling-note>{note}</misspelling-note>
+      else
+        Null 
       }
-    }
       {
-      if (xrefs.size > 0) {
+      if (xrefs.size > 0) 
         <xref-list>
           {xrefs.map(_.toXML)}
           </xref-list>
+      else
+        Null
       }
-    }
       {
-      if (ref_ids.size > 0) {
+      if (ref_ids.size > 0) 
         <reference-list>
             {ref_ids.map(id => <reference resource-internal-ref={id}/>)}
           </reference-list>
+      else
+        Null
       }
-    }
     </misspelling>
 }
 
@@ -3111,17 +3162,17 @@ class Transformant(
 
   def toXML =
     <transformant>
-      {
-      if (term != null) {
-        term.toXML
-      } else {
-        { name }
-      }
+    {
+    if (term != null)
+      term.toXML
+    else 
+      name
     }
-      {
-      if (note != null && note.length > 0) {
-        <transformant-note>{note}</transformant-note>
-      }
+    {
+    if (note != null && note.length > 0) 
+      <transformant-note>{note}</transformant-note>
+    else
+      Null      
     }
     </transformant>
 }
@@ -3158,7 +3209,7 @@ class Resistance(val db: String, val ac: String, val name: String) {
       } else if (xref != null) {
         xref.toXML
       } else {
-        { name }
+        name
       }
     }
     </resistance>
@@ -3194,16 +3245,18 @@ class DerivedFromSite(
     <derived-from-site>
       <site site-type={site}>{name}
       {
-      if (terms.size > 0) {
+      if (terms.size > 0) 
         terms.map(_.toXML)
+      else
+        Null
       }
-    }
       </site>
       {
-      if (note != null && note.length > 0) {
+      if (note != null && note.length > 0)
         <site-note>{note}</site-note>
+      else
+        Null
       }
-    }
     </derived-from-site>
 }
 
@@ -3248,32 +3301,30 @@ class DoublingTime(val value: String, val note: String, val refs: String) {
     <doubling-time>
       <doubling-time-value>{value}</doubling-time-value>
       {
-      if (note != null) {
+      if (note != null) 
         <doubling-time-note>{note}</doubling-time-note>
+      else
+        Null
       }
-    }
       <doubling-time-sources>
       {
-      if (xrefList.size > 0) {
-        <xref-list>
-          {xrefList.map(_.toXML)}
-        </xref-list>
+      if (xrefList.size > 0)
+        <xref-list>{xrefList.map(_.toXML)}</xref-list>
+      else
+        Null
       }
-    }
       {
-      if (refList.size > 0) {
-        <reference-list>
-          {refList.map(id => <reference resource-internal-ref={id}/>)}
-        </reference-list>
+      if (refList.size > 0)
+        <reference-list>{refList.map(id => <reference resource-internal-ref={id}/>)}</reference-list>
+      else  
+        Null
       }
-    }
       {
-      if (srcList.size > 0) {
-        <source-list>
-          {srcList.map(src => <source>{src}</source>)}
-        </source-list>
+      if (srcList.size > 0) 
+        <source-list>{srcList.map(src => <source>{src}</source>)}</source-list>
+      else
+        Null
       }
-    }
       </doubling-time-sources>
     </doubling-time>
 }
@@ -3285,20 +3336,16 @@ class HLAlistwithSource(
 ) {
   def toXML =
     <hla-typing>
-      <hla-gene-alleles-list>
-      {glist.map(_.toXML)}
-      </hla-gene-alleles-list>
+      <hla-gene-alleles-list>{glist.map(_.toXML)}</hla-gene-alleles-list>
       <hla-typing-source>
-          {
-      if (srcXref != null) { srcXref.toXML }
-      else if (
-        src.contains("PubMed") || src
-          .contains("Patent") || src.contains("DOI") || src.contains("CelloPub")
-      )
+      {
+      if (srcXref != null) 
+        srcXref.toXML
+      else if (src.contains("PubMed") || src.contains("Patent") || src.contains("DOI") || src.contains("CelloPub"))
         <reference resource-internal-ref={src}/>
       else
         <source>{src}</source>
-    }
+      }
 		  </hla-typing-source>
     </hla-typing>
 }
@@ -3311,19 +3358,14 @@ class PopFreqData(val popName: String, val popFreq: String) {
 class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
   def toXML =
     <genome-ancestry>
-      <population-list>
-        {poplist.map(_.toXML)}
-      </population-list>
+      <population-list>{poplist.map(_.toXML)}</population-list>
       <genome-ancestry-source>
-          {
-      if (
-        src.contains("PubMed") || src
-          .contains("Patent") || src.contains("DOI") || src.contains("CelloPub")
-      )
+      {
+      if (src.contains("PubMed") || src.contains("Patent") || src.contains("DOI") || src.contains("CelloPub"))
         <reference resource-internal-ref={src}/>
       else
         <source>{src}</source>
-    }
+      }
 		  </genome-ancestry-source>
     </genome-ancestry>
 }
@@ -3402,11 +3444,15 @@ class DbXref(
         <property-list>
             <property name={propname} value={_property}/>
           </property-list>
-    }
+      else
+        Null
+      }
       {
       if (final_url != "")
         <url>{scala.xml.PCData(final_url)}</url>
-    }
+      else
+        Null
+      }
     </xref>
 
   def toOBO = {
@@ -3549,15 +3595,19 @@ class Comment(
     // if (category != "HLA typing" && category != "Genome ancestry" && category != "Registration" && category != "Sequence variation")
     if (!CelloParser.specialCCTopics.contains(category))
       <comment category={category}> 
-    {if (text != "") { text }} 
-    {if (method != "") <method>{method}</method>} 
-    {if (cvterm != null) { cvterm.toXML }} 
-    {
-        if (ccXreflist.size > 0) <xref-list> {
-          ccXreflist.map(_.toXML)
-        } </xref-list>
+      {if (text != "") text else Null} 
+      {if (method != "") <method>{method}</method> else Null} 
+      {if (cvterm != null) cvterm.toXML else Null} 
+      {
+        if (ccXreflist.size > 0) 
+          <xref-list>{ccXreflist.map(_.toXML)}</xref-list>
+        else
+          Null
       }
-    </comment>
+      </comment>
+    else
+      Null
+
 
   def toOBO = {
     var commtext = category + ": "
@@ -3599,30 +3649,32 @@ class CelloPublication(
 ) {
 
   def toXML =
-    <publication date={year} type={pubtype} journal-name={
-      if (name != "") name else null
-    } volume={if (volume != "") volume else null} first-page={
-      if (firstpage != "") firstpage else null
-    } last-page={if (lastpage != "") lastpage else null} publisher={
-      if (publisher != "") publisher else null
-    } institution={if (institute != "") institute else null} city={
-      if (city != "") city else null
-    } country={if (country != "") country else null} internal-id={internal_id}>
+    <publication 
+      date={year} 
+      type={pubtype} 
+      journal-name={ if (name != "") name else null } 
+      volume={ if (volume != "") volume else null } 
+      first-page={ if (firstpage != "") firstpage else null } 
+      last-page={ if (lastpage != "") lastpage else null } 
+      publisher={ if (publisher != "") publisher else null } 
+      institution={ if (institute != "") institute else null } 
+      city={ if (city != "") city else null } 
+      country={ if (country != "") country else null } 
+      internal-id={internal_id} >
+
       <title>{scala.xml.PCData(title)}</title>
       {
       if (editors.size > 0)
-        <editor-list>
-            {editors.map(_.toXML)}
-          </editor-list>
-    }
-      <author-list>
-        {authors.map(_.toXML)}
-      </author-list>
+        <editor-list>{editors.map(_.toXML)}</editor-list>
+      else
+        Null
+      }
+      <author-list>{authors.map(_.toXML)}</author-list>
       {
       if (dbrefs.size > 0)
-        <xref-list>
-            {dbrefs.map(_.toXML)}
-          </xref-list>
-    }
+        <xref-list>{dbrefs.map(_.toXML)}</xref-list>
+      else
+        Null
+      }
     </publication>
 }

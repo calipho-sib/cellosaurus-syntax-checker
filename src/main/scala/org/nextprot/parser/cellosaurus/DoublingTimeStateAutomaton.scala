@@ -47,7 +47,7 @@ object DoublingTimeStateAutomaton {
     }
 
     // sort pattern matches found: nearest match_pos first / longest match first
-    pmList.sortWith { (pm1, pm2) =>
+    val sortedPmList = pmList.sortWith { (pm1, pm2) =>
       val pos1 = 99999 - pm1("match_pos").asInstanceOf[Int]
       val pos2 = 99999 - pm2("match_pos").asInstanceOf[Int]
       val pm1Key = f"${pos1}%05d/${pm1("pattern")}"
@@ -56,11 +56,10 @@ object DoublingTimeStateAutomaton {
     }
 
     // return first match (the only one which is relevant)
-    return pmList(0)
+    return sortedPmList.head
   }
 
   def parseLine(line: String): List[Map[String,String]] = {
-    //println(s"\nline  : $line")
     var elems = List[Map[String,String]]()
     var pos = 0
     var state = "value"
@@ -71,7 +70,6 @@ object DoublingTimeStateAutomaton {
       val pattern = matchObj("pattern").asInstanceOf[String]
       val text = line.substring(pos, endPos)
       val elem = Map("state" -> state, "text" -> text, "pattern" -> pattern)
-      //println(s"$state : ${line.substring(pos, endPos)}")
       pos = matchObj("next_pos").asInstanceOf[Int]
       state = matchObj("next_state").asInstanceOf[String]
       elems = elems :+ elem
@@ -128,9 +126,9 @@ object DoublingTimeStateAutomaton {
       if (line.startsWith("CC   Doubling time")) {
         val parsedLine = line.substring(20).trim()        
         lineNo += 1
+        println(line)
         try {
           val elems = parseLine(parsedLine)
-          //for (el <- elems) { println(el) }
           val dtlist = buildDtList(elems)
           for (dt <- dtlist) {
             println(dt)
