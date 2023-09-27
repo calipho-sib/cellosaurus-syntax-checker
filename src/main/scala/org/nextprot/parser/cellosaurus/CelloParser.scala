@@ -17,10 +17,6 @@ import java.util.Date;
 import scala.xml._
 import org.nextprot.parser.cellosaurus._
 
-//import org.nextprot.parser.cellosaurus.datamodel
-//import org.nextprot.parser.cellosaurus.datamodel.publication
-//import org.nextprot.parser.cellosaurus.utils._
-
 object CelloParser {
 
   val codec = Codec("UTF-8")
