@@ -17,6 +17,18 @@ import java.util.Date;
 import scala.xml._
 import org.nextprot.parser.cellosaurus._
 
+/*
+
+See also
+
+https://www.javadoc.io/doc/org.scala-lang/scala-library/latest/index.html
+https://docs.scala-lang.org/scala3/book/string-interpolation.html
+https://www.scala-sbt.org/1.x/docs/Compiler-Plugins.html
+https://docs.scala-lang.org/overviews/compiler-options/index.html
+https://mvnrepository.com/search?q=sbt-assembly
+
+*/
+
 object CelloParser {
 
   val codec = Codec("UTF-8")
@@ -24,6 +36,8 @@ object CelloParser {
   // grep -n --color='auto' -P "[\x80-\xFF]" cellosaurus.txt
 
   val xmap = scala.collection.mutable.Map[String, (String, String)]()
+
+  val ok_seqvardblist = List("HGNC", "MGI", "RGD", "UniProtKB", "VGNC")
 
   val specialCCTopics = List(
     "HLA typing",
@@ -189,6 +203,7 @@ object CelloParser {
       "TKG",
       "Ximbio"
     )
+
     val ok_seqvarlist =
       List("Gene amplification", "Gene deletion", "Gene fusion", "Mutation")
     val ok_zygositylist = List(
@@ -874,6 +889,14 @@ object CelloParser {
                 errcnt += 1
               }
             }
+
+            // check gene db
+            val db = allseqvartoks(1)
+            if (! CelloParser.ok_seqvardblist.contains(db)) {
+              Console.err.println("Invalid db in Sequence variation '" + db + "' : " + entryline);
+              errcnt += 1
+            }
+
             allseqvartoks.foreach(token => {
               if (token.contains("y=")) {
                 val tokfields = token.split("=")
@@ -2813,6 +2836,7 @@ class SequenceVariation(
       mutdesc = toklist(6).split("=")(1)
       if (mutdesc.contains(" (")) mutdesc = mutdesc.split(" \\(")(0)
     }
+  
     toklist.foreach(token => {
       if (token.startsWith("Note=")) {
         varnote = token.substring(5).trim()
@@ -2832,6 +2856,13 @@ class SequenceVariation(
         ) :: varXreflist
       }
     })
+
+    // 
+    if (! CelloParser.ok_seqvardblist.contains(db)) {
+      Console.err.println("FATAL error, Invalid db in Sequence variation: '" + db + "' , see details above.")
+      System.exit(1)
+    }
+
     varXreflist = new DbXref(
       _db = db,
       _ac = ac,
