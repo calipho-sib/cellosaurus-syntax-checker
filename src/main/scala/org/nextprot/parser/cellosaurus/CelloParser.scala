@@ -483,9 +483,8 @@ object CelloParser {
       var coreid = ""
       var ac = ""
       var drlist = ArrayBuffer[String]()
-      var localsynlist =
-        List
-          .empty[String] // synonym's list to check against Misspelling comments
+      var st_lines = ArrayBuffer[String]()
+      var localsynlist = List.empty[String] // synonym's list to check against Misspelling comments
       var curr_rank = 0
       var last_rank = 0
       var cell_type_count = 0
@@ -1007,6 +1006,7 @@ object CelloParser {
             }
           }
         } else if (entryline.startsWith("ST   ")) { // Short tandem repeats
+          st_lines += entryline
           hasSTR = true
           // if (!entrylinedata.contains(": ")) { Console.err.println("Incorrect ST data format at: " + entryline); errcnt += 1 }
           if ("[A-Za-z0-9)]: ".r.findFirstIn(entrylinedata) == None) {
@@ -1343,9 +1343,21 @@ object CelloParser {
           Console.err.println("Invalid line at: " + entryline); errcnt += 1
         } // catches any line not conforming to above patterns
       })
+
+
+      // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+      // Current Entry level checks
+      // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+      ShortTandemChecker.check(ac, st_lines.toList)
+
     })
 
-    // Entry level checks
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    // All Entries level checks
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
     duplist = aclist.diff(aclist.distinct)
     if (duplist.length != 0) {
       duplist.foreach(ac => {
