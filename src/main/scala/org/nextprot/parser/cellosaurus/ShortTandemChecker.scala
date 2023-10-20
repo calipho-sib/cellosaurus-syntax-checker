@@ -27,12 +27,20 @@ object ShortTandemChecker {
       val elems = m.split(":")
       val marker = elems(0).substring(5)
       val allele = elems(1).split("\\(")(0).strip()
-      val srclst = get_marker_src(m)
+      val srclst = get_marker_src(ac, m)
 
       srclst.foreach( s => {
-        if (!all_sources.contains(s)) {
-          println("ERROR, undeclared source " + s + " in " + ac + ", line: " + m)
-        }
+        var ok = false
+        all_sources.foreach( ds => {
+          // source s must be same as one of all_sources element
+          if (s == ds) {  
+            ok = true
+          // or s must start with the same letters as a an element of all_sources + "_"
+          } else if (s.startsWith(ds + "_")) {
+            ok = true
+          }
+        })
+        if (!ok) println("ERROR, undeclared source " + s + " in " + ac + ", line: " + m)
       })
 
       if (marker != prev_marker) {
@@ -51,9 +59,12 @@ object ShortTandemChecker {
 
   }
 
-  def get_marker_src(line: String) : List[String] = {
+  def get_marker_src(ac: String, line: String) : List[String] = {
     val p1 = line.indexOf("(")
     val p2 = line.indexOf(")")
+    if (p1 >= 0 && p2 < p1) {
+      println("ERROR, ST line format error, misplaced or missing closing parenthesis in " + ac + ", line: " + line)
+    }
     if (p1 >= 0 && p2 > p1) {
       return line.substring(p1+1,p2).split("; ").toList
     } else {
