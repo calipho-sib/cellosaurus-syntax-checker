@@ -35,8 +35,6 @@ object CelloParser {
   codec.onMalformedInput(CodingErrorAction.REPLACE)
   // grep -n --color='auto' -P "[\x80-\xFF]" cellosaurus.txt
 
-  val xmap = scala.collection.mutable.Map[String, (String, String)]()
-
   val ok_seqvardblist = List("HGNC", "MGI", "RGD", "UniProtKB", "VGNC")
 
   val specialCCTopics = List(
@@ -422,23 +420,8 @@ object CelloParser {
     subsetdefs += "subsetdef: Sex_unspecified \"Sex unspecified\"\n"
     subsetdefs = subsetdefs.split("\n").sortWith(_ < _).mkString("\n")
 
-    // Parse cellosaurus xref file to get databases categories and urls, and put in a map
-    // val xmap = scala.collection.mutable.Map[String, (String, String)]()
-    var xdb = ""
-    var xcat = ""
-    var xurl = ""
-    var xserver = ""
-    for (line <- Source.fromFile(celloXrefpath).getLines()) {
-      if (line.startsWith("Abbrev")) xdb = line.substring(8).trim()
-      else if (line.startsWith("Server")) xserver = line.substring(8).trim()
-      else if (line.startsWith("Db_URL")) xurl = line.substring(8).trim()
-      else if (line.startsWith("Cat")) xcat = line.substring(8).trim()
-      else if (xdb != "" && xurl != "") {
-        if (xurl == "None") // Use the server base url instead
-          xurl = xserver
-        xmap(xdb) = (xurl, xcat)
-      }
-    }
+    // Parse cellosaurus xref file to get databases categories and urls
+    DbXrefInfo.load(celloXrefpath)
 
     // Parse cellosaurus txt file, build headers for obo file, and split in flat entries
     for (line <- Source.fromFile(args(0)).getLines()) {
@@ -739,7 +722,7 @@ object CelloParser {
             ) {
               Console.err.println("Missing database token at: " + entryline);
               errcnt += 1
-            } else if (cctext.contains("=ZFN") && !xmap.contains(cctoks(1))) {
+            } else if (cctext.contains("=ZFN") && ! DbXrefInfo.contains(cctoks(1))) {
               Console.err.println(
                 "Wrong database token at: " + entryline + " "
               ); errcnt += 1
@@ -827,7 +810,7 @@ object CelloParser {
               }
             }
           } else if (cctopic == "Misspelling") {
-            val ms = new Misspelling(cctext, xmap)
+            val ms = new Misspelling(cctext)
             val ms_err = ms.errors
             ms_err.foreach(err => {
               errcnt += 1
@@ -1564,7 +1547,7 @@ object CelloParser {
       })
 
       if (toxml || toOBO) {
-        celloentry = toCelloEntry(entry, xmap) // generate model representation
+        celloentry = toCelloEntry(entry) // generate model representation
 
         // pam
         val oiGroup = celloentry.getOiGroup()
@@ -1634,7 +1617,7 @@ object CelloParser {
       for (line <- Source.fromFile(celloRefpath).getLines()) {
         publiFlat += line
         if (line.startsWith("//")) { // Record complete
-          val Cellopub = toCellopublication(publiFlat, xmap)
+          val Cellopub = toCellopublication(publiFlat)
           cellorefs += Cellopub.internal_id // For a subsequent sanity check with uniquerefs as collected in the cellosaurus.txt parsing loop
           xmlfile.write(prettyXMLprinter.format(Cellopub.toXML) + "\n")
           publiFlat.clear
@@ -1826,8 +1809,7 @@ object CelloParser {
   // ------------------ Utility methods, TODO: move in a separate package and import------------------------------
 
   def toCellopublication(
-      publiFlatentry: ArrayBuffer[String],
-      xmap: scala.collection.mutable.Map[String, (String, String)]
+      publiFlatentry: ArrayBuffer[String]
   ): CelloPublication = {
     var authorlist = ArrayBuffer[String]()
     var editorlist = ArrayBuffer[String]()
@@ -1949,8 +1931,6 @@ object CelloParser {
           pubXreflist = new DbXref(
             _db = db,
             _ac = xref.split("=")(1),
-            _category = xmap(db)._2,
-            _url = xmap(db)._1,
             _property = "",
             _entryCategory = ""
           ) :: pubXreflist
@@ -1980,8 +1960,7 @@ object CelloParser {
   }
 
   def toCelloEntry(
-      flatEntry: ArrayBuffer[String],
-      xmap: scala.collection.mutable.Map[String, (String, String)]
+      flatEntry: ArrayBuffer[String]
   ): CelloEntry = {
     var entrylinedata = ""
     var ac = ""
@@ -2054,7 +2033,7 @@ object CelloParser {
       else if (entryline.startsWith("AG   ")) age = entrylinedata // Age
       else if (entryline.startsWith("DR   ")) { // xref
         val db = entrylinedata.split("; ")(0)
-        if (!xmap.contains(db))
+        if (!DbXrefInfo.contains(db))
           Console.err.println(
             "Error: no entry for \"" + db + "\" in cellosaurus_xrefs.txt"
           )
@@ -2062,8 +2041,6 @@ object CelloParser {
           celloXreflist = new DbXref(
             _db = db,
             _ac = entrylinedata.split(";")(1).trim(),
-            _category = xmap(db)._2,
-            _url = xmap(db)._1,
             _property = "",
             _entryCategory = entrycategory
           ) :: celloXreflist
@@ -2088,17 +2065,16 @@ object CelloParser {
           if (dbAc.length == 2) {
             val db = dbAc(0)
             val ac = dbAc(1)
-            if (!xmap.contains(db)) {
+            if (!DbXrefInfo.contains(db)) {
               Console.err.println(
                 "Error: no entry for \"" + db + "\" in cellosaurus_xrefs.txt"
               )
-            } else if (!ok_rxdblist.contains(db) && xmap.contains(db)) {
+            } else if (!ok_rxdblist.contains(db) && DbXrefInfo.contains(db)) {
               hlaSrc = null
               hlaSrcXref = new DbXref(
                 _db = db,
                 _ac = ac,
-                _category = xmap(db)._2,
-                _url = xmap(db)._1,
+
                 _property = "",
                 _entryCategory = ""
               )
@@ -2241,7 +2217,6 @@ object CelloParser {
             mutyp = mutyp,
             zygosity = zygotype,
             text = textdata,
-            xmap,
             sources = srctok
           ) :: celloSeqVarlist
         } else if (category.equals("Registration")) { // prepare registration list
@@ -2255,14 +2230,13 @@ object CelloParser {
         // TODO misspell
         else if (category.equals("Misspelling")) {
           celloMisspellingList =
-            new Misspelling(textdata, xmap) :: celloMisspellingList
+            new Misspelling(textdata) :: celloMisspellingList
         }
 
         // default handler for normal comments
         celloCommentlist = new Comment(
           category = category,
-          text = textdata,
-          xmap
+          text = textdata
         ) :: celloCommentlist
 
       } else if (entryline.startsWith("WW   ")) { // web pages
@@ -2818,7 +2792,6 @@ class SequenceVariation(
     val mutyp: String,
     val zygosity: String,
     var text: String,
-    xmap: scala.collection.mutable.Map[String, (String, String)],
     val sources: String
 ) {
   var varXreflist = List[DbXref]()
@@ -2857,12 +2830,9 @@ class SequenceVariation(
       // CC   Sequence variation: Mutation; HGNC; 11730; TERT; Simple; p.Arg631Gln (c.1892G>A); ClinVar=VCV000029899; Zygosity=Unspecified (Direct_author_submission).
       else if (token.startsWith("ClinVar=") || token.startsWith("dbSNP=")) {
         db2 = token.split("=")(0)
-        // varXreflist = new DbXref(_db = db2, _ac = token.split("=")(1), _category = xmap(db2)._2, _url = xmap(db2)._1, _property = geneName,  _entryCategory = "") :: varXreflist
         varXreflist = new DbXref(
           _db = db2,
           _ac = token.split("=")(1),
-          _category = xmap(db2)._2,
-          _url = xmap(db2)._1,
           _property = "",
           _entryCategory = ""
         ) :: varXreflist
@@ -2878,8 +2848,6 @@ class SequenceVariation(
     varXreflist = new DbXref(
       _db = db,
       _ac = ac,
-      _category = xmap(db)._2,
-      _url = xmap(db)._1,
       _property = geneName,
       _entryCategory = ""
     ) :: varXreflist
@@ -2887,8 +2855,6 @@ class SequenceVariation(
       varXreflist = new DbXref(
         _db = db,
         _ac = ac2,
-        _category = xmap(db)._2,
-        _url = xmap(db)._1,
         _property = geneName2,
         _entryCategory = ""
       ) :: varXreflist
@@ -3062,12 +3028,9 @@ class CellType(val data: String) {
   }
 }
 
-class Misspelling(
-    val data: String,
-    xmap: scala.collection.mutable.Map[String, (String, String)]
-) {
+class Misspelling(val data: String) {
 
-  val result = parse(data, xmap)
+  val result = parse(data)
 
   val line = data
   // mandatory misspelled label
@@ -3080,10 +3043,7 @@ class Misspelling(
   val ref_ids = result._4
   val errors = result._5
 
-  def parse(
-      data: String,
-      xmap: scala.collection.mutable.Map[String, (String, String)]
-  ): (String, String, List[DbXref], List[String], List[String]) = {
+  def parse(data: String): (String, String, List[DbXref], List[String], List[String]) = {
 
     // parsing result variables
     var xlabel = ""
@@ -3127,7 +3087,7 @@ class Misspelling(
               else token
             refs = ref :: refs
             // case for a xref if check of db is known (contained in xmap)
-          } else if (xmap.contains(db)) {
+          } else if (DbXrefInfo.contains(db)) {
             val ac =
               if (dbac(1).endsWith("."))
                 dbac(1).substring(0, dbac(1).length - 1)
@@ -3135,8 +3095,6 @@ class Misspelling(
             val xref = new DbXref(
               _db = db,
               _ac = ac,
-              _category = xmap(db)._2,
-              _url = xmap(db)._1,
               _property = "",
               _entryCategory = ""
             )
@@ -3225,12 +3183,9 @@ class Resistance(val db: String, val ac: String, val name: String) {
   def init = {
     if (db != null && db.length > 0) {
       if (db == "UniProtKB") {
-        val xmap = CelloParser.xmap
         xref = new DbXref(
           _db = db,
           _ac = ac,
-          _category = xmap(db)._2,
-          _url = xmap(db)._1,
           _property = name,
           _entryCategory = ""
         )
@@ -3321,12 +3276,9 @@ class DoublingTime(val value: String, val note: String, val refs: String) {
           refList = item :: refList
         } else {
           val ac = itemParts(1)
-          val xmap = CelloParser.xmap
           val xref = new DbXref(
             _db = db,
             _ac = ac,
-            _category = xmap(db)._2,
-            _url = xmap(db)._1,
             _property = "",
             _entryCategory = ""
           )
@@ -3412,15 +3364,14 @@ class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
 class DbXref(
     val _db: String,
     val _ac: String,
-    val _category: String,
-    val _url: String,
     var _property: String,
     val _entryCategory: String
 ) {
 
+  val _category = DbXrefInfo.getCat(_db)
+  val _url = DbXrefInfo.getUrl(_db)
   var final_url = _url
-  var propname =
-    "gene/protein designation" // default value, overriden in comments.updatDBrefs for discontinued cell lines
+  var propname = "gene/protein designation" // default value, overriden in comments.updatDBrefs for discontinued cell lines
 
   init
   def init = { // prepare final url from template and accession
@@ -3500,11 +3451,8 @@ class DbXref(
   }
 }
 
-class Comment(
-    val category: String,
-    var text: String,
-    xmap: scala.collection.mutable.Map[String, (String, String)]
-) {
+class Comment(val category: String, var text: String) {
+
   var dbref: DbXref = null
   var ccXreflist = List[DbXref]()
   var cvterm: CvTerm = null
@@ -3536,8 +3484,6 @@ class Comment(
         ccXreflist = new DbXref(
           _db = db,
           _ac = ac,
-          _category = xmap(db)._2,
-          _url = xmap(db)._1,
           _property = geneName,
           _entryCategory = ""
         ) :: ccXreflist
@@ -3545,8 +3491,6 @@ class Comment(
           ccXreflist = new DbXref(
             _db = db,
             _ac = ac2,
-            _category = xmap(db)._2,
-            _url = xmap(db)._1,
             _property = geneName2,
             _entryCategory = ""
           ) :: ccXreflist
@@ -3570,8 +3514,6 @@ class Comment(
         ccXreflist = new DbXref(
           _db = db,
           _ac = ac,
-          _category = xmap(db)._2,
-          _url = xmap(db)._1,
           _property = newtext,
           _entryCategory = ""
         ) :: ccXreflist
@@ -3586,7 +3528,7 @@ class Comment(
     } else if (category.equals("Transfected with") && text.contains(";")) {
       val linetoks = text.split("; ")
       val db = linetoks(0);
-      if (xmap.contains(db)) {
+      if (DbXrefInfo.contains(db)) {
         var property = linetoks(2)
         var i = 0
         if (
@@ -3597,8 +3539,6 @@ class Comment(
         ccXreflist = new DbXref(
           _db = db,
           _ac = linetoks(1),
-          _category = xmap(db)._2,
-          _url = xmap(db)._1,
           _property = property,
           _entryCategory = ""
         ) :: ccXreflist
@@ -3619,8 +3559,6 @@ class Comment(
         ccXreflist = new DbXref(
           _db = terminology,
           _ac = ac,
-          _category = xmap(terminology)._2,
-          _url = xmap(terminology)._1,
           _property = name,
           _entryCategory = ""
         ) :: ccXreflist
