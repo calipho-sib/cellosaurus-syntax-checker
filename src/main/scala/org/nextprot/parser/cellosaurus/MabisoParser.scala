@@ -4,11 +4,52 @@ import scala.io.Source
 import scala.util.matching.Regex
 import scala.xml._
 
-class Mabiso(heavyChain: String, lightChain: String, publiRefs: List[PubliRef], xrefs: List[DbXref], sources: List[STsource]) {
+class Mabiso(heavyChain: String, lightChain: String, refList: List[PubliRef], xrefList: List[DbXref], srcList: List[STsource]) {
+  
   override def toString() : String = {
-    s"Mabiso(heavyChain=$heavyChain, lightChain:$lightChain, publiRefs:$publiRefs, xrefs:$xrefs, sources:$sources)"
+    s"Mabiso(heavyChain=$heavyChain, lightChain:$lightChain, publiRefs:$refList, xrefs:$xrefList, sources:$srcList)"
   }
-}
+
+  def toXML =
+    <monoclonal-antibody-isotype>
+      <heavy-chain>{heavyChain}</heavy-chain>
+      {
+      if (lightChain != null) 
+        <light-chain>{lightChain}</light-chain>
+      else
+        Null
+      }
+
+      { 
+      if (refList.size + xrefList.size + srcList.size > 0) 
+        <monoclonal-antibody-isotype-sources>
+        {
+        if (xrefList.size > 0)
+          <xref-list>{xrefList.map(_.toXML)}</xref-list>
+        else
+          Null
+        }
+        {
+        if (refList.size > 0)
+          <reference-list>{refList.map(_.toXML)}</reference-list>
+        else  
+          Null
+        }
+        {
+        if (srcList.size > 0) 
+          <source-list>{srcList.map(_.toXML)}</source-list>
+        else
+          Null
+        }
+        </monoclonal-antibody-isotype-sources>
+      else
+        Null
+      }
+
+    </monoclonal-antibody-isotype>    
+  
+} // end class
+
 
 //case class Mabiso(heavyChain: String, lightChain: String, sources: List[String]) 
 
@@ -119,7 +160,7 @@ object MabisoParser {
             println("--------------")
             println(line)
             val mabisoList = parseLine(linevalue)
-            mabisoList.foreach(m => { println(m) })
+            mabisoList.foreach(m => { println(m.toXML ) })
         } catch {
            case e: Exception => {}
         }
