@@ -44,6 +44,7 @@ object CelloParser {
     "Sequence variation",
     "Misspelling",
     "Doubling time",
+    "Monoclonal antibody isotype",
     "Derived from site",
     "Cell type",
     "Transformant",
@@ -761,6 +762,20 @@ object CelloParser {
                 )
               }
             }
+
+          } else if (cctopic == "Monoclonal antibody isotype") {
+            try {
+              MabisoParser.parseLine(cctext.trim)
+            } catch {
+              case e: Exception => {
+                errcnt += 1
+                println(
+                  s"ERROR while parsing Monoclonal antibody isotype comment: ${e.getMessage}"
+                )
+              }
+            }
+
+            
           } else if (cctopic == "Derived from site") {
             try {
               val result = DerivedFromSiteParser.parseLine(cctext.trim)
@@ -1980,6 +1995,7 @@ object CelloParser {
     var celloSourcereflist = List[PubliRef]()
     var celloHLAlists = List[HLAlistwithSource]()
     var celloDoublingTimeList = List[DoublingTime]()
+    var celloMabisoList = List[Mabiso]()
     var celloDerivedFromSiteList = List[DerivedFromSite]()
     var celloTransformantList = List[Transformant]()
     var celloResistanceList = List[Resistance]()
@@ -2122,6 +2138,16 @@ object CelloParser {
           } catch {
             case e: Exception => {} // handled earlier
           }
+
+
+        } else if (category.equals("Monoclonal antibody isotype")) {
+          try {
+            celloMabisoList = MabisoParser.parseLine(textdata)
+          } catch {
+            case e: Exception => {} // handled earlier
+          }
+
+
         } else if (category.equals("Derived from site")) {
           try {
             val el = DerivedFromSiteParser.parseLine(textdata)
@@ -2379,6 +2405,7 @@ object CelloParser {
       genomeAncestry = popDatawithSource,
       misspellinglist = celloMisspellingList,
       doublingTimeList = celloDoublingTimeList,
+      mabisoList = celloMabisoList,
       derivedFromSiteList = celloDerivedFromSiteList,
       cellType = celloCellType,
       transformantList = celloTransformantList,
@@ -2454,6 +2481,7 @@ class CelloEntry(
     val genomeAncestry: PopulistwithSource,
     val misspellinglist: List[Misspelling],
     val doublingTimeList: List[DoublingTime],
+    val mabisoList: List[Mabiso],
     val derivedFromSiteList: List[DerivedFromSite],
     val cellType: CellType,
     val transformantList: List[Transformant],
@@ -2613,6 +2641,13 @@ class CelloEntry(
       {
       if (doublingTimeList.size > 0)
         <doubling-time-list>{doublingTimeList.map(_.toXML)}</doubling-time-list>
+      else
+        Null
+      }
+
+      {
+      if (mabisoList.size > 0)
+        <monoclonal-antibody-isotype-list>{mabisoList.map(_.toXML)}</monoclonal-antibody-isotype-list>
       else
         Null
       }
