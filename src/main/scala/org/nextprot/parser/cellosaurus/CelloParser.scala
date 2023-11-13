@@ -45,6 +45,7 @@ object CelloParser {
     "Misspelling",
     "Doubling time",
     "Monoclonal antibody isotype",
+    "Monoclonal antibody target",
     "Derived from site",
     "Cell type",
     "Transformant",
@@ -769,9 +770,17 @@ object CelloParser {
             } catch {
               case e: Exception => {
                 errcnt += 1
-                println(
-                  s"ERROR while parsing Monoclonal antibody isotype comment: ${e.getMessage}"
-                )
+                println(s"ERROR while parsing Monoclonal antibody isotype comment: ${e.getMessage}")
+              }
+            }
+
+          } else if (cctopic == "Monoclonal antibody target") {
+            try {
+              MabtarParser.parseLine(cctext.trim)
+            } catch {
+              case e: Exception => {
+                errcnt += 1
+                println(s"ERROR while parsing Monoclonal antibody target comment: ${e.getMessage}")
               }
             }
 
@@ -1996,6 +2005,7 @@ object CelloParser {
     var celloHLAlists = List[HLAlistwithSource]()
     var celloDoublingTimeList = List[DoublingTime]()
     var celloMabisoList = List[Mabiso]()
+    var celloMabtarList = List[Mabtar]()
     var celloDerivedFromSiteList = List[DerivedFromSite]()
     var celloTransformantList = List[Transformant]()
     var celloResistanceList = List[Resistance]()
@@ -2143,6 +2153,13 @@ object CelloParser {
         } else if (category.equals("Monoclonal antibody isotype")) {
           try {
             celloMabisoList = MabisoParser.parseLine(textdata)
+          } catch {
+            case e: Exception => {} // handled earlier
+          }
+
+        } else if (category.equals("Monoclonal antibody target")) {
+          try {
+            celloMabtarList = MabtarParser.parseLine(textdata) :: celloMabtarList
           } catch {
             case e: Exception => {} // handled earlier
           }
@@ -2406,6 +2423,7 @@ object CelloParser {
       misspellinglist = celloMisspellingList,
       doublingTimeList = celloDoublingTimeList,
       mabisoList = celloMabisoList,
+      mabtarList = celloMabtarList,
       derivedFromSiteList = celloDerivedFromSiteList,
       cellType = celloCellType,
       transformantList = celloTransformantList,
@@ -2482,6 +2500,7 @@ class CelloEntry(
     val misspellinglist: List[Misspelling],
     val doublingTimeList: List[DoublingTime],
     val mabisoList: List[Mabiso],
+    val mabtarList: List[Mabtar],
     val derivedFromSiteList: List[DerivedFromSite],
     val cellType: CellType,
     val transformantList: List[Transformant],
@@ -2648,6 +2667,13 @@ class CelloEntry(
       {
       if (mabisoList.size > 0)
         <monoclonal-antibody-isotype-list>{mabisoList.map(_.toXML)}</monoclonal-antibody-isotype-list>
+      else
+        Null
+      }
+
+      {
+      if (mabtarList.size > 0)
+        <monoclonal-antibody-target-list>{mabtarList.map(_.toXML)}</monoclonal-antibody-target-list>
       else
         Null
       }
@@ -3423,35 +3449,34 @@ class Comment(val category: String, var text: String) {
           ) :: ccXreflist
         }
       }
-    } else if (
-      category.equals("Monoclonal antibody target") && text.contains("; ")
-    ) {
-      // Console.err.println(text)
-      val linetoks = text.split("; ")
-      val db = linetoks(0)
-      val ac = linetoks(1)
-      var newtext = linetoks(2)
-      var i = 0
-      if (
-        linetoks.size > 3
-      ) // like "Monoclonal antibody target: UniProtKB; P02724; Human GYPA/CD235a (with L-20 and E-24; recognizes N blood group antigen)."
-        for (i <- 3 to linetoks.size - 1)
-          newtext += "; " + linetoks(i)
-      if (db != "ChEBI")
-        ccXreflist = new DbXref(
-          _db = db,
-          _ac = ac,
-          _property = newtext,
-          _entryCategory = ""
-        ) :: ccXreflist
-      else
-        cvterm = new CvTerm(
-          _terminology = "ChEBI",
-          _ac = ac.split("\\)")(0),
-          _name = newtext
-        )
-      text =
-        "" // Since the text is copied either as a property or name there is no need to display as comment's text
+    // } else if (
+    //   category.equals("Monoclonal antibody target") && text.contains("; ")
+    // ) {
+    //   // Console.err.println(text)
+    //   val linetoks = text.split("; ")
+    //   val db = linetoks(0)
+    //   val ac = linetoks(1)
+    //   var newtext = linetoks(2)
+    //   var i = 0
+    //   if (
+    //     linetoks.size > 3
+    //   ) // like "Monoclonal antibody target: UniProtKB; P02724; Human GYPA/CD235a (with L-20 and E-24; recognizes N blood group antigen)."
+    //     for (i <- 3 to linetoks.size - 1)
+    //       newtext += "; " + linetoks(i)
+    //   if (db != "ChEBI")
+    //     ccXreflist = new DbXref(
+    //       _db = db,
+    //       _ac = ac,
+    //       _property = newtext,
+    //       _entryCategory = ""
+    //     ) :: ccXreflist
+    //   else
+    //     cvterm = new CvTerm(
+    //       _terminology = "ChEBI",
+    //       _ac = ac.split("\\)")(0),
+    //       _name = newtext
+    //     )
+    //   text = "" // Since the text is copied either as a property or name there is no need to display as comment's text
     } else if (category.equals("Transfected with") && text.contains(";")) {
       val linetoks = text.split("; ")
       val db = linetoks(0);

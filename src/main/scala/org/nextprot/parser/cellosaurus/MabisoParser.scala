@@ -103,7 +103,7 @@ object MabisoParser {
       .map(src => {
         val dbac=src.split("=")
         val db = dbac(0)
-        if (! DbXrefInfo.contains(db)) throw Exception("Invalid db in xref: " + db)
+        if (! DbXrefInfo.contains(db)) throw Exception("Invalid xref db '" + db + "' in: " + src)
         val ac = dbac(1)
         new DbXref(db, ac, "", "")
       }).toList
@@ -131,9 +131,9 @@ object MabisoParser {
       val lightIdx = item.indexOf(",")
       val srcIdx = item.indexOf("(")
       val hc = getHeavyChain(item, lightIdx, srcIdx)
-      if (hc == null || ! validHeavyChains.contains(hc)) throw Exception("Invalid heavy chain: " + hc)
+      if (hc == null || ! validHeavyChains.contains(hc)) throw Exception("Invalid heavy chain '" + hc + "'' in: " + rawline)
       val lc = getLightChain(item, lightIdx, srcIdx)
-      if (lc != null && ! validLightChains.contains(lc)) throw Exception("Invalid light chain: " + lc)
+      if (lc != null && ! validLightChains.contains(lc)) throw Exception("Invalid light chain '" + lc + "'' in: " + rawline)
       val srcList = splitSources(item, lightIdx, srcIdx)
       val raw = getRawSources(srcList)             
       val xrf = getXrefSources(srcList)            
