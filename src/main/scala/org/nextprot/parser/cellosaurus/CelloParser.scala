@@ -2919,9 +2919,14 @@ class SequenceVariation(
 
     val srcList = sources.split("; ") // split what's parenthesis in last token
     srcList.foreach(src => {
-      if (src.contains("="))
+      if (src.contains("=")) {
         varSourcereflist = new PubliRef(db_ac = src) :: varSourcereflist
-      else varSourcelist = new STsource(src = src) :: varSourcelist
+      } else {
+        val clean_src = src.trim()
+        if (clean_src.length > 0) {
+          varSourcelist = new STsource(src = clean_src) :: varSourcelist
+        }
+      }
     })
   }
 
