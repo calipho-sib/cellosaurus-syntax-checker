@@ -858,10 +858,12 @@ object CelloParser {
                 "Misspelled name is in current SY at " + entryline
               ); errcnt += 1
             }
+
           } else if (cctopic == "Registration") { // format like an x-ref, registry then registry number
             if (cctoks.size != 2) {
               Console.err.println("Wrong format for " + entryline); errcnt += 1
             }
+
           } else if (cctopic == "Sequence variation") { // one of 4 categorie listed in ok_seqvarlist
             val allseqvartoks = cctext.split("; ")
             if (!ok_seqvarlist.contains(allseqvartoks(0))) {
@@ -902,11 +904,25 @@ object CelloParser {
               }
             }
 
+
             // check gene db
             val db = allseqvartoks(1)
             if (! CelloParser.ok_seqvardblist.contains(db)) {
               Console.err.println("Invalid db in Sequence variation '" + db + "' : " + entryline);
               errcnt += 1
+            }
+
+            // check source(s) at the end of line
+            val idx1 = entrylinedata.lastIndexOf("(")
+            val idx2 = entrylinedata.lastIndexOf(")")
+            if (idx1 > -1 && idx2 > idx1) {
+              val sources = entrylinedata.substring(idx1+1, idx2)
+              sources.split("; ").foreach(src => {
+                if (src.split("=").length>2) {
+                  Console.err.println("Invalid source at: " + entryline)
+                  errcnt += 1
+                }
+              })
             }
 
             allseqvartoks.foreach(token => {
