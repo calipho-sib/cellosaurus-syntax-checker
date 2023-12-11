@@ -625,11 +625,14 @@ object CelloParser {
             Console.err.println("RX unterminated line found at: " + entryline);
             errcnt += 1
           }
+          if (entrylinedata.split("=").length > 2) {
+            Console.err.println("Too many ⁼'=' found at: " + entryline); 
+            errcnt += 1
+          }
           val rxdbname = entrylinedata.split("=")(0)
           if (!ok_rxdblist.contains(rxdbname)) {
-            Console.err.println(
-              "Illegal db:" + rxdbname + " found at: " + entryline
-            ); errcnt += 1
+            Console.err.println("Illegal db:" + rxdbname + " found at: " + entryline); 
+            errcnt += 1
           }
           if (entrylinedata.split("[=;]").length < 2) {
             Console.err.println(
@@ -685,6 +688,10 @@ object CelloParser {
           }
           wwcnt += 1
         } else if (entryline.startsWith("CC   ")) { // Comments
+          if (entryline.contains("==")) {
+            Console.err.println("ERROR Found '==' string at: " + entryline);
+            errcnt += 1
+          }
           val cctopic = entrylinedata.split(":")(0)
           if (!ok_cclist.contains(cctopic)) {
             Console.err.println("Unknown CC topic found at: " + entryline);
@@ -755,12 +762,11 @@ object CelloParser {
             try {
               val elems = DoublingTimeStateAutomaton.parseLine(cctext.trim)
               val dtlist = DoublingTimeStateAutomaton.buildDtList(elems)
+              dtlist.foreach(dt => { new DoublingTime(value = dt("value"), note = dt("note"), refs = dt("refs"))})
             } catch {
               case e: Exception => {
                 errcnt += 1
-                println(
-                  s"ERROR while parsing Doubling time comment: ${e.getMessage}"
-                )
+                Console.err.println(s"ERROR while parsing Doubling time comment of ${ac}: ${e.getMessage}")
               }
             }
 
@@ -1141,6 +1147,10 @@ object CelloParser {
             Console.err.println(
               "Illegal taxonomy format found at: " + entryline
             ); errcnt += 1
+          }
+          if(oxlist(0).split("=").length > 2) {
+            Console.err.println("Too many ⁼'=' found at: " + entryline); 
+            errcnt += 1
           }
           val dbname = oxlist(0).split("=")(0)
           val taxid = oxlist(0).split("=")(1)
@@ -2100,7 +2110,6 @@ object CelloParser {
               hlaSrcXref = new DbXref(
                 _db = db,
                 _ac = ac,
-
                 _property = "",
                 _entryCategory = ""
               )
@@ -2138,11 +2147,7 @@ object CelloParser {
             val elems = DoublingTimeStateAutomaton.parseLine(textdata)
             val dtlist = DoublingTimeStateAutomaton.buildDtList(elems)
             dtlist.foreach(dt => {
-              val doublingTime = new DoublingTime(
-                value = dt("value"),
-                note = dt("note"),
-                refs = dt("refs")
-              )
+              val doublingTime = new DoublingTime(value = dt("value"), note = dt("note"), refs = dt("refs"))
               celloDoublingTimeList = doublingTime :: celloDoublingTimeList
             })
           } catch {
@@ -3315,7 +3320,7 @@ class DoublingTime(val value: String, val note: String, val refs: String) {
       val itemParts = item.split("=")
       if (itemParts.length == 1) {
         srcList = item :: srcList
-      } else {
+      } else if (itemParts.length == 2) {
         val db = itemParts(0)
         if (
           db == "PubMed" || db == "DOI" || db == "Patent" || db == "CelloPub"
@@ -3331,6 +3336,8 @@ class DoublingTime(val value: String, val note: String, val refs: String) {
           )
           xrefList = xref :: xrefList
         }
+      } else {
+        throw new Exception("Unexpected number of elements in doubling time reference " + item)
       }
     })
   }
