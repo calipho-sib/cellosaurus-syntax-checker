@@ -426,6 +426,8 @@ object CelloParser {
     DbXrefInfo.load(celloXrefpath)
 
     // Parse cellosaurus txt file, build headers for obo file, and split in flat entries
+    // and detect line doublons within cell line records
+    var cl_line_map = Map[String,String]()
     for (line <- Source.fromFile(args(0)).getLines()) {
       curr_line_nb += 1
       if (line.map(_.toInt).contains(65533)) {
@@ -438,11 +440,17 @@ object CelloParser {
         oboheadercomment += "!" + line + "\n"; obostarted = true
       } else if (line.endsWith("cellosaurus@sib.swiss")) obostarted = false
       else if (started) {
+        if (cl_line_map.contains(line)) {
+          Console.err.println("Warning, line doublon '" + line + "' at line " + curr_line_nb)
+        } else {
+          cl_line_map(line)=null
+        }
         if (line.length() < 2) {
           println("Warning: blank line at line number " + curr_line_nb);
           blankcnt += 1
         } else currEntry += line
         if (line == "//") {
+          cl_line_map.clear()
           Entries += currEntry; currEntry = new ArrayBuffer[String]
         }
       } else if (line.startsWith(" Version:")) celloversion = line.split(" ")(2)
