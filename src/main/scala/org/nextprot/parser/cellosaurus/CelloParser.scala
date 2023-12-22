@@ -746,15 +746,10 @@ object CelloParser {
             }
           }
 
-          if (
-            cctopic == "Discontinued" && !entrylinedata
-              .contains("Catalog number")
-          ) {
+          if (cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
             // These discontinued CCs must also exist as DR lines
-            var discontinued =
-              entrylinedata.split(": ")(1) // just keep db reference
-            discontinued =
-              (discontinued.substring(0, discontinued.lastIndexOf(';')).trim())
+            var discontinued = entrylinedata.split(": ")(1) // just keep db reference
+            discontinued = (discontinued.substring(0, discontinued.lastIndexOf(';')).trim())
             if (!drlist.contains(discontinued)) {
               Console.err.println(
                 "No match for discontinued: '" + discontinued + "' found among DR lines of " + ac
@@ -2808,18 +2803,18 @@ class CelloEntry(
   }
 
   def updatDBrefs = { // find dbrefs associated with 'Discontinued' comments, set their property flags and remove urls
-    var discAC = ""
-    var property = ""
     var newCommentlist = List[Comment]()
     comments.foreach(comment => {
-      if (
-        comment.category
-          .equals("Discontinued") && comment.text.split("; ").size > 2
-      ) { // Console.err.println(comment.text)
-        discAC = comment.text.split("; ")(1)
-        property = comment.text.split("; ")(2)
+      if (comment.category.equals("Discontinued") && comment.text.split("; ").size > 2) { // Console.err.println(comment.text)
+        val comment_parts = comment.text.split("; ")
+        val discDB = comment_parts(0)
+        val discAC = comment_parts(1)
+        val property = comment_parts(2)
         dbrefs.foreach(dbref => {
-          if (dbref._ac.equals(discAC)) { // Console.err.println(discAC + ": " + property)
+          val db = dbref._db
+          // special rule for AddexBio, see cellosaurus_xrefs.txt
+          val ac = if (db.equals("AddexBio")) dbref._ac.split("/")(0) else dbref._ac
+          if (ac.equals(discAC) && db.equals(discDB)) {
             dbref.propname = "Discontinued"
             dbref._property = property
             dbref.final_url = "" // No url
