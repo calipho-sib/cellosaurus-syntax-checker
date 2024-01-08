@@ -2912,7 +2912,7 @@ class SequenceVariation(
         db2 = token.split("=")(0)
         varXreflist = new DbXref(
           _db = db2,
-          _ac = token.split("=")(1),
+          _ac = token.split("=")(1).split(" \\(")(0),
           _property = "",
           _entryCategory = ""
         ) :: varXreflist
