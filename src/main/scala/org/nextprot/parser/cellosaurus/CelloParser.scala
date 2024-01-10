@@ -3442,72 +3442,25 @@ class Comment(val category: String, var text: String) {
   var cvterm: CvTerm = null
   var method = ""
   var geneName = ""
-  var ac2 = ""
-  var geneName2 = ""
+  val textOri = text
+
   init
 
   def init = { // prepare data for complex comments (methods, xrefs...)
-    if (text.contains("Method=")) {
-      method = text.split("=")(1).split("; ")(0)
-      val toklist = text.split("; ")
-      if (toklist.size > 3) { // some data are not xrefs, eg: CVCL_5A48 -> CC   Knockout cell: Method=Homologous recombination; Rad51d. (cricetulus)
+    if (category.equals("Knockout cell")) {
+      try {
+        val toklist = text.split("; ")
+        method = toklist(0).split("=")(1)
         val db = toklist(1)
         val ac = toklist(2)
-        geneName = toklist(3)
-        if (geneName.size > 9) {
-          // Console.err.println("gene: " + geneName)
-          if (text.contains(" + ")) { // There is a second dbref: prepare it
-            // like  CC   Knockout cell: Method=ZFN; HGNC; 24338; C1GALT1C1 + HGNC; 19139; POMGNT1.
-            geneName = geneName.split(" ")(0)
-            ac2 = toklist(4)
-            geneName2 = toklist(5).split("\\.")(0)
-          } else // eg: firefly luciferase (with optimized codon usage for mammalian expression)
-            geneName = ""
-        }
-        text = ""
-        ccXreflist = new DbXref(
-          _db = db,
-          _ac = ac,
-          _property = geneName,
-          _entryCategory = ""
-        ) :: ccXreflist
-        if (ac2 != "") {
-          ccXreflist = new DbXref(
-            _db = db,
-            _ac = ac2,
-            _property = geneName2,
-            _entryCategory = ""
-          ) :: ccXreflist
-        }
+        val geneAndNote = toklist(3).split(" \\(Note=")
+        val geneName = geneAndNote(0)
+        text = if (geneAndNote.length>1) geneAndNote(1).split("\\)")(0) else ""
+        ccXreflist = new DbXref(_db = db, _ac = ac, _property = geneName, _entryCategory = "") :: ccXreflist
+      } catch {
+        case e: Exception => { Console.err.println(s"ERROR while parsing Knockout cell comment: ${textOri}")}
       }
-    // } else if (
-    //   category.equals("Monoclonal antibody target") && text.contains("; ")
-    // ) {
-    //   // Console.err.println(text)
-    //   val linetoks = text.split("; ")
-    //   val db = linetoks(0)
-    //   val ac = linetoks(1)
-    //   var newtext = linetoks(2)
-    //   var i = 0
-    //   if (
-    //     linetoks.size > 3
-    //   ) // like "Monoclonal antibody target: UniProtKB; P02724; Human GYPA/CD235a (with L-20 and E-24; recognizes N blood group antigen)."
-    //     for (i <- 3 to linetoks.size - 1)
-    //       newtext += "; " + linetoks(i)
-    //   if (db != "ChEBI")
-    //     ccXreflist = new DbXref(
-    //       _db = db,
-    //       _ac = ac,
-    //       _property = newtext,
-    //       _entryCategory = ""
-    //     ) :: ccXreflist
-    //   else
-    //     cvterm = new CvTerm(
-    //       _terminology = "ChEBI",
-    //       _ac = ac.split("\\)")(0),
-    //       _name = newtext
-    //     )
-    //   text = "" // Since the text is copied either as a property or name there is no need to display as comment's text
+
     } else if (category.equals("Transfected with") && text.contains(";")) {
       val linetoks = text.split("; ")
       val db = linetoks(0);
@@ -3526,16 +3479,12 @@ class Comment(val category: String, var text: String) {
           _entryCategory = ""
         ) :: ccXreflist
       }
-    } else if (
-      (category.equals("Transformant") || category.equals(
-        "Selected for resistance to"
-      )) && text.contains(";") && !text.contains("v-Myc")
-    ) {
+    } else if ((category.equals("Transformant") || category.equals("Selected for resistance to")) 
+                && text.contains(";") && !text.contains("v-Myc")) {
       val linetoks = text.split("; ")
       var terminology = linetoks(0);
       val ac = linetoks(1)
       val name = linetoks(2)
-
       text = ""
       if (terminology == "NCBI_TaxID") terminology = "NCBI-Taxonomy"
       if (terminology == "UniProtKB")
@@ -3558,11 +3507,10 @@ class Comment(val category: String, var text: String) {
       {if (text != "") text else Null} 
       {if (method != "") <method>{method}</method> else Null} 
       {if (cvterm != null) cvterm.toXML else Null} 
-      {
-        if (ccXreflist.size > 0) 
-          <xref-list>{ccXreflist.map(_.toXML)}</xref-list>
-        else
-          Null
+      {if (ccXreflist.size > 0) 
+        <xref-list>{ccXreflist.map(_.toXML)}</xref-list>
+      else
+        Null
       }
       </comment>
     else
