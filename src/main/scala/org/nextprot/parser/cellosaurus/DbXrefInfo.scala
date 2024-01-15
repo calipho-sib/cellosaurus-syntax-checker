@@ -19,13 +19,14 @@ object DbXrefInfo {
       else if (line.startsWith("Db_URL")) xurl = line.substring(8).trim()
       else if (line.startsWith("Cat")) xcat = line.substring(8).trim()
       else if (xdb != "" && xurl != "") {
-        if (xurl == "None") // Use the server base url instead
-          xurl = xserver
+        if (xurl == "None") xurl = xserver  // use the server base url instead of db url 
         mymap(xdb) = (xurl, xcat)
       }
     }
   }
 
+  def getDbSet() : Set[String] = { mymap.keys.toSet }
+ 
   def getUrl(db: String) : String = { mymap(db)._1 }
 
   def getCat(db: String) : String = { mymap(db)._2 }

@@ -44,6 +44,7 @@ object CelloParser {
     "Sequence variation",
     "Misspelling",
     "Doubling time",
+    "Microsatellite instability",
     "Monoclonal antibody isotype",
     "Monoclonal antibody target",
     "Derived from site",
@@ -424,6 +425,8 @@ object CelloParser {
 
     // Parse cellosaurus xref file to get databases categories and urls
     DbXrefInfo.load(celloXrefpath)
+    // Initialize the source checker (recognizes PubliRefs, Xrefs and OrgRefs)
+    SourceChecker.init(DbXrefInfo.getDbSet())
 
     // Parse cellosaurus txt file, build headers for obo file, and split in flat entries
     // and detect line doublons within cell line records
@@ -770,6 +773,16 @@ object CelloParser {
               case e: Exception => {
                 errcnt += 1
                 Console.err.println(s"ERROR while parsing Doubling time comment of ${ac}: ${e.getMessage}")
+              }
+            }
+
+          } else if (cctopic == "Microsatellite instability") {
+            try {
+              MsiParser.parseLine(cctext.trim)
+            } catch {
+              case e: Exception => {
+                errcnt += 1
+                Console.err.println(s"ERROR while parsing Microsatellite instability comment of ${ac}: ${e.getMessage}")
               }
             }
 
@@ -2033,6 +2046,7 @@ object CelloParser {
     var celloSourcereflist = List[PubliRef]()
     var celloHLAlists = List[HLAlistwithSource]()
     var celloDoublingTimeList = List[DoublingTime]()
+    var celloMsiList = List[Msi]()
     var celloMabisoList = List[Mabiso]()
     var celloMabtarList = List[Mabtar]()
     var celloDerivedFromSiteList = List[DerivedFromSite]()
@@ -2161,6 +2175,7 @@ object CelloParser {
           ) // add source or source xref to list
           celloHLAlists =
             celloHLAlistwithSource :: celloHLAlists // add list to list of list
+
         } else if (category.equals("Doubling time")) {
           try {
             val elems = DoublingTimeStateAutomaton.parseLine(textdata)
@@ -2173,6 +2188,13 @@ object CelloParser {
             case e: Exception => {} // handled earlier
           }
 
+        } else if (category.equals("Microsatellite instability")) {
+          try {
+            val msi = MsiParser.parseLine(textdata)
+            celloMsiList = msi :: celloMsiList
+          } catch {
+            case e: Exception => {} // handled earlier
+          }
 
         } else if (category.equals("Monoclonal antibody isotype")) {
           try {
@@ -2446,6 +2468,7 @@ object CelloParser {
       genomeAncestry = popDatawithSource,
       misspellinglist = celloMisspellingList,
       doublingTimeList = celloDoublingTimeList,
+      msiList = celloMsiList,
       mabisoList = celloMabisoList,
       mabtarList = celloMabtarList,
       derivedFromSiteList = celloDerivedFromSiteList,
@@ -2523,6 +2546,7 @@ class CelloEntry(
     val genomeAncestry: PopulistwithSource,
     val misspellinglist: List[Misspelling],
     val doublingTimeList: List[DoublingTime],
+    val msiList: List[Msi],
     val mabisoList: List[Mabiso],
     val mabtarList: List[Mabtar],
     val derivedFromSiteList: List[DerivedFromSite],
@@ -2684,6 +2708,13 @@ class CelloEntry(
       {
       if (doublingTimeList.size > 0)
         <doubling-time-list>{doublingTimeList.map(_.toXML)}</doubling-time-list>
+      else
+        Null
+      }
+
+      {
+      if (msiList.size > 0)
+        <microsatellite-instability-list>{msiList.map(_.toXML)}</microsatellite-instability-list>
       else
         Null
       }

@@ -9,6 +9,7 @@ lazy val root = project
     scalaVersion := scala3Version,
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.DoublingTimeStateAutomaton"),
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.ParserPlayground"),
+//    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.MsiParser"),
     Compile / mainClass := Some("org.nextprot.parser.cellosaurus.CelloParser"),
     scalacOptions ++= Seq("-deprecation", "-explain"),
     exportJars := true, 
