@@ -74,7 +74,7 @@ object MsiParser {
         var note: String = null
         if (tail.startsWith("(Note=")) {
             val closeNotePos = tail.indexOf(")")
-            note = tail.substring(0, closeNotePos)
+            note = tail.substring(6, closeNotePos)
             tail = tail.substring(closeNotePos + 1)
         }
         val openPos = tail.indexOf("(")
