@@ -45,6 +45,7 @@ object CelloParser {
     "Misspelling",
     "Doubling time",
     "Microsatellite instability",
+    "Knockout cell",
     "Monoclonal antibody isotype",
     "Monoclonal antibody target",
     "Derived from site",
@@ -775,6 +776,17 @@ object CelloParser {
                 Console.err.println(s"ERROR while parsing Doubling time comment of ${ac}: ${e.getMessage}")
               }
             }
+
+          } else if (cctopic == "Knockout cell") {
+            try {
+              KnockoutParser.parseLine(cctext.trim)
+            } catch {
+              case e: Exception => {
+                errcnt += 1
+                Console.err.println(s"ERROR while parsing Knockout cell comment of ${ac}: ${e.getMessage}")
+              }
+            }
+
 
           } else if (cctopic == "Microsatellite instability") {
             try {
@@ -2046,6 +2058,7 @@ object CelloParser {
     var celloSourcereflist = List[PubliRef]()
     var celloHLAlists = List[HLAlistwithSource]()
     var celloDoublingTimeList = List[DoublingTime]()
+    var celloKnockoutList = List[Knockout]()
     var celloMsiList = List[Msi]()
     var celloMabisoList = List[Mabiso]()
     var celloMabtarList = List[Mabtar]()
@@ -2184,6 +2197,14 @@ object CelloParser {
               val doublingTime = new DoublingTime(value = dt("value"), note = dt("note"), refs = dt("refs"))
               celloDoublingTimeList = doublingTime :: celloDoublingTimeList
             })
+          } catch {
+            case e: Exception => {} // handled earlier
+          }
+
+        } else if (category.equals("Knockout cell")) {
+          try {
+            val msi = KnockoutParser.parseLine(textdata)
+            celloKnockoutList = msi :: celloKnockoutList
           } catch {
             case e: Exception => {} // handled earlier
           }
@@ -2468,6 +2489,7 @@ object CelloParser {
       genomeAncestry = popDatawithSource,
       misspellinglist = celloMisspellingList,
       doublingTimeList = celloDoublingTimeList,
+      knockoutList = celloKnockoutList,
       msiList = celloMsiList,
       mabisoList = celloMabisoList,
       mabtarList = celloMabtarList,
@@ -2546,6 +2568,7 @@ class CelloEntry(
     val genomeAncestry: PopulistwithSource,
     val misspellinglist: List[Misspelling],
     val doublingTimeList: List[DoublingTime],
+    val knockoutList: List[Knockout],
     val msiList: List[Msi],
     val mabisoList: List[Mabiso],
     val mabtarList: List[Mabtar],
@@ -2708,6 +2731,13 @@ class CelloEntry(
       {
       if (doublingTimeList.size > 0)
         <doubling-time-list>{doublingTimeList.map(_.toXML)}</doubling-time-list>
+      else
+        Null
+      }
+
+      {
+      if (knockoutList.size > 0)
+        <knockout-cell-list>{knockoutList.map(_.toXML)}</knockout-cell-list>
       else
         Null
       }
@@ -3468,31 +3498,13 @@ class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
 
 class Comment(val category: String, var text: String) {
 
-  var dbref: DbXref = null
   var ccXreflist = List[DbXref]()
   var cvterm: CvTerm = null
-  var method = ""
-  var geneName = ""
-  val textOri = text
 
   init
 
   def init = { // prepare data for complex comments (methods, xrefs...)
-    if (category.equals("Knockout cell")) {
-      try {
-        val toklist = text.split("; ")
-        method = toklist(0).split("=")(1)
-        val db = toklist(1)
-        val ac = toklist(2)
-        val geneAndNote = toklist(3).split(" \\(Note=")
-        val geneName = geneAndNote(0)
-        text = if (geneAndNote.length>1) geneAndNote(1).split("\\)")(0) else ""
-        ccXreflist = new DbXref(_db = db, _ac = ac, _property = geneName, _entryCategory = "") :: ccXreflist
-      } catch {
-        case e: Exception => { Console.err.println(s"ERROR while parsing Knockout cell comment: ${textOri}")}
-      }
-
-    } else if (category.equals("Transfected with") && text.contains(";")) {
+    if (category.equals("Transfected with") && text.contains(";")) {
       val linetoks = text.split("; ")
       val db = linetoks(0);
       if (DbXrefInfo.contains(db)) {
@@ -3536,7 +3548,6 @@ class Comment(val category: String, var text: String) {
     if (!CelloParser.specialCCTopics.contains(category))
       <comment category={category}> 
       {if (text != "") text else Null} 
-      {if (method != "") <method>{method}</method> else Null} 
       {if (cvterm != null) cvterm.toXML else Null} 
       {if (ccXreflist.size > 0) 
         <xref-list>{ccXreflist.map(_.toXML)}</xref-list>
@@ -3551,11 +3562,7 @@ class Comment(val category: String, var text: String) {
   def toOBO = {
     var commtext = category + ": "
     if (ccXreflist.size > 0) {
-      if (method != "")
-        commtext += "Method=" + method + "; "
-      commtext += ccXreflist(0)._db + "; " + ccXreflist(
-        0
-      )._ac + "; " + ccXreflist(0)._property + "."
+      commtext += ccXreflist(0)._db + "; " + ccXreflist(0)._ac + "; " + ccXreflist(0)._property + "."
     } else if (cvterm != null) {
       if (
         category.equals("Transformant")
