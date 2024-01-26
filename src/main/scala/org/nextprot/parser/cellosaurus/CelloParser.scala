@@ -892,6 +892,7 @@ object CelloParser {
               Console.err.println("Wrong format for " + entryline); errcnt += 1
             }
 
+          // =============================================================================================
           } else if (cctopic == "Sequence variation") { // one of 4 categorie listed in ok_seqvarlist
             val allseqvartoks = cctext.split("; ")
             if (!ok_seqvarlist.contains(allseqvartoks(0))) {
@@ -954,7 +955,7 @@ object CelloParser {
             }
 
             allseqvartoks.foreach(token => {
-              if (token.contains("y=")) {
+              if (token.contains("Zygosity=")) {
                 val tokfields = token.split("=")
                 var zygotype = tokfields(1)
                 if (zygotype.contains(" ")) {
@@ -973,6 +974,9 @@ object CelloParser {
                 }
               }
             })
+
+          // ================================================================================
+
           } else if (cctopic == "Genome ancestry") { // check populations cv
             val allpoptoks = cctext.split(" \\(")
             if (allpoptoks.size != 2) {
@@ -3561,7 +3565,7 @@ class Comment(val category: String, var text: String) {
 
   def toOBO = {
     var commtext = category + ": "
-    if (ccXreflist.size > 0) {
+    if (ccXreflist.size > 0) {  
       commtext += ccXreflist(0)._db + "; " + ccXreflist(0)._ac + "; " + ccXreflist(0)._property + "."
     } else if (cvterm != null) {
       if (
