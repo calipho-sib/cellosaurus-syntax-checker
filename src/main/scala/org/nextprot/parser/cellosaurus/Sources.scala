@@ -3,19 +3,20 @@ package org.nextprot.parser.cellosaurus
 import scala.xml._
 
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 class STsource(val src: String) {
-
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   override def toString() :String = {
     return s"STsource($src)"
   }
-
   def toXML =
     <source>{src}</source>
 }
 
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 class PubliRef(val db_ac: String) {
-
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   def toXML =
     <reference resource-internal-ref={db_ac}/>
 
@@ -34,8 +35,9 @@ class PubliRef(val db_ac: String) {
 }
 
 
-
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 class DbXref(
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     val _db: String,
     val _ac: String,
     var _property: String,
