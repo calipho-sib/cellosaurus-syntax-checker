@@ -299,7 +299,7 @@ object CelloParser {
       <copyright>
         Copyrighted by the SIB Swiss Institute of Bioinformatics.
         Distributed under the Creative Commons Attribution 4.0 International (CC BY 4.0) license - see http://creativecommons.org/licenses/by/4.0/
-  </copyright>
+      </copyright>
 
     // Parse command line arguments
     if (args.length == 0) {
@@ -428,7 +428,11 @@ object CelloParser {
     DbXrefInfo.load(celloXrefpath)
     // Initialize the source checker (recognizes PubliRefs, Xrefs and OrgRefs)
     SourceChecker.init(DbXrefInfo.getDbSet())
-
+/*
+    println("DepMap:" + SourceChecker.isKnownOrgRef("DepMap"))
+    println("Cosmic-CLP:" + SourceChecker.isKnownOrgRef("Cosmic-CLP"))
+    sys.exit()
+*/
     // Parse cellosaurus txt file, build headers for obo file, and split in flat entries
     // and detect line doublons within cell line records
     var cl_line_map = Map[String,String]()
@@ -2940,8 +2944,9 @@ class SequenceVariation(
     val sources: String
 ) {
   var varXreflist = List[DbXref]()
-  var varSourcelist = List[STsource]()
-  var varSourcereflist = List[PubliRef]()
+  var srcOrglist = List[STsource]()
+  var srcPublist = List[PubliRef]()
+  var srcXreflist = List[DbXref]()
   var ac2 = ""
   var db2 = ""
   var geneName2 = ""
@@ -3007,13 +3012,24 @@ class SequenceVariation(
     }
 
     val srcList = sources.split("; ") // split what's parenthesis in last token
-    srcList.foreach(src => {
+    srcList.foreach(elem => {
+      val src = elem.trim()
       if (src.contains("=")) {
-        varSourcereflist = new PubliRef(db_ac = src) :: varSourcereflist
+        val parts = src.split("=")
+        val db = parts(0).trim()
+        val ac = parts(1).trim()
+        if (SourceChecker.isKnownPubliRef(src)) {
+          srcPublist = new PubliRef(db_ac = src) :: srcPublist
+        } else if (SourceChecker.isKnownXref(src)) {
+          srcXreflist = new DbXref(db, ac, "", "") :: srcXreflist
+        }
       } else {
+        if (! SourceChecker.isKnownOrgRef(src)) {
+          Console.err.println("WARNING, unknown organization in source of sequence variation: " + src)
+        }
         val clean_src = src.trim()
         if (clean_src.length > 0) {
-          varSourcelist = new STsource(src = clean_src) :: varSourcelist
+          srcOrglist = new STsource(src = clean_src) :: srcOrglist
         }
       }
     })
@@ -3041,18 +3057,26 @@ class SequenceVariation(
         {varXreflist.map(_.toXML)}
       </xref-list>
       {
-      if (varSourcelist.size > 0 || varSourcereflist.size > 0) 
+      if (srcOrglist.size > 0 || srcPublist.size > 0 || srcXreflist.size > 0) 
         <variation-sources>
           {
-          if (varSourcelist.size > 0) 
-            {varSourcelist.map(_.toXML)}
+          if (srcOrglist.size > 0) 
+            {srcOrglist.map(_.toXML)}
           else
             Null          
           }
           {
-          if (varSourcereflist.size > 0)
+          if (srcXreflist.size > 0)
+            <xref-list>
+        	    {srcXreflist.map(_.toXML)}
+						</xref-list>
+          else
+            Null
+          }
+          {
+          if (srcPublist.size > 0)
             <reference-list>
-        	    {varSourcereflist.map(_.toXML)}
+        	    {srcPublist.map(_.toXML)}
 						</reference-list>
           else
             Null
