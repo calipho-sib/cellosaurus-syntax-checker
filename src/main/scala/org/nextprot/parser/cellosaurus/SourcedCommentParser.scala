@@ -241,7 +241,7 @@ object ParserPlayground {
     val filename = args(0)
 
     // init source checker with default values
-    SourceChecker.init(null)
+    SourceChecker.init(null, null)
 
     if (1==1) {
       analyzeSources(filename)

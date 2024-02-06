@@ -1,15 +1,26 @@
 package org.nextprot.parser.cellosaurus
 
+import scala.io.Source
+
+
 object SourceChecker {
 
     var knownPubliDbSet : Set[String] = null    
     var knownXrefDbSet : Set[String] = null
-    var knownOrgSet : Set[String] = null
+    var knownInstituteMap : Map[String, String] = null
+    var knownMiscSet : Set[String] = null
 
-    // MUST be called otherwise error occur
-    def init(xrefDbSet: Set[String]) : Unit = {
+    // MUST be called otherwise error occurs
+    def init(xrefDbSet: Set[String], instMap: Map[String, String]) : Unit = {
+
         knownPubliDbSet = Set("PubMed", "DOI", "CelloPub", "Patent")
-        knownOrgSet = Set("Sanger", "Direct_author_submission")
+                            
+        knownMiscSet = Set(
+            "Direct_author_submission", "from autologous cell line", "from child cell line", 
+            "from familial inference", "from inference of", "from parent cell line", 
+            "inferred from genetic background", "from patent cell line"
+            )
+
         if (xrefDbSet == null) {
             // default list for tests
             knownXrefDbSet = Set(
@@ -27,15 +38,21 @@ object SourceChecker {
                 "RSCB", "SKIP", "SKY/M-FISH/CGH", "SLKBase", "TKG", "TNGB", "TOKU-E", "UBERON", "Ubigene", "UniProtKB", "VGNC", 
                 "WiCell", "Wikidata", "Ximbio")
         } else {
-            // real and up to date list for production time
-            // excludes publi refs PubMed, DOI, CelloPub and Patent
+            // real and up to date list for production time, excludes publi refs PubMed, DOI, CelloPub and Patent
             knownXrefDbSet = xrefDbSet -- knownPubliDbSet
+        }
+
+        if (instMap == null)  {
+            knownInstituteMap = Map("Sanger" -> "Sanger", "Boston_University" -> "Boston_University", "BNLC" -> "BNLC", "Cedars-Sinai" -> "Cedars-Sinai") // just a samples
+        } else {
+            // read from file institution_list
+            knownInstituteMap = instMap
         }
         println("INFO, init SourceChecker")
     }
 
     /*
-    The 3 sets above should be set by the main parser using init() based on files that are up to date
+    The 2 sets just above should be set by the main parser using init() and loadInstituteFile() based on files that are up to date
     */
 
     def isKnownXref(db_ac: String): Boolean = {
@@ -54,14 +71,20 @@ object SourceChecker {
 
     def isKnownOrgRef(name: String): Boolean = {
         if (knownXrefDbSet.contains(name)) return true
-        if (knownOrgSet.contains(name)) return true
+        if (knownInstituteMap.contains(name)) return true
         return false
     }
+
+    def isKnownMiscRef(name: String): Boolean = {
+        return knownMiscSet.find(el => name.startsWith(el)) != None
+    }
+
 
     def isKnown(name: String): Boolean = {
         if (isKnownXref(name)) return true
         if (isKnownPubliRef(name)) return true
-        if (isKnownOrgRef(name)) return true  
+        if (isKnownOrgRef(name)) return true
+        if (isKnownMiscRef(name)) return true
         return false      
     }
 
@@ -72,5 +95,49 @@ object SourceChecker {
         if (db_set.contains(db)) return true 
         return false  
     }
+
+    def loadInstitutionFile(filename: String): Map[String, String] = {
+        var instMap = Map[String,String]() 
+        println("Loading " + filename)
+        val lines = Source.fromFile(filename).getLines()
+        var lineNo = 0
+        for (line <- lines) {
+            lineNo += 1
+            val elems = line.strip().split("; ")
+            var terms = List[String]()
+            var id: String = null
+            for (el <- elems) {
+                if (el.startsWith("Synonym=")) { // we assume it is the last element of the line when len(elems) > 1
+                    id = el.substring(8)
+                    terms = id :: terms
+                } else  {
+                    terms = el :: terms
+                }
+            }
+            if (id == null) id = terms(0)
+            for (t <- terms) instMap += (t -> id)
+        }
+        //println("file " + filename + "content:")
+        //for (el <- instMap) println(el)
+        return instMap
+    }
+
+
+    def main(args: Array[String]): Unit = {
+  
+        val datadir = "/home/pmichel/work/cellosaurus-api/data_in/"
+        DbXrefInfo.load(datadir + "cellosaurus_xrefs.txt")
+        val instMap = SourceChecker.loadInstitutionFile(datadir + "institution_list")
+        SourceChecker.init(DbXrefInfo.getDbSet(), instMap)
+
+        println("ICLAC: " + SourceChecker.isKnownOrgRef("ICLAC"))
+        println("Center for iPS Cell Research and Application: " + SourceChecker.isKnownOrgRef("Center for iPS Cell Research and Application"))
+        println("CiRA: " + SourceChecker.isKnownOrgRef("CiRA"));
+
+        println("from parent cell line bla bla: " + SourceChecker.isKnownMiscRef("from parent cell line bla bla"))
+        println("from parent cell line bla bla: " + SourceChecker.isKnown("from parent cell line bla bla"))
+
+    }
+  
 
 }

@@ -328,7 +328,7 @@ object CelloParser {
       else if (arg.contains("DRmap=")) drmapname = arg.split("=")(1)
     })
 
-    // Load CVs for cc, ca, st, and xref dbs
+    // Load CVs for cc, ca, st, xref dbs , site mappings and institution lists
     var jarpath = new File(System.getProperty("java.class.path"));
     Console.err.println("jar path is: " + jarpath)
     var celloCVpath =
@@ -347,6 +347,10 @@ object CelloParser {
       jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
         "file.separator"
       ) + "site_mapping_to_cl_uberon"
+    var celloInstitutionListPath =
+      jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
+        "file.separator"
+      ) + "institution_list"
 
     // var celloCVpath = "/home/agateau/workspace/cellosaurus-syntax-checker/celloparser.cv"
     if (!new File(celloSiteMappingPath).exists) {
@@ -367,6 +371,10 @@ object CelloParser {
     // var celloRefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_refs.txt"
     if (!new File(celloRefpath).exists) {
       Console.err.println("cellosaurus_refs.txt not found at: " + celloRefpath);
+      sys.exit(1)
+    }
+    if (!new File(celloInstitutionListPath).exists) {
+      Console.err.println("institution_list not found at: " + celloInstitutionListPath);
       sys.exit(1)
     }
     var ca = ArrayBuffer[String]()
@@ -427,12 +435,17 @@ object CelloParser {
     // Parse cellosaurus xref file to get databases categories and urls
     DbXrefInfo.load(celloXrefpath)
     // Initialize the source checker (recognizes PubliRefs, Xrefs and OrgRefs)
-    SourceChecker.init(DbXrefInfo.getDbSet())
+    val instDict = SourceChecker.loadInstitutionFile(celloInstitutionListPath)
+    SourceChecker.init(DbXrefInfo.getDbSet(), instDict) // TODO real init of institution list
+    println("Step 1")
 /*
+    println("Direct_author_submission: " + SourceChecker.isKnownMiscRef("Direct_author_submission"))
+    println("Direct_author_submission: " + SourceChecker.isKnown("Direct_author_submission"))
     println("DepMap:" + SourceChecker.isKnownOrgRef("DepMap"))
     println("Cosmic-CLP:" + SourceChecker.isKnownOrgRef("Cosmic-CLP"))
     sys.exit()
 */
+
     // Parse cellosaurus txt file, build headers for obo file, and split in flat entries
     // and detect line doublons within cell line records
     var cl_line_map = Map[String,String]()
@@ -2307,6 +2320,8 @@ object CelloParser {
             poplist = cellopoplist.reverse,
             src = popuSrc
           ) // add source to list
+
+
         } else if (category.equals("Sequence variation")) { // prepare stuff
           var seqvartoks = textdata.split("; ")
           var seqvartype = seqvartoks(0)
@@ -2331,12 +2346,17 @@ object CelloParser {
             }
           })
           celloSeqVarlist = new SequenceVariation(
+            cl_ac = ac,
             vartyp = seqvartype,
             mutyp = mutyp,
             zygosity = zygotype,
             text = textdata,
             sources = srctok
           ) :: celloSeqVarlist
+
+
+
+
         } else if (category.equals("Registration")) { // prepare registration list
           var regtoks = textdata.split("; ")
           celloReglist = new Registration(
@@ -2937,6 +2957,7 @@ class Strmarker(
 
 
 class SequenceVariation(
+    val cl_ac: String,
     val vartyp: String,
     val mutyp: String,
     val zygosity: String,
@@ -3024,8 +3045,8 @@ class SequenceVariation(
           srcXreflist = new DbXref(db, ac, "", "") :: srcXreflist
         }
       } else {
-        if (! SourceChecker.isKnownOrgRef(src)) {
-          Console.err.println("WARNING, unknown organization in source of sequence variation: " + src)
+        if (! SourceChecker.isKnown(src)) {
+          Console.err.println(s"WARNING, unknown organization in source of sequence variation: '${src}' in ${cl_ac}")
         }
         val clean_src = src.trim()
         if (clean_src.length > 0) {

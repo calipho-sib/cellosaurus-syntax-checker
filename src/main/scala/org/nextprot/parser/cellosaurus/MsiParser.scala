@@ -18,10 +18,10 @@ class Msi(value: String, note: String, sources: List[String]) {
             else if (SourceChecker.isKnownXref(s)) { 
                 val dbac = s.split("=")
                 xrefs = new DbXref(dbac(0), dbac(1), "", "") :: xrefs 
-            } else if (SourceChecker.isKnownOrgRef(s)) {
+            } else if (SourceChecker.isKnownOrgRef(s) || SourceChecker.isKnownMiscRef(s)) {
                 orgRefs = s :: orgRefs 
             } else {
-                Console.err.println(s"WARN. unknown source ${s}")
+                Console.err.println(s"WARN. unknown source '${s}'")
             }
         })
     }
@@ -93,7 +93,7 @@ object MsiParser {
         // sbt "run ../cellosaurus-api/data_in/cellosaurus_xrefs.txt mabtar.txt"
 
         DbXrefInfo.load(args(0)) // load allowed db name with cat & url properties
-        SourceChecker.init(DbXrefInfo.getDbSet())
+        SourceChecker.init(DbXrefInfo.getDbSet(), null)
 
         val filename = args(1)
         var lineNo = 0
