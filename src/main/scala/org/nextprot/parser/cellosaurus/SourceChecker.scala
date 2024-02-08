@@ -18,7 +18,7 @@ object SourceChecker {
         knownMiscSet = Set(
             "Direct_author_submission", "from autologous cell line", "from child cell line", 
             "from familial inference", "from inference of", "from parent cell line", 
-            "inferred from genetic background", "from patent cell line"
+            "inferred from genetic background"
             )
 
         if (xrefDbSet == null) {

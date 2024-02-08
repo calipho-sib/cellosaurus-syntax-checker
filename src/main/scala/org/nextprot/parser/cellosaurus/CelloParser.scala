@@ -31,9 +31,6 @@ https://mvnrepository.com/search?q=sbt-assembly
 
 object CelloParser {
 
-  val codec = Codec("UTF-8")
-  codec.onMalformedInput(CodingErrorAction.REPLACE)
-  // grep -n --color='auto' -P "[\x80-\xFF]" cellosaurus.txt
 
   val ok_seqvardblist = List("HGNC", "MGI", "RGD", "UniProtKB", "VGNC")
 
@@ -288,7 +285,6 @@ object CelloParser {
     var syncnt = 0
     var ageunitcnt = 0
     var agendrange = 0
-    var nonUTF8cnt = 0
     var blankcnt = 0
     var curr_line_nb = 0
     var celloentry: CelloEntry = null
@@ -436,8 +432,8 @@ object CelloParser {
     DbXrefInfo.load(celloXrefpath)
     // Initialize the source checker (recognizes PubliRefs, Xrefs and OrgRefs)
     val instDict = SourceChecker.loadInstitutionFile(celloInstitutionListPath)
-    SourceChecker.init(DbXrefInfo.getDbSet(), instDict) // TODO real init of institution list
-    println("Step 1")
+    SourceChecker.init(DbXrefInfo.getDbSet(), instDict)
+
 /*
     println("Direct_author_submission: " + SourceChecker.isKnownMiscRef("Direct_author_submission"))
     println("Direct_author_submission: " + SourceChecker.isKnown("Direct_author_submission"))
@@ -446,14 +442,14 @@ object CelloParser {
     sys.exit()
 */
 
+    println(s"Checking ${args(0)} for non UTF-8 characters...")
+    if (Utf8Checker.check(args(0))) { println("ok") } else { println("Exiting"); sys.exit() }
+
     // Parse cellosaurus txt file, build headers for obo file, and split in flat entries
     // and detect line doublons within cell line records
     var cl_line_map = Map[String,String]()
     for (line <- Source.fromFile(args(0)).getLines()) {
       curr_line_nb += 1
-      if (line.map(_.toInt).contains(65533)) {
-        println("Warning: " + line); nonUTF8cnt += 1
-      } // code for special '�' replacement character from coded
       if (obostarted && !line.contains("-----"))
         oboheadercomment += "!" + line + "\n"
       if (line.startsWith("____")) started = true
@@ -1736,7 +1732,7 @@ object CelloParser {
     }
 
     println(s"${Entries.length} entries: $errcnt error(s)")
-    println(s"$nonUTF8cnt non-UTF8 character containing line(s), $blankcnt blank line(s)")
+    println(s"${blankcnt} blank line(s)")
 
     if (conflictfilename != "") { // Output five tables in reference file
       val dupfile = new PrintWriter(new File(conflictfilename))

@@ -10,6 +10,7 @@ lazy val root = project
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.DoublingTimeStateAutomaton"),
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.ParserPlayground"),
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.SourceChecker"),
+//    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.Utf8Checker"),
     Compile / mainClass := Some("org.nextprot.parser.cellosaurus.CelloParser"),
     scalacOptions ++= Seq("-deprecation", "-explain"),
     exportJars := true, 
