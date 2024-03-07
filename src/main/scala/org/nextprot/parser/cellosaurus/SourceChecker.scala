@@ -75,6 +75,12 @@ object SourceChecker {
         return false
     }
 
+    def getKnownOrgRefId(name:String): String = {
+        if (knownXrefDbSet.contains(name)) return name
+        if (knownInstituteMap.contains(name)) return knownInstituteMap(name)
+        return null
+    }
+
     def isKnownMiscRef(name: String): Boolean = {
         return knownMiscSet.find(el => name.startsWith(el)) != None
     }
@@ -137,6 +143,11 @@ object SourceChecker {
         println("from parent cell line bla bla: " + SourceChecker.isKnownMiscRef("from parent cell line bla bla"))
         println("from parent cell line bla bla: " + SourceChecker.isKnown("from parent cell line bla bla"))
 
+        println("check org ids:")
+        println("ICLAC -- id --> " + SourceChecker.getKnownOrgRefId("ICLAC"))
+        println("Center for iPS Cell Research and Application -- id --> " + SourceChecker.getKnownOrgRefId("Center for iPS Cell Research and Application"))
+        println("UniProtKB --> " + SourceChecker.getKnownOrgRefId("UniProtKB"))
+        println("Schtroupf -- id --> " + SourceChecker.getKnownOrgRefId("Schtroupf"))
     }
   
 
