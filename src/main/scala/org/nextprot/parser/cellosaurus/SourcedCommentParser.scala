@@ -68,8 +68,12 @@ trait BasicParserTrait {
       if (matched == None) throw new Exception(s"Pattern for source(s) not found: $sources")
       val pa = matched.get
       currComment += linevalue.substring(currPos, pos).trim()
-      if (pa.action == Action.KEEP || pa.action == Action.KEEP_AND_SPLIT) currComment += " " + pa.pattern
-      currSources = currSources ++ sources.split("; ").toList
+      if (pa.action == Action.KEEP || pa.action == Action.KEEP_AND_SPLIT || pa.action == Action.IGNORE) {
+        currComment += " " + pa.pattern
+      }
+      if (pa.action != Action.IGNORE) {
+        currSources = currSources ++ sources.split("; ").toList
+      }
       //println(s"action: ${pa.action}")
       if (pa.action == Action.SPLIT  || pa.action == Action.KEEP_AND_SPLIT || pa.action == Action.COMPLETE) {
         val sc = new SourcedComment(currComment, List(currSources: _*), pa.action)
@@ -80,16 +84,25 @@ trait BasicParserTrait {
       //println(s"currPos: $currPos linevalue.length: ${linevalue.length}" )
       currPos = pos + pa.pattern.length
     })
-    if (currPos < linevalue.length)
+    if (currPos < linevalue.length) {
       currComment += linevalue.substring(currPos, linevalue.length)
-    if (currComment.length > 0 )
+    }
+    if (currComment.length > 0 ) {
       result = new SourcedComment(currComment, List(currSources: _*), Action.PICKUP) :: result
+    }
     result.reverse
   }
 
 }
 
-enum Action { case SPLIT, KEEP, KEEP_AND_SPLIT, COMPLETE, PICKUP }
+enum Action { case 
+  IGNORE,         // pattern kept in text but not added to source list
+  SPLIT,          // pattern removed from text and added to source list, text split after pattern 
+  KEEP,           // pattern kept in text and added to source list
+  KEEP_AND_SPLIT, // pattern kept in text, added to source list, text split after pattern
+  COMPLETE,       // pattern removed from text and added to sources, MUST match at the end of line
+  PICKUP          // action set by parseLine() to pick up data to handle after the last pattern match
+}
 case class PatternAction(pattern: String, action: Action)
 
 object AnecdotalParser extends BasicParserTrait {
@@ -247,6 +260,22 @@ object VirologyParser extends BasicParserTrait {
   }
 }
 
+object SourcedCommentParser extends BasicParserTrait {
+  val name = "SourcedCommentParser"
+  val topic = "CC   Test: "
+  def sourceIsValid(src: String): Boolean = { 
+    SourceChecker.isKnown(src) && ! SourceChecker.isInDbSet(src, Set("Cellosaurus")) }
+  def getPatternActionList() : List[PatternAction] = {
+    return List(
+      PatternAction( "($sources). " , Action.IGNORE),     // 
+      PatternAction( "($sources) "  , Action.IGNORE),     // 
+      PatternAction( "($sources), " , Action.IGNORE),     // 
+      PatternAction( "($sources); " , Action.IGNORE),     // 
+      PatternAction( "($sources)"   , Action.COMPLETE) // COMPLETE should occur at the end of line
+    )
+  }
+}
+
 
 object TestParser extends BasicParserTrait {
   val name = "TestParser"
@@ -332,9 +361,11 @@ object ParserPlayground {
     //val parser = CharacteristicsParser
     //val parser = DonorInfoParser
     //val parser = KaryotypeParser
-    val parser = MiscellaneousParser
+    //val parser = MiscellaneousParser
     //val parser = SenescenceParser
     //val parser = VirologyParser
+
+    val parser = SourcedCommentParser
 
     if (1==1) {
       println(s"---------- ${parser.name} - Analysis -----------")
