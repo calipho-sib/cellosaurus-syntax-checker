@@ -105,6 +105,7 @@ enum Action { case
 }
 case class PatternAction(pattern: String, action: Action)
 
+// unused
 object AnecdotalParser extends BasicParserTrait {
   val name = "AnecdotalParser"
   val topic = "CC   Anecdotal: "
@@ -120,6 +121,7 @@ object AnecdotalParser extends BasicParserTrait {
   }
 }
 
+// unused
 object BiotechnologyParser extends BasicParserTrait {
   val name = "BiotechnologyParser"
   val topic = "CC   Biotechnology: "
@@ -135,6 +137,7 @@ object BiotechnologyParser extends BasicParserTrait {
   }
 }
 
+// unused
 object CautionParser extends BasicParserTrait {
 
 // Was indicated to have been established in the absence of EBV (PubMed=7522246), but contains EBV (CLS=300204)
@@ -154,13 +157,7 @@ object CautionParser extends BasicParserTrait {
   }
 }
 
-
-/*
-No split necessary, sources always appear at the end in brackets.
-*/
-
-// Control cell line for the CHOP-KO-DR (Cellosaurus=CVCL_B046), GCN2-KO-DR (Cellosaurus=CVCL_B049) and PERK-KO-DR (Cellosaurus=CVCL_B067) cell lines.
-
+// unused
 object CharacteristicsParser extends BasicParserTrait {
   val name = "CharacteristicsParser"
   val topic = "CC   Characteristics: "
@@ -179,6 +176,7 @@ object CharacteristicsParser extends BasicParserTrait {
 }
 
 
+// unused
 object DonorInfoParser extends BasicParserTrait {
   val name = "DonorInfoParser"
   val topic = "CC   Donor information: "
@@ -196,6 +194,7 @@ object DonorInfoParser extends BasicParserTrait {
   }
 }
 
+// unused
 object KaryotypeParser extends BasicParserTrait {
   val name = "KaryotypeParser"
   val topic = "CC   Karyotypic information: "
@@ -210,6 +209,7 @@ object KaryotypeParser extends BasicParserTrait {
   }
 }
 
+// unused
 object MiscellaneousParser extends BasicParserTrait {
   val name = "MiscellaneousParser"
   val topic = "CC   Miscellaneous: "
@@ -228,6 +228,7 @@ object MiscellaneousParser extends BasicParserTrait {
 }
 
 
+// unused
 object SenescenceParser extends BasicParserTrait {
   val name = "SenescenceParser"
   val topic = "CC   Senescence: "
@@ -244,6 +245,7 @@ object SenescenceParser extends BasicParserTrait {
   }
 }
 
+// unused
 object VirologyParser extends BasicParserTrait {
   val name = "VirologyParser"
   val topic = "CC   Virology: "
@@ -260,9 +262,15 @@ object VirologyParser extends BasicParserTrait {
   }
 }
 
+/* 
+  Generic parser for 
+ */
 object SourcedCommentParser extends BasicParserTrait {
   val name = "SourcedCommentParser"
   val topic = "CC   Test: "
+  val categories = Set(
+    "Anecdotal", "Biotechnology", "Caution", "Characteristics", "Donor information", 
+    "Karyotypic information", "Miscellaneous", "Senescence", "Virology")
   def sourceIsValid(src: String): Boolean = { 
     SourceChecker.isKnown(src) && ! SourceChecker.isInDbSet(src, Set("Cellosaurus")) }
   def getPatternActionList() : List[PatternAction] = {
@@ -364,7 +372,6 @@ object ParserPlayground {
     //val parser = MiscellaneousParser
     //val parser = SenescenceParser
     //val parser = VirologyParser
-
     val parser = SourcedCommentParser
 
     if (1==1) {

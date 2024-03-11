@@ -763,7 +763,31 @@ object CelloParser {
             }
           }
 
-          if (cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
+          if (SourcedCommentParser.categories.contains(cctopic)) {
+            val topic_offset = 5 + cctopic.length + 2
+            var raw_sc = entryline.substring(topic_offset)
+            if (raw_sc.endsWith(".")) raw_sc = raw_sc.substring(0, raw_sc.length - 1).trim()
+            try {
+              // next line may throw error
+              val sc_list = SourcedCommentParser.parseLine(raw_sc)
+              // next one as well ;-)
+              if (sc_list.size != 1) throw new Exception(s"Expected 1 sourced comment but got ${sc_list.size} in: ${raw_sc}")
+              val sc = sc_list(0)
+              /*
+              println(s"DEBUG SC - topic: ${cctopic}")
+              println(s"DEBUG SC - line : ${raw_sc}")
+              println(s"DEBUG SC - comm : ${sc.comment}")
+              println(s"DEBUG SC - src  : ${sc.sources}")
+              println(s"DEBIG SC - act  : ${sc.patternAction}") 
+             */
+            } catch {
+              case e: Exception => {
+                errcnt += 1
+                Console.err.println(s"ERROR while parsing sourced comment of ${ac}: ${e.getMessage}")
+              }
+            }
+
+          } else if (cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
             // These discontinued CCs must also exist as DR lines
             var discontinued = entrylinedata.split(": ")(1) // just keep db reference
             discontinued = (discontinued.substring(0, discontinued.lastIndexOf(';')).trim())
@@ -3543,47 +3567,48 @@ class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
 
 class Comment(val category: String, var text: String) {
 
-  var ccXreflist = List[DbXref]()
-  var cvterm: CvTerm = null
+  var xreflist = List[DbXref]()
+  var publist = List[PubliRef]()
+  var srclist = List[STsource]()
+  var hasSources: Boolean = false
+  var hasTransfectedXref: Boolean = false
 
   init
 
   def init = { // prepare data for complex comments (methods, xrefs...)
-    if (category.equals("Transfected with") && text.contains(";")) {
+
+    if (SourcedCommentParser.categories.contains(category) ) {
+      var raw_sc = text.trim()
+      if (raw_sc.endsWith(".")) raw_sc = raw_sc.substring(0, raw_sc.length - 1).trim()
+      val sc_list = SourcedCommentParser.parseLine(raw_sc)
+      if (sc_list.size != 1) throw new Exception(s"ERROR Expected 1 sourced comment but got ${sc_list.size} in: ${text}")
+      val sc = sc_list(0)
+      text = sc.comment
+      sc.sources.foreach(s => {
+        hasSources = true
+        if (SourceChecker.isKnownXref(s)) {
+          val parts = s.split("=")
+          xreflist = new DbXref(_db = parts(0), _ac = parts(1), _property = "", _entryCategory = "") :: xreflist
+        } else if (SourceChecker.isKnownPubliRef(s)) {
+          publist = new PubliRef(s) :: publist
+        } else if (SourceChecker.isKnownOrgRef(s) || SourceChecker.isKnownMiscRef(s)) {
+          srclist = new STsource(s) :: srclist
+        }
+      })
+
+    } else if (category.equals("Transfected with") && text.contains(";")) {
       val linetoks = text.split("; ")
       val db = linetoks(0);
       if (DbXrefInfo.contains(db)) {
         var property = linetoks(2)
-        var i = 0
-        if (
-          linetoks.size > 3
-        ) // like "Transfected with: UniProtKB; P42212; GFP (with L-64, T-65 and L-231 = EGFP). Transfected with: UniProtKB; Q99ZW2; Streptomyces pyogenes Cas9 (nuclear version; nCas9n)."
-          for (i <- 3 to linetoks.size - 1)
-            property += "; " + linetoks(i)
-        ccXreflist = new DbXref(
-          _db = db,
-          _ac = linetoks(1),
-          _property = property,
-          _entryCategory = ""
-        ) :: ccXreflist
+        if (linetoks.size > 3) {
+          // like "Transfected with: UniProtKB; Q99ZW2; Streptomyces pyogenes Cas9 (nuclear version; nCas9n)."
+          var i = 0
+          for (i <- 3 to linetoks.size - 1) property += "; " + linetoks(i)
+        }
+        hasTransfectedXref = true
+        xreflist = new DbXref(_db = db, _ac = linetoks(1), _property = property, _entryCategory = "") :: xreflist
       }
-    } else if ((category.equals("Transformant") || category.equals("Selected for resistance to")) 
-                && text.contains(";") && !text.contains("v-Myc")) {
-      val linetoks = text.split("; ")
-      var terminology = linetoks(0);
-      val ac = linetoks(1)
-      val name = linetoks(2)
-      text = ""
-      if (terminology == "NCBI_TaxID") terminology = "NCBI-Taxonomy"
-      if (terminology == "UniProtKB")
-        ccXreflist = new DbXref(
-          _db = terminology,
-          _ac = ac,
-          _property = name,
-          _entryCategory = ""
-        ) :: ccXreflist
-      else
-        cvterm = new CvTerm(_terminology = terminology, _ac = ac, _name = name)
     }
   }
 
@@ -3593,28 +3618,41 @@ class Comment(val category: String, var text: String) {
     if (!CelloParser.specialCCTopics.contains(category))
       <comment category={category}> 
       {if (text != "") text else Null} 
-      {if (cvterm != null) cvterm.toXML else Null} 
-      {if (ccXreflist.size > 0) 
-        <xref-list>{ccXreflist.map(_.toXML)}</xref-list>
+      {if (hasTransfectedXref)
+          <xref-list>{xreflist.map(_.toXML)}</xref-list>
+      else 
+        Null
+      }
+      {if (hasSources)
+        <comment-sources>
+        {if (xreflist.size > 0) 
+          <xref-list>{xreflist.map(_.toXML)}</xref-list>
+        else
+          Null
+        }
+        {if (publist.size > 0)
+          <reference-list>{publist.map(_.toXML)}</reference-list>
+        else
+          Null
+        }
+        {if (srclist.size > 0)
+          <source-list>{srclist.map(_.toXML)}</source-list>
+        else
+          Null
+        }
+        </comment-sources>
       else
         Null
       }
-      </comment>
+      </comment>    
     else
       Null
 
 
   def toOBO = {
     var commtext = category + ": "
-    if (ccXreflist.size > 0) {  
-      commtext += ccXreflist(0)._db + "; " + ccXreflist(0)._ac + "; " + ccXreflist(0)._property + "."
-    } else if (cvterm != null) {
-      if (
-        category.equals("Transformant")
-      ) // xref in a different format, may change in next releases
-        commtext += cvterm._name + "(" + cvterm._terminology + "; " + cvterm._ac + ")."
-      else
-        commtext += cvterm._terminology + "; " + cvterm._ac + "; " + cvterm._name + "."
+    if (xreflist.size > 0 && ! hasSources) {  // we want xref related to transfected comment, not the sources of the comment
+      commtext += xreflist(0)._db + "; " + xreflist(0)._ac + "; " + xreflist(0)._property + "."
     } else
       commtext += text + "."
     CelloParser.escape_chars_for_obo(commtext)

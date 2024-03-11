@@ -10,11 +10,20 @@ This project is used to check the syntax of the cellosaurus.txt ASCII file and c
 
 ## For developers
 
-Build the jar make
+Build the jar
 
 ```
-mvn assembly:assembly
+sbt assembly
 ```
+
+Play with some classes
+
+* Select a mainClass in build.sbt
+* Run the class with a simila rommand as
+```
+sbt "run arg1 arg2 ... argN"
+```
+
 
 ## For users 
 
