@@ -2047,12 +2047,7 @@ object CelloParser {
         })
         xreflist.foreach(xref => {
           val db = xref.split("=")(0)
-          pubXreflist = new DbXref(
-            _db = db,
-            _ac = xref.split("=")(1),
-            _property = "",
-            _entryCategory = ""
-          ) :: pubXreflist
+          pubXreflist = new DbXref(db = db, ac = xref.split("=")(1))  :: pubXreflist
         })
       }
     }
@@ -2157,16 +2152,12 @@ object CelloParser {
       else if (entryline.startsWith("DR   ")) { // xref
         val db = entrylinedata.split("; ")(0)
         if (!DbXrefInfo.contains(db))
-          Console.err.println(
-            "Error: no entry for \"" + db + "\" in cellosaurus_xrefs.txt"
-          )
+          Console.err.println("Error: no entry for \"" + db + "\" in cellosaurus_xrefs.txt")
         else
           celloXreflist = new DbXref(
-            _db = db,
-            _ac = entrylinedata.split(";")(1).trim(),
-            _property = "",
-            _entryCategory = entrycategory
-          ) :: celloXreflist
+            db = db, 
+            ac = entrylinedata.split(";")(1).trim(), 
+            entryCategory = entrycategory) :: celloXreflist
       } else if (entryline.startsWith("CC   ")) { // comment
         val linetokens = entrylinedata.split(": ")
         val category = linetokens(0)
@@ -2194,12 +2185,7 @@ object CelloParser {
               )
             } else if (!ok_rxdblist.contains(db) && DbXrefInfo.contains(db)) {
               hlaSrc = null
-              hlaSrcXref = new DbXref(
-                _db = db,
-                _ac = ac,
-                _property = "",
-                _entryCategory = ""
-              )
+              hlaSrcXref = new DbXref(db, ac)
             }
           }
           // Console.err.println("===hlaSrc:" + hlaSrc)
@@ -2920,12 +2906,11 @@ class CelloEntry(
         val discAC = comment_parts(1)
         val property = comment_parts(2)
         dbrefs.foreach(dbref => {
-          val db = dbref._db
+          val db = dbref.db
           // special rule for AddexBio, see cellosaurus_xrefs.txt
-          val ac = if (db.equals("AddexBio")) dbref._ac.split("/")(0) else dbref._ac
+          val ac = if (db.equals("AddexBio")) dbref.ac.split("/")(0) else dbref.ac
           if (ac.equals(discAC) && db.equals(discDB)) {
-            dbref.propname = "Discontinued"
-            dbref._property = property
+            dbref.discontinued = property
             dbref.final_url = "" // No url
           }
         })
@@ -3022,10 +3007,8 @@ class SequenceVariation(
       else if (token.startsWith("ClinVar=") || token.startsWith("dbSNP=")) {
         db2 = token.split("=")(0)
         varXreflist = new DbXref(
-          _db = db2,
-          _ac = token.split("=")(1).split(" \\(")(0),
-          _property = "",
-          _entryCategory = ""
+          db = db2,
+          ac = token.split("=")(1).split(" \\(")(0)
         ) :: varXreflist
       }
     })
@@ -3036,19 +3019,9 @@ class SequenceVariation(
       System.exit(1)
     }
 
-    varXreflist = new DbXref(
-      _db = db,
-      _ac = ac,
-      _property = geneName,
-      _entryCategory = ""
-    ) :: varXreflist
+    varXreflist = new DbXref(db, ac, label = geneName) :: varXreflist
     if (ac2 != "") {
-      varXreflist = new DbXref(
-        _db = db,
-        _ac = ac2,
-        _property = geneName2,
-        _entryCategory = ""
-      ) :: varXreflist
+      varXreflist = new DbXref(db, ac2, geneName2) :: varXreflist
       varXreflist = varXreflist.reverse
     }
 
@@ -3062,7 +3035,7 @@ class SequenceVariation(
         if (SourceChecker.isKnownPubliRef(src)) {
           srcPublist = new PubliRef(db_ac = src) :: srcPublist
         } else if (SourceChecker.isKnownXref(src)) {
-          srcXreflist = new DbXref(db, ac, "", "") :: srcXreflist
+          srcXreflist = new DbXref(db, ac) :: srcXreflist
         }
       } else {
         if (! SourceChecker.isKnown(src)) {
@@ -3293,12 +3266,7 @@ class Misspelling(val data: String) {
               if (dbac(1).endsWith("."))
                 dbac(1).substring(0, dbac(1).length - 1)
               else dbac(1)
-            val xref = new DbXref(
-              _db = db,
-              _ac = ac,
-              _property = "",
-              _entryCategory = ""
-            )
+            val xref = new DbXref(db, ac)
             xrefs = xref :: xrefs
             // case with something unexpected
           } else {
@@ -3384,12 +3352,7 @@ class Resistance(val db: String, val ac: String, val name: String) {
   def init = {
     if (db != null && db.length > 0) {
       if (db == "UniProtKB") {
-        xref = new DbXref(
-          _db = db,
-          _ac = ac,
-          _property = name,
-          _entryCategory = ""
-        )
+        xref = new DbXref(db, ac, label = name)
       } else {
         term = new CvTerm(_terminology = db, _ac = ac, _name = name)
       }
@@ -3477,12 +3440,7 @@ class DoublingTime(val value: String, val note: String, val refs: String) {
           refList = item :: refList
         } else {
           val ac = itemParts(1)
-          val xref = new DbXref(
-            _db = db,
-            _ac = ac,
-            _property = "",
-            _entryCategory = ""
-          )
+          val xref = new DbXref(db, ac)
           xrefList = xref :: xrefList
         }
       } else {
@@ -3588,7 +3546,7 @@ class Comment(val category: String, var text: String) {
         hasSources = true
         if (SourceChecker.isKnownXref(s)) {
           val parts = s.split("=")
-          xreflist = new DbXref(_db = parts(0), _ac = parts(1), _property = "", _entryCategory = "") :: xreflist
+          xreflist = new DbXref(db = parts(0), ac = parts(1)) :: xreflist
         } else if (SourceChecker.isKnownPubliRef(s)) {
           publist = new PubliRef(s) :: publist
         } else if (SourceChecker.isKnownOrgRef(s) || SourceChecker.isKnownMiscRef(s)) {
@@ -3607,7 +3565,7 @@ class Comment(val category: String, var text: String) {
           for (i <- 3 to linetoks.size - 1) property += "; " + linetoks(i)
         }
         hasTransfectedXref = true
-        xreflist = new DbXref(_db = db, _ac = linetoks(1), _property = property, _entryCategory = "") :: xreflist
+        xreflist = new DbXref(db, ac = linetoks(1), label = property) :: xreflist
       }
     }
   }
@@ -3652,7 +3610,7 @@ class Comment(val category: String, var text: String) {
   def toOBO = {
     var commtext = category + ": "
     if (xreflist.size > 0 && ! hasSources) {  // we want xref related to transfected comment, not the sources of the comment
-      commtext += xreflist(0)._db + "; " + xreflist(0)._ac + "; " + xreflist(0)._property + "."
+      commtext += xreflist(0).db + "; " + xreflist(0).ac + "; " + xreflist(0).label + "."
     } else
       commtext += text + "."
     CelloParser.escape_chars_for_obo(commtext)

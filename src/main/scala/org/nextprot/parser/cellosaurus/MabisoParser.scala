@@ -105,7 +105,7 @@ object MabisoParser {
         val db = dbac(0)
         if (! DbXrefInfo.contains(db)) throw Exception("Invalid xref db '" + db + "' in: " + src)
         val ac = dbac(1)
-        new DbXref(db, ac, "", "")
+        new DbXref(db, ac)
       }).toList
   }
 

@@ -38,82 +38,75 @@ class PubliRef(val db_ac: String) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 class DbXref(
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-    val _db: String,
-    val _ac: String,
-    var _property: String,
-    val _entryCategory: String
+    val db: String,
+    val ac: String,
+    var label: String = "",
+    var discontinued: String = "",
+    val entryCategory: String = ""
 ) {
 
-  val _category = DbXrefInfo.getCat(_db)
-  val _url = DbXrefInfo.getUrl(_db)
-  var final_url = _url
-  var propname = "gene/protein designation" // default value, overriden in comments.updatDBrefs for discontinued cell lines
+  val category = DbXrefInfo.getCat(db)
+  val url = DbXrefInfo.getUrl(db)
+  var final_url = url
 
   init
   def init = { // prepare final url from template and accession
-    if (_url.contains("%s")) {
+    if (url.contains("%s")) {
       // Deal with a few exceptions...
-      if (_db.equals("BTO"))
-        final_url = _url.replace(
-          "%s",
-          _ac.substring(4)
-        ) // BTO:  %s is the numerical part of the BTO:nnnnnnn identifier
-      else if (_db.equals("CGH-DB"))
-        final_url = _url
-          .replace("%s", _ac.split("-")(0))
-          .replace(
-            "%t",
-            _ac.split("-")(1)
-          ) // CGH-DB: Note: %s and %t are respectively the values before and after the dash in the DR line.
-      else if (_db.equals("AddexBio"))
-        final_url = _url.replace(
-          "%s",
-          _ac.split("/")(1)
-        ) // AddexBio: Note: %s is the value after the slash "/" in the DR line.
-      else if (_db.equals("ECACC")) {
+      if (db.equals("BTO"))
+        // BTO:  %s is the numerical part of the BTO:nnnnnnn identifier
+        final_url = url.replace("%s", ac.substring(4)) 
+      else if (db.equals("CGH-DB"))
+        // CGH-DB: Note: %s and %t are respectively the values before and after the dash in the DR line.
+        final_url = url.replace("%s", ac.split("-")(0)).replace("%t", ac.split("-")(1)) 
+      else if (db.equals("AddexBio"))
+        // AddexBio: Note: %s is the value after the slash "/" in the DR line.
+        final_url = url.replace("%s", ac.split("/")(1)) 
+      else if (db.equals("ECACC")) {
         var urlCategory = ""
         var modifiedUrl = ""
         var collection = ""
-        if (_entryCategory.equals("Hybridoma")) {
+        if (entryCategory.equals("Hybridoma")) {
           urlCategory = "hybridoma"; collection = "ecacc_gc";
-        } else if (_entryCategory.equals("Induced pluripotent stem cell")) {
+        } else if (entryCategory.equals("Induced pluripotent stem cell")) {
           urlCategory = "ipsc"; collection = "ecacc_ipsc";
-        } else if (_entryCategory.startsWith("chromosomal")) {
+        } else if (entryCategory.startsWith("chromosomal")) {
           urlCategory = "humangeneticca"; collection = "ecacc_hgc";
-        } else if (_entryCategory.startsWith("Neurone Disease (MND)")) {
+        } else if (entryCategory.startsWith("Neurone Disease (MND)")) {
           urlCategory = "diseaseandnormalcohortcollections";
           collection = "ecacc_mnd";
-        } else if (_entryCategory.startsWith("randomly")) {
+        } else if (entryCategory.startsWith("randomly")) {
           urlCategory = "humanrandomcontrol"; collection = "ecacc_hrc";
         }
         if (urlCategory != "")
-          modifiedUrl = _url
-            .replace("generalcell", urlCategory)
-            .split("&")(0) + "&collection=" + collection
-        else modifiedUrl = _url
-        final_url = modifiedUrl.replace("%s", _ac)
-      } else if (_db.equals("TKG")) { // TKG: Note: n% is the second digit of the cell line AC and %s is the cell line AC without the 'TKG'
-        val digits = _ac.split(" ")(1)
-        final_url = _url
-          .replace("%n", digits.substring(1, 2))
-          .replace("%s", digits); // wtf! digits.substring(1,1) is empty!!!
+          modifiedUrl = url.replace("generalcell", urlCategory).split("&")(0) + "&collection=" + collection
+        else modifiedUrl = url
+        final_url = modifiedUrl.replace("%s", ac)
+      } else if (db.equals("TKG")) { 
+        // TKG: Note: n% is the second digit of the cell line AC and %s is the cell line AC without the 'TKG'
+        val digits = ac.split(" ")(1)
+        final_url = url.replace("%n", digits.substring(1, 2)).replace("%s", digits); // wtf! digits.substring(1,1) is empty!!!
       } else // General form
-        final_url = _url.replace("%s", _ac)
+        final_url = url.replace("%s", ac)
     } else
       final_url = "" // for xrefs like ICLC
   }
 
   override def toString() :String = {
-    return s"DbXref($_db=$_ac)"
+    return s"DbXref($db=$ac)"
   }
 
   def toXML =
-    <xref database={_db} category={_category} accession={_ac}>
+    <xref database={db} category={category} accession={ac}>
       {
-      if (_property != "")
-        <property-list>
-            <property name={propname} value={_property}/>
-          </property-list>
+      if (label != "")
+        <label>{label}</label>
+      else
+        Null
+      }
+      {
+      if (discontinued != "")
+        <discontinued>{discontinued}</discontinued>
       else
         Null
       }
@@ -126,9 +119,10 @@ class DbXref(
     </xref>
 
   def toOBO = {
-    val drline = "xref: " + _db + ":" + _ac + "\n"
+    val drline = "xref: " + db + ":" + ac + "\n"
     drline
   }
+
 }
 
 

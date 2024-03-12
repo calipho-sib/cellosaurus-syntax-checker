@@ -7,7 +7,7 @@ import scala.xml._
 class Mabtar(name: String, db: String, ac: String, note:String) {
 
   val trgTerm : CvTerm = if (db=="ChEBI") new CvTerm(db, ac, name) else null
-  val trgXref : DbXref = if (db=="UniProtKB") new DbXref(db, ac, name, "") else null
+  val trgXref : DbXref = if (db=="UniProtKB") new DbXref(db, ac, label = name) else null
   
   override def toString() : String = {
     s"Mabtar(name=$name, db:$db, ac:$ac, note:$note)"

@@ -17,7 +17,7 @@ class Msi(value: String, note: String, sources: List[String]) {
                 publiRefs = s :: publiRefs }
             else if (SourceChecker.isKnownXref(s)) { 
                 val dbac = s.split("=")
-                xrefs = new DbXref(dbac(0), dbac(1), "", "") :: xrefs 
+                xrefs = new DbXref(dbac(0), dbac(1)) :: xrefs 
             } else if (SourceChecker.isKnownOrgRef(s) || SourceChecker.isKnownMiscRef(s)) {
                 orgRefs = s :: orgRefs 
             } else {

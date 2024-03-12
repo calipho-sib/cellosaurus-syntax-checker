@@ -34,7 +34,7 @@ object KnockoutParser {
         val geneAndNote = toklist(3).split(" \\(Note=")
         val geneName = geneAndNote(0)
         val note = if (geneAndNote.length>1) geneAndNote(1).split("\\)")(0) else null
-        val xref = new DbXref(db, ac, geneName, "")
+        val xref = new DbXref(db, ac, label = geneName)
         return new Knockout(method, xref, note)
     }
 
