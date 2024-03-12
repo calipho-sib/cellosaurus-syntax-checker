@@ -1499,33 +1499,6 @@ object CelloParser {
         } nb-cell-lines={Entries.size.toString} nb-publications={
           uniquerefs.size.toString
         } />
-           <terminology-list>
-               <terminology name="NCBI-Taxonomy" source="National Center for Biotechnology Information" description="Taxonomy database of organisms">
-                    <url><![CDATA[https://www.ncbi.nlm.nih.gov/taxonomy]]></url>
-                </terminology>
-                <terminology name="NCIt" source="National Cancer Institute" description="Terminology of biomedical concepts">
-                    <url><![CDATA[https://ncit.nci.nih.gov]]></url>
-                </terminology>
-                <terminology name="ORDO" source="Orphanet" description="Rare diseases ontology">
-                    <url><![CDATA[https://www.ebi.ac.uk/ols/ontologies/ordo]]></url>
-                </terminology>
-                <terminology name="ChEBI" source="European Molecular Biology Laboratory" description="Chemical Entities of Biological Interest">
-                    <url><![CDATA[https://www.ebi.ac.uk/chebi/]]></url>
-                </terminology>
-                <terminology name="PubChem" source="National Center for Biotechnology Information" description="Public repository for information on chemical substances and their biological activities">
-                    <url><![CDATA[https://pubchem.ncbi.nlm.nih.gov/]]></url>
-                </terminology>
-    						<terminology name="DrugBank" source="Wishart's group" description="DrugBank database">
-      							<url><![CDATA[https://www.drugbank.ca/]]></url>
-    						</terminology>
-    						<terminology name="UBERON" source="Uberon/CL team" description="Uber-anatomy ontology">
-      							<url><![CDATA[https://uberon.github.io/]]></url>
-    						</terminology>
-    						<terminology name="CL" source="Uberon/CL team" description="The Cell Ontology">
-      							<url><![CDATA[https://obophenotype.github.io/cell-ontology/]]></url>
-    						</terminology>
-
-           </terminology-list>
          </header>
 
       xmlfile.write("<Cellosaurus>\n")
@@ -2105,10 +2078,10 @@ object CelloParser {
     var celloOldaclist = List[OldAc]()
     var celloSynlist = List[Synonym]()
     var celloPublilist = List[PubliRef]()
-    var celloDislist = List[CvTerm]()
-    var celloSpeclist = List[CvTerm]()
-    var celloOriglist = List[CvTerm]()
-    var celloDerivedlist = List[CvTerm]()
+    var celloDislist = List[DbXref]()
+    var celloSpeclist = List[DbXref]()
+    var celloOriglist = List[DbXref]()
+    var celloDerivedlist = List[DbXref]()
     var celloXreflist = List[DbXref]()
     var celloCommentlist = List[Comment]()
     var celloWebPagelist = List[WebPage]()
@@ -2387,28 +2360,28 @@ object CelloParser {
         celloWebPagelist =
           new WebPage(url = entrylinedata.trim()) :: celloWebPagelist
       } else if (entryline.startsWith("DI   ")) { // diseases
-        celloDislist = new CvTerm(
-          _terminology = entrylinedata.split("; ")(0),
-          _ac = entrylinedata.split("; ")(1),
-          _name = entrylinedata.split("; ")(2)
+        celloDislist = new DbXref(
+          db = entrylinedata.split("; ")(0),
+          ac = entrylinedata.split("; ")(1),
+          label = entrylinedata.split("; ")(2)
         ) :: celloDislist
       } else if (entryline.startsWith("OX   ")) { // species
-        celloSpeclist = new CvTerm(
-          _terminology = "NCBI-Taxonomy",
-          _ac = entrylinedata.split("=")(1).split("; ")(0),
-          _name = entrylinedata.split("! ")(1)
+        celloSpeclist = new DbXref(
+          db = "NCBI_TaxID",
+          ac = entrylinedata.split("=")(1).split("; ")(0),
+          label = entrylinedata.split("! ")(1)
         ) :: celloSpeclist
       } else if (entryline.startsWith("OI   ")) { // same origin
-        celloOriglist = new CvTerm(
-          _terminology = "Cellosaurus",
-          _ac = entrylinedata.split(" ! ")(0),
-          _name = entrylinedata.split(" ! ")(1)
+        celloOriglist = new DbXref(
+          db = "Cellosaurus",
+          ac = entrylinedata.split(" ! ")(0),
+          label = entrylinedata.split(" ! ")(1)
         ) :: celloOriglist
       } else if (entryline.startsWith("HI   ")) { // derived from
-        celloDerivedlist = new CvTerm(
-          _terminology = "Cellosaurus",
-          _ac = entrylinedata.split(" ! ")(0),
-          _name = entrylinedata.split(" ! ")(1)
+        celloDerivedlist = new DbXref(
+          db = "Cellosaurus",
+          ac = entrylinedata.split(" ! ")(0),
+          label = entrylinedata.split(" ! ")(1)
         ) :: celloDerivedlist
       } else if (entryline.startsWith("RX   ")) { // publications
         val ref1 = entrylinedata.split("; ")(0)
@@ -2588,10 +2561,10 @@ class CelloEntry(
     val dbrefs: List[DbXref],
     var comments: List[Comment],
     val webpages: List[WebPage],
-    val diseases: List[CvTerm],
-    val species: List[CvTerm],
-    val origin: List[CvTerm],
-    val derived: List[CvTerm],
+    val diseases: List[DbXref],
+    val species: List[DbXref],
+    val origin: List[DbXref],
+    val derived: List[DbXref],
     val publis: List[PubliRef],
     val sources: List[STsource],
     val sourcerefs: List[PubliRef],
@@ -2616,7 +2589,7 @@ class CelloEntry(
   def getOiGroup(): String = {
     var result = List[String]()
     if (origin.size > 0) {
-      origin.foreach(el => { result = el._ac :: result })
+      origin.foreach(el => { result = el.ac :: result })
       if (result.size > 0) result = ac :: result
     }
     val sorted = result.sortWith((s: String, t: String) => { s < t })
@@ -2627,7 +2600,7 @@ class CelloEntry(
     var species = List[String]()
     var populations = List[String]()
     var subspecies = List[String]()
-    this.species.foreach(el => { species = el._ac :: species })
+    this.species.foreach(el => { species = el.ac :: species })
     this.comments.foreach(el => {
       if (el.category == "Population") { populations = el.text :: populations }
     })
@@ -2887,10 +2860,10 @@ class CelloEntry(
     if (currcomment != "")
       oboEntryString += currcomment.replace("..", ".") + "\"\n"
     origin.foreach(origin => {
-      oboEntryString += "relationship: originate_from_same_individual_as " + origin._ac + " ! " + origin._name + "\n"
+      oboEntryString += "relationship: originate_from_same_individual_as " + origin.ac + " ! " + origin.label + "\n"
     })
     derived.foreach(derivedfrom => {
-      oboEntryString += "relationship: derived_from " + derivedfrom._ac + " ! " + derivedfrom._name + "\n"
+      oboEntryString += "relationship: derived_from " + derivedfrom.ac + " ! " + derivedfrom.label + "\n"
     })
     // oboEntryString += "creation_date: \"" + credat +  "T00:00:00Z\"\n" // OBO format requires useless hours-minutes
     oboEntryString += "creation_date: " + credat + "T00:00:00Z\n" // OBO format requires useless hours-minutes
@@ -3122,25 +3095,6 @@ class Synonym(val syno: String) {
   }
 }
 
-
-class CvTerm(val _terminology: String, val _ac: String, val _name: String) {
-
-  def toXML =
-    <cv-term terminology={_terminology} accession={_ac}>{_name}</cv-term>
-
-  def toOBO = {
-    var db = _terminology
-    var drline = ""
-    if (db.equals("NCBI-Taxonomy")) db = "NCBI_TaxID"
-    if (_terminology.equals("Cellosaurus"))
-      drline =
-        "relationship: originate_from_same_individual_as " + _ac + " ! " + _name + "\n"
-    else
-      drline = "xref: " + db + ":" + _ac + " ! " + _name + "\n"
-    drline
-  }
-}
-
 class WebPage(val url: String) {
   def toXML =
     <url>{scala.xml.PCData(url)}</url>
@@ -3167,34 +3121,29 @@ class CellType(val data: String) {
 
   def parse(data: String): Map[String, Object] = {
     val res = scala.collection.mutable.Map[String, Object]()
-    res("name") = null
-    res("term") = null
+    res("xref") = null
     val elems = data.split("; ")
     res("name") = elems(0)
     if (elems.size > 1) {
-      val cl_term = elems(1).split("=")
+      val cl_xref = elems(1).split("=")
       if (
-        cl_term.size != 2 || cl_term(0) != "CL" || !cl_term(1).startsWith("CL_")
+        cl_xref.size != 2 || cl_xref(0) != "CL" || !cl_xref(1).startsWith("CL_")
       ) {
-        throw new Exception("Invalid CL term")
+        throw new Exception("Invalid CL xref")
       }
-      var ac = cl_term(1)
+      var ac = cl_xref(1)
       if (ac.endsWith(".")) ac = ac.substring(0, ac.length - 1)
-      res("term") = new CvTerm(
-        _terminology = "CL",
-        _ac = ac,
-        _name = SiteMapping.getLabel(ac)
-      )
+      res("xref") = new DbXref("CL", ac, label = SiteMapping.getLabel(ac))
     }
     return res
   }
 
   def toXML = {
-    val term: CvTerm = ct("term").asInstanceOf[CvTerm]
+    val xref: DbXref = ct("xref").asInstanceOf[DbXref]
     <cell-type>{ct("name")}
     {
-    if (term != null)
-      term.toXML
+    if (xref != null)
+      xref.toXML
     else
       Null
     }
@@ -3315,22 +3264,20 @@ class Transformant(
     val note: String
 ) {
 
-  var term: CvTerm = null
+  var xref: DbXref = null
   init
 
   def init = {
     if (db != null && db.length > 0) {
-      var terminology = db
-      if (terminology == "NCBI_TaxID") terminology = "NCBI-Taxonomy"
-      term = new CvTerm(_terminology = terminology, _ac = ac, _name = name)
+      xref = new DbXref(db, ac, label = name)
     }
   }
 
   def toXML =
     <transformant>
     {
-    if (term != null)
-      term.toXML
+    if (xref != null)
+      xref.toXML
     else 
       name
     }
@@ -3345,26 +3292,19 @@ class Transformant(
 
 class Resistance(val db: String, val ac: String, val name: String) {
 
-  var term: CvTerm = null
   var xref: DbXref = null
   init
 
   def init = {
     if (db != null && db.length > 0) {
-      if (db == "UniProtKB") {
-        xref = new DbXref(db, ac, label = name)
-      } else {
-        term = new CvTerm(_terminology = db, _ac = ac, _name = name)
-      }
+      xref = new DbXref(db, ac, label = name)
     }
   }
 
   def toXML =
     <resistance>
       {
-      if (term != null) {
-        term.toXML
-      } else if (xref != null) {
+      if (xref != null) {
         xref.toXML
       } else {
         name
@@ -3380,21 +3320,16 @@ class DerivedFromSite(
     val uber: String
 ) {
 
-  var terms = List[CvTerm]()
+  var xrefs = List[DbXref]()
   init
 
   def init = {
     if (uber != null && uber.length > 0) {
-      val items = uber.split(
-        '+'
-      ) // use split on char rather on string (would be double escaped "\\+")
+      // use split on char rather on string (would be double escaped "\\+")
+      val items = uber.split('+') 
       items.foreach(item => {
-        val term = new CvTerm(
-          _terminology = "UBERON",
-          _ac = item,
-          _name = SiteMapping.getLabel(item)
-        )
-        terms = term :: terms
+        val xref = new DbXref("UBERON", item, label = SiteMapping.getLabel(item))
+        xrefs = xref :: xrefs
       })
     }
   }
@@ -3403,8 +3338,8 @@ class DerivedFromSite(
     <derived-from-site>
       <site site-type={site}>{name}
       {
-      if (terms.size > 0) 
-        terms.map(_.toXML)
+      if (xrefs.size > 0) 
+        xrefs.map(_.toXML)
       else
         Null
       }

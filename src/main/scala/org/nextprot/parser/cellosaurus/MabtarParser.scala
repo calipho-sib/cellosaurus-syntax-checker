@@ -6,8 +6,7 @@ import scala.xml._
 
 class Mabtar(name: String, db: String, ac: String, note:String) {
 
-  val trgTerm : CvTerm = if (db=="ChEBI") new CvTerm(db, ac, name) else null
-  val trgXref : DbXref = if (db=="UniProtKB") new DbXref(db, ac, label = name) else null
+  val trgXref : DbXref = if (db=="ChEBI" || db=="UniProtKB") new DbXref(db, ac, label = name) else null
   
   override def toString() : String = {
     s"Mabtar(name=$name, db:$db, ac:$ac, note:$note)"
@@ -16,10 +15,7 @@ class Mabtar(name: String, db: String, ac: String, note:String) {
   def toXML =
     <monoclonal-antibody-target>
       {
-      if (trgXref == null && trgTerm == null) name else Null
-      }
-      {
-      if (trgTerm != null) trgTerm.toXML else Null
+      if (trgXref == null) name else Null
       }
       {
       if (trgXref != null) trgXref.toXML else Null

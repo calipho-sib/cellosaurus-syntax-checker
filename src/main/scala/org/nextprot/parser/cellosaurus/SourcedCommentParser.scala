@@ -4,9 +4,6 @@ import scala.io.Source
 import scala.collection.mutable.Map
 
 case class SourcedComment(comment: String, sources: List[String], patternAction: Action) {
-
-//  val trgTerm : CvTerm = if (db=="ChEBI") new CvTerm(db, ac, name) else null
-//  val trgXref : DbXref = if (db=="UniProtKB") new DbXref(db, ac, name, "") else null
   
   override def toString() : String = {
     val src_str = if (sources.length==0) "(none)" else sources.mkString("; ")

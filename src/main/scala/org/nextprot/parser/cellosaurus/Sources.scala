@@ -118,8 +118,30 @@ class DbXref(
       }
     </xref>
 
+/*
+  def old_CvTermToOBO = {
+    var db = _terminology
+    var drline = ""
+    if (db.equals("NCBI-Taxonomy")) db = "NCBI_TaxID"
+    if (_terminology.equals("Cellosaurus"))
+      drline =
+        "relationship: originate_from_same_individual_as " + _ac + " ! " + _name + "\n"
+    else
+      drline = "xref: " + db + ":" + _ac + " ! " + _name + "\n"
+    drline
+  }
+*/
+
   def toOBO = {
-    val drline = "xref: " + db + ":" + ac + "\n"
+    var drline = ""
+    if (db.equals("Cellosaurus")) {
+      drline = "relationship: originate_from_same_individual_as " + ac + " ! " + label + "\n"
+    } else {
+      drline = "xref: " + db + ":" + ac + "\n"
+      if (label != null && label.length>0) {
+        drline = "xref: " + db + ":" + ac + " ! " + label + "\n"
+      }
+    }
     drline
   }
 
