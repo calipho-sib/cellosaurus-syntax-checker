@@ -132,15 +132,20 @@ class CelloEntry(
       {
       if (strSources.size > 0 || strSourceRefs.size > 0)
         <str-list>
-          <source-list>
-            {strSources.map(_.toXML)}
+          <str-sources>
             {
             if (strSourceRefs.size > 0)
               <reference-list>{strSourceRefs.map(_.toXML)}</reference-list>
             else 
               Null
             }
-          </source-list>
+            {
+            if (strSources.size > 0)
+                <source-list>{strSources.map(_.toXML)}</source-list>
+            else 
+              Null
+            }
+          </str-sources>
           <marker-list>{strmarkers.map(_.toXML)}</marker-list>
         </str-list>
       else

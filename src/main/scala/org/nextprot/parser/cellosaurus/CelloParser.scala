@@ -2487,8 +2487,8 @@ object CelloParser {
       origin = celloOriglist.reverse,
       derived = celloDerivedlist.reverse,
       publis = celloPublilist.reverse,
-      sources = celloStrSourceList,
-      sourcerefs = celloStrSourceRefList,
+      strSources = celloStrSourceList,
+      strSourceRefs = celloStrSourceRefList,
       strmarkers = sortedMarkerList,
       reglist = celloReglist,
       hlalists = celloHLAlists.reverse,
@@ -2559,19 +2559,25 @@ class StrmarkerData(
 			<marker-alleles>{alleles}</marker-alleles>
       {
       if (strmarkersources.size > 0 || strmarkersourcerefs.size > 0)
-        <source-list>
-          {strmarkersources.map(_.toXML)}
+        <str-sources>
           {
           if (strmarkersourcerefs.size > 0)
             <reference-list>{strmarkersourcerefs.map(_.toXML)}</reference-list>
-          else
+          else 
             Null
           }
-        </source-list>
+          {
+          if (strmarkersources.size > 0)
+              <source-list>{strmarkersources.map(_.toXML)}</source-list>
+          else 
+            Null
+          }
+        </str-sources>
       else
         Null
       }
     </marker-data>
+
 }
 
 class Strmarker(
@@ -2702,12 +2708,6 @@ class SequenceVariation(
       if (srcOrglist.size > 0 || srcPublist.size > 0 || srcXreflist.size > 0) 
         <variation-sources>
           {
-          if (srcOrglist.size > 0) 
-            {srcOrglist.map(_.toXML)}
-          else
-            Null          
-          }
-          {
           if (srcXreflist.size > 0)
             <xref-list>
         	    {srcXreflist.map(_.toXML)}
@@ -2722,6 +2722,14 @@ class SequenceVariation(
 						</reference-list>
           else
             Null
+          }
+          {
+          if (srcOrglist.size > 0) 
+            <source-list>
+              {srcOrglist.map(_.toXML)}
+            </source-list>
+          else
+            Null          
           }
         </variation-sources>        
       else 
@@ -3161,8 +3169,7 @@ class Comment(val category: String, var text: String) {
   }
 
   def toXML =
-    // skip these comment's xml since they appear later in a structured form
-    // if (category != "HLA typing" && category != "Genome ancestry" && category != "Registration" && category != "Sequence variation")
+    // skip comments belonging to special topics since they appear later in a structured form
     if (!CelloParser.specialCCTopics.contains(category))
       <comment category={category}> 
       {if (text != "") text else Null} 
