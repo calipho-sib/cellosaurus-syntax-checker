@@ -25,6 +25,7 @@ class CelloEntry(
     val publis: List[PubliRef],
     val strSources: List[STsource],
     val strSourceRefs: List[PubliRef],
+    val strSourceXrefs: List[DbXref],
     val strmarkers: List[Strmarker],
     val reglist: List[Registration],
     val hlalists: List[HLAlistwithSource],
@@ -130,9 +131,15 @@ class CelloEntry(
       }
 
       {
-      if (strSources.size > 0 || strSourceRefs.size > 0)
+      if (strSources.size > 0 || strSourceRefs.size > 0 || strSourceXrefs.size > 0)
         <str-list>
           <str-sources>
+            {
+            if (strSourceXrefs.size > 0)
+              <xref-list>{strSourceXrefs.map(_.toXML)}</xref-list>
+            else 
+              Null
+            }
             {
             if (strSourceRefs.size > 0)
               <reference-list>{strSourceRefs.map(_.toXML)}</reference-list>

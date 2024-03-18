@@ -2065,6 +2065,7 @@ object CelloParser {
     var celloStrmarkerlist = List[Strmarker]()
     var celloStrSourceList = List[STsource]()
     var celloStrSourceRefList = List[PubliRef]()
+    var celloStrSourceXrefList = List[DbXref]()
     var celloHLAlists = List[HLAlistwithSource]()
     var celloDoublingTimeList = List[DoublingTime]()
     var celloKnockoutList = List[Knockout]()
@@ -2401,39 +2402,51 @@ object CelloParser {
           ) + "-" + orgdatlist(0) // convert to YYYY-MM-DD, the official xs:date
         celloVersion = entrylinedata.split("; ")(2).split(": ")(1)
       } else if (entryline.startsWith("ST   Source")) { // short tandem repeats source
-        val srcList = entrylinedata
-          .substring(11)
-          .split("; ") // skip the 'Source(s):' comment
+        val srcList = entrylinedata.substring(11).split("; ") // skip the 'Source(s):' comment
         srcList.foreach(src => {
-          if (src.contains("="))
-            celloStrSourceRefList = new PubliRef(db_ac = src) :: celloStrSourceRefList
-          else
+          if (src.contains("=")) {
+            val dbac = src.split("=")
+            val db = dbac(0)
+            val ac = dbac(1)
+            if (db == "PubMed" || db == "DOI" || db == "Patent" || db == "CelloPub") {
+              celloStrSourceRefList = new PubliRef(db_ac = src) :: celloStrSourceRefList    
+            } else {
+              celloStrSourceXrefList = new DbXref(db, ac) :: celloStrSourceXrefList
+            }
+          } else {
             celloStrSourceList = new STsource(src = src) :: celloStrSourceList
+          }
         })
       } else if (entryline.startsWith("ST   ")) { // short tandem repeats
-        var celloStrMarkerSourcelist = List[STsource]()
-        var celloStrMarkerSourcereflist = List[PubliRef]()
+        var markerSourceList = List[STsource]()
+        var markerSourceRefList = List[PubliRef]()
+        var markerSourceXrefList = List[DbXref]()
         val id = entrylinedata.split(": ")(0)
         val rawdata = entrylinedata.split(": ")(1)
         if (rawdata.contains("(")) { // ST   D21S11: 27,32.2 (PubMed=25877200)
           // Separate allele counts from references
           alleles = rawdata.split(" \\(")(0)
           val allelerefs = rawdata.split("[\\(||\\)]")(1)
-          allelerefs
-            .split("; ")
-            .foreach(alleleref => {
-              if (alleleref.contains("="))
-                celloStrMarkerSourcereflist =
-                  new PubliRef(db_ac = alleleref) :: celloStrMarkerSourcereflist
-              else
-                celloStrMarkerSourcelist =
-                  new STsource(src = alleleref) :: celloStrMarkerSourcelist
+          allelerefs.split("; ").foreach(alleleref => {
+              if (alleleref.contains("=")) {
+                val dbac = alleleref.split("=")
+                val db = dbac(0)
+                val ac = dbac(1)
+                if (db == "PubMed" || db == "DOI" || db == "Patent" || db == "CelloPub") {
+                  markerSourceRefList = new PubliRef(db_ac = alleleref) :: markerSourceRefList
+                } else {
+                  markerSourceXrefList = new DbXref(db, ac) :: markerSourceXrefList
+                }
+              } else {
+                markerSourceList = new STsource(src = alleleref) :: markerSourceList
+              }
             })
         } else alleles = rawdata
         val strMarkerdata = new StrmarkerData(
           alleles = alleles,
-          strmarkersources = celloStrMarkerSourcelist,
-          strmarkersourcerefs = celloStrMarkerSourcereflist
+          stSources = markerSourceList,
+          pubSources = markerSourceRefList,
+          xrefSources = markerSourceXrefList
         )
         celloStrmarkerlist = new Strmarker(
           id = id,
@@ -2489,6 +2502,7 @@ object CelloParser {
       publis = celloPublilist.reverse,
       strSources = celloStrSourceList,
       strSourceRefs = celloStrSourceRefList,
+      strSourceXrefs = celloStrSourceXrefList,
       strmarkers = sortedMarkerList,
       reglist = celloReglist,
       hlalists = celloHLAlists.reverse,
@@ -2550,25 +2564,32 @@ class OiEntry(
 
 class StrmarkerData(
     val alleles: String,
-    val strmarkersources: List[STsource],
-    val strmarkersourcerefs: List[PubliRef]
+    val stSources: List[STsource],
+    val pubSources: List[PubliRef],
+    val xrefSources: List[DbXref]    
 ) {
 
   def toXML =
     <marker-data>
 			<marker-alleles>{alleles}</marker-alleles>
       {
-      if (strmarkersources.size > 0 || strmarkersourcerefs.size > 0)
+      if (stSources.size > 0 || pubSources.size > 0 || xrefSources.size > 0 )
         <str-sources>
           {
-          if (strmarkersourcerefs.size > 0)
-            <reference-list>{strmarkersourcerefs.map(_.toXML)}</reference-list>
+          if (xrefSources.size > 0)
+            <xref-list>{xrefSources.map(_.toXML)}</xref-list>
           else 
             Null
           }
           {
-          if (strmarkersources.size > 0)
-              <source-list>{strmarkersources.map(_.toXML)}</source-list>
+          if (pubSources.size > 0)
+            <reference-list>{pubSources.map(_.toXML)}</reference-list>
+          else 
+            Null
+          }
+          {
+          if (stSources.size > 0)
+              <source-list>{stSources.map(_.toXML)}</source-list>
           else 
             Null
           }
