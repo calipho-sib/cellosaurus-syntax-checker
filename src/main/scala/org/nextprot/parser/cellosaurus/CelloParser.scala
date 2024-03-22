@@ -432,7 +432,8 @@ object CelloParser {
     DbXrefInfo.load(celloXrefpath)
     // Initialize the source checker (recognizes PubliRefs, Xrefs and OrgRefs)
     val instDict = SourceChecker.loadInstitutionFile(celloInstitutionListPath)
-    SourceChecker.init(DbXrefInfo.getDbSet(), instDict)
+    val cpDict = SourceChecker.loadHierarchy(args(0))
+    SourceChecker.init(DbXrefInfo.getDbSet(), instDict, cpDict)
 
 /*
     println("Direct_author_submission: " + SourceChecker.isKnownMiscRef("Direct_author_submission"))
@@ -3168,7 +3169,12 @@ class Comment(val category: String, var text: String) {
           xreflist = new DbXref(db = parts(0), ac = parts(1)) :: xreflist
         } else if (SourceChecker.isKnownPubliRef(s)) {
           publist = new PubliRef(s) :: publist
-        } else if (SourceChecker.isKnownOrgRef(s) || SourceChecker.isKnownMiscRef(s)) {
+        } else if (SourceChecker.isKnownOrgRef(s)) {
+          srclist = new STsource(s) :: srclist
+        } else if (SourceChecker.isKnownMiscRef(s)) {
+          // get cellosaurus cell lines(s) db=ac from sources
+          // generate and store the corresponding xrefs
+          // optionally: modify the comment by re-appending the source
           srclist = new STsource(s) :: srclist
         }
       })

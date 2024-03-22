@@ -41,6 +41,7 @@ trait BasicParserTrait {
     result.reverse
   }
 
+
   def parseLine(rawline: String): List[SourcedComment] = {
     // remove final "." if necessary
     val linevalue = if (rawline.endsWith(".")) rawline.substring(0,rawline.length-1) else rawline
@@ -97,174 +98,18 @@ enum Action { case
   SPLIT,          // pattern removed from text and added to source list, text split after pattern 
   KEEP,           // pattern kept in text and added to source list
   KEEP_AND_SPLIT, // pattern kept in text, added to source list, text split after pattern
-  COMPLETE,       // pattern removed from text and added to sources, MUST match at the end of line
+  COMPLETE,       // pattern removed from text and added to sources, match MUST occur at the end of line
   PICKUP          // action set by parseLine() to pick up data to handle after the last pattern match
 }
+
 case class PatternAction(pattern: String, action: Action)
-
-// unused
-object AnecdotalParser extends BasicParserTrait {
-  val name = "AnecdotalParser"
-  val topic = "CC   Anecdotal: "
-  def sourceIsValid(db_ac: String): Boolean = {
-      SourceChecker.isKnown(db_ac) && ! SourceChecker.isInDbSet(db_ac, Set("Cellosaurus"))
-  }
-  def getPatternActionList() : List[PatternAction] = {
-    return List(
-      PatternAction( "($sources). ", Action.SPLIT),    // pattern triggering a split (occurs in the middle of the line)
-      PatternAction( "($sources) " , Action.KEEP),     // pattern kept in the comment but added to sources (occurs in the middle of the line)
-      PatternAction( "($sources)"  , Action.COMPLETE)  // pattern added to sources (COMPLETE should occur at the end of the line)
-    )
-  }
-}
-
-// unused
-object BiotechnologyParser extends BasicParserTrait {
-  val name = "BiotechnologyParser"
-  val topic = "CC   Biotechnology: "
-  def sourceIsValid(db_ac: String): Boolean = {
-      SourceChecker.isKnown(db_ac) && ! SourceChecker.isInDbSet(db_ac, Set("Cellosaurus", "DrugBank"))
-  }
-  def getPatternActionList() : List[PatternAction] = {
-    return List(
-      PatternAction( "($sources). ", Action.SPLIT),    // pattern never matches except with Cellosaurus & DrubgBank which are discarded
-      PatternAction( "($sources) " , Action.KEEP),     // pattern never matches
-      PatternAction( "($sources)"  , Action.COMPLETE)  // pattern matches with DOI, PubMed
-    )
-  }
-}
-
-// unused
-object CautionParser extends BasicParserTrait {
-
-// Was indicated to have been established in the absence of EBV (PubMed=7522246), but contains EBV (CLS=300204)
-
-  val name = "CautionParser"
-  val topic = "CC   Caution: "
-  def sourceIsValid(db_ac: String): Boolean = {
-      SourceChecker.isKnown(db_ac) // && ! SourceChecker.isInDbSet(db_ac, Set("Cellosaurus", "DrugBank"))
-  }
-  def getPatternActionList() : List[PatternAction] = {
-    return List(
-      PatternAction( "($sources). ", Action.SPLIT),    // 
-      PatternAction( "($sources) " , Action.KEEP),     // 
-      PatternAction( "($sources), " , Action.KEEP),     // matches PubMed, AV3, FL, WISH
-      PatternAction( "($sources)"  , Action.COMPLETE)  // 
-    )
-  }
-}
-
-// unused
-object CharacteristicsParser extends BasicParserTrait {
-  val name = "CharacteristicsParser"
-  val topic = "CC   Characteristics: "
-  def sourceIsValid(db_ac: String): Boolean = {
-      SourceChecker.isKnown(db_ac) // && ! SourceChecker.isInDbSet(db_ac, Set("Cellosaurus"))
-  }
-  def getPatternActionList() : List[PatternAction] = {
-    return List(
-      PatternAction( "($sources). ", Action.SPLIT),    // 
-      PatternAction( "($sources) " , Action.KEEP),     // Cellosaurus
-      PatternAction( "($sources), " , Action.KEEP),     // Cellosaurus
-      PatternAction( "($sources); " , Action.KEEP),     // Cellosaurus
-      PatternAction( "($sources)"  , Action.COMPLETE) //
-    )
-  }
-}
-
-
-// unused
-object DonorInfoParser extends BasicParserTrait {
-  val name = "DonorInfoParser"
-  val topic = "CC   Donor information: "
-  var validXrefDbSet : Set[String] = null // set at run time
-  def sourceIsValid(db_ac: String): Boolean = {
-      SourceChecker.isKnown(db_ac) // && ! SourceChecker.isInDbSet(db_ac, Set("Cellosaurus"))
-  }
-  def getPatternActionList() : List[PatternAction] = {
-    return List(
-      PatternAction( "($sources). " ,  Action.KEEP),     // Cellosaurus
-      PatternAction( "($sources) " , Action.KEEP),     // Cellosaurus
-      PatternAction( "($sources), " , Action.KEEP),     // Cellosaurus
-      PatternAction( "($sources)"  , Action.COMPLETE) // COMPLETE should occur at the end of line
-    )
-  }
-}
-
-// unused
-object KaryotypeParser extends BasicParserTrait {
-  val name = "KaryotypeParser"
-  val topic = "CC   Karyotypic information: "
-  def sourceIsValid(db_ac: String): Boolean = {
-      SourceChecker.isKnown(db_ac) // && ! SourceChecker.isInDbSet(db_ac, Set("Cellosaurus"))
-  }
-  def getPatternActionList() : List[PatternAction] = {
-    return List(
-      PatternAction( "($sources) " , Action.KEEP),     // Cellosaurus
-      PatternAction( "($sources)"  , Action.COMPLETE) // COMPLETE should occur at the end of line
-    )
-  }
-}
-
-// unused
-object MiscellaneousParser extends BasicParserTrait {
-  val name = "MiscellaneousParser"
-  val topic = "CC   Miscellaneous: "
-  def sourceIsValid(db_ac: String): Boolean = {
-      SourceChecker.isKnown(db_ac) // && ! SourceChecker.isInDbSet(db_ac, Set("Cellosaurus"))
-  }
-  def getPatternActionList() : List[PatternAction] = {
-    return List(
-   //   PatternAction( "($sources). " , Action.KEEP_AND_SPLIT),     // PubMed...
-   //   PatternAction( "($sources); " , Action.KEEP),               // Coriell...
-      PatternAction( "($sources) " , Action.KEEP),                  // Cellosaurus, CelloPub, DOI
-      PatternAction( "($sources), " , Action.KEEP),                 // PubMed, Cellosaurus
-      PatternAction( "($sources)"  , Action.COMPLETE)               // many
-    )
-  }
-}
-
-
-// unused
-object SenescenceParser extends BasicParserTrait {
-  val name = "SenescenceParser"
-  val topic = "CC   Senescence: "
-  def sourceIsValid(db_ac: String): Boolean = {
-      SourceChecker.isKnown(db_ac) // && ! SourceChecker.isInDbSet(db_ac, Set("Cellosaurus"))
-  }
-  def getPatternActionList() : List[PatternAction] = {
-    return List(
-      PatternAction( "($sources). " , Action.KEEP_AND_SPLIT),     // PubMed...
-      PatternAction( "($sources); " , Action.KEEP),               // Coriell...
-      PatternAction( "($sources), " , Action.KEEP),               // ATCC...
-      PatternAction( "($sources)"  , Action.KEEP)                 // many
-    )
-  }
-}
-
-// unused
-object VirologyParser extends BasicParserTrait {
-  val name = "VirologyParser"
-  val topic = "CC   Virology: "
-  def sourceIsValid(db_ac: String): Boolean = {
-      SourceChecker.isKnown(db_ac) // && ! SourceChecker.isInDbSet(db_ac, Set("Cellosaurus"))
-  }
-  def getPatternActionList() : List[PatternAction] = {
-    return List(
-      PatternAction( "($sources). " , Action.KEEP_AND_SPLIT),     // PubMed...
-  //    PatternAction( "($sources); " , Action.KEEP),               // none
-      PatternAction( "($sources), " , Action.KEEP),               // PubMed...
-      PatternAction( "($sources)"  , Action.KEEP)                 // many
-    )
-  }
-}
 
 /* 
   Generic parser for 
  */
 object SourcedCommentParser extends BasicParserTrait {
   val name = "SourcedCommentParser"
-  val topic = "CC   Test: "
+  val topic = "CC"
   val categories = Set(
     "Anecdotal", "Biotechnology", "Caution", "Characteristics", "Donor information", 
     "Karyotypic information", "Miscellaneous", "Senescence", "Virology")
@@ -282,17 +127,6 @@ object SourcedCommentParser extends BasicParserTrait {
 }
 
 
-object TestParser extends BasicParserTrait {
-  val name = "TestParser"
-  val topic = null
-  def sourceIsValid(src: String): Boolean = { SourceChecker.isKnown(src) }
-  def getPatternActionList() : List[PatternAction] = {
-    return List(
-      PatternAction( "($sources)"  , Action.COMPLETE) // COMPLETE should occur at the end of line
-    )
-  }
-}
-
 case class SourceInfo(var topics: Set[String], var typ: String, var count: Int)
 
 object ParserPlayground {
@@ -304,8 +138,6 @@ object ParserPlayground {
 
 
   def analyzeSources(filename: String, parser: BasicParserTrait) : Unit = {
-
-    //val parser = TestParser
 
     val source = Source.fromFile(filename)
     val lineiter = source.getLines()
@@ -358,7 +190,8 @@ object ParserPlayground {
     // init source checker with real data
     DbXrefInfo.load(data_dir + "/cellosaurus_xrefs.txt")
     val instDict = SourceChecker.loadInstitutionFile(data_dir + "/institution_list")
-    SourceChecker.init(DbXrefInfo.getDbSet(), instDict)
+    val cpDict = SourceChecker.loadHierarchy(data_dir + "/cellosaurus.txt")
+    SourceChecker.init(DbXrefInfo.getDbSet(), instDict, cpDict)
 
     //val parser = AnecdotalParser
     //val parser = BiotechnologyParser
@@ -371,31 +204,49 @@ object ParserPlayground {
     //val parser = VirologyParser
     val parser = SourcedCommentParser
 
-    if (1==1) {
+    if (1==2) {
       println(s"---------- ${parser.name} - Analysis -----------")
       analyzeSources(filename, parser)
       //sys.exit(0)      
     }
 
-
     val lines = Source.fromFile(filename).getLines()
     var lineNo = 0
-    println(s"---------- ${parser.name} - parsing result -----------")
-    for (line <- lines) {
-      if (line.startsWith(parser.topic)) {
-        var linevalue = line.substring(parser.topic.length).trim()
-        lineNo += 1
-        println("\n---- : <<" + linevalue + ">>")
-        try {
-          val sc_list = parser.parseLine(linevalue)
-          println(s"elements : ${sc_list.length}")
-          sc_list.foreach(sc => { println(s"${sc.comment}\n${sc.sources}\npattern action: ${sc.patternAction}") })
-          //sc_list.foreach(sc => { println(sc) })
-        } catch {
-          case e: Exception => println(s"ERROR at line $lineNo: ${e.getMessage}")
+
+    if (1==2) {
+      println(s"---------- ${parser.name} - parsing result -----------")
+      for (line <- lines) {
+        if (line.startsWith(parser.topic)) {  // topic property is not used in prod, we use categories instead
+          var linevalue = line.substring(parser.topic.length).trim()
+          lineNo += 1
+          println("\n---- : <<" + linevalue + ">>")
+          try {
+            val sc_list = parser.parseLine(linevalue)
+            println(s"elements : ${sc_list.length}")
+            sc_list.foreach(sc => {
+              println(s"COMMENT=${sc.comment}\nSOURCES=${sc.sources}\nPATTERN=${sc.patternAction}")
+              sc.sources.foreach( source => {
+                if (SourceChecker.isKnownMiscRef(source)) {
+                  println(s"MISC-SRC=${source}")
+                } else {
+                  println(s"OTHER-SRC=${source}")
+                }
+              })
+            })
+          } catch {
+            case e: Exception => println(s"ERROR at line $lineNo: ${e.getMessage}")
+          }
         }
       }
     }
+    
+
     println("End")
+
+
   }
+
+
 }
+
+

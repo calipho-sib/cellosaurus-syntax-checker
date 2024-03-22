@@ -44,7 +44,10 @@ object KnockoutParser {
         // sbt "run ../cellosaurus-api/data_in/cellosaurus_xrefs.txt knockout.txt"
 
         DbXrefInfo.load(args(0)) // load allowed db name with cat & url properties
-        SourceChecker.init(DbXrefInfo.getDbSet(), null)
+        val datadir = "/home/pmichel/work/cellosaurus-api/data_in/"
+        val instMap = SourceChecker.loadInstitutionFile(datadir + "institution_list")
+        val childParentMap = SourceChecker.loadHierarchy(datadir + "cellosaurus.txt")
+        SourceChecker.init(DbXrefInfo.getDbSet(), instMap, childParentMap)
 
         val filename = args(1)
         var lineNo = 0

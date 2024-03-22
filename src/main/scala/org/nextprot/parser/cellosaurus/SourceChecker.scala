@@ -2,6 +2,11 @@ package org.nextprot.parser.cellosaurus
 
 import scala.io.Source
 
+case class ParentLink(id: String, ac: String, parentId: String) {
+  override def toString() : String = {
+    s"ParentLink($id - $ac == parent => $parentId)"
+  }
+}
 
 object SourceChecker {
 
@@ -9,16 +14,23 @@ object SourceChecker {
     var knownXrefDbSet : Set[String] = null
     var knownInstituteMap : Map[String, String] = null
     var knownMiscSet : Set[String] = null
+    var knownParentLinkMap : Map[String, ParentLink] = null
 
     // MUST be called otherwise error occurs
-    def init(xrefDbSet: Set[String], instMap: Map[String, String]) : Unit = {
+    def init(xrefDbSet: Set[String], instMap: Map[String, String], parentLinkMap: Map[String, ParentLink]) : Unit = {
+
+        knownParentLinkMap = parentLinkMap
 
         knownPubliDbSet = Set("PubMed", "DOI", "CelloPub", "Patent")
                             
         knownMiscSet = Set(
-            "Direct_author_submission", "from autologous cell line", "from child cell line", 
-            "from familial inference", "from inference of", "from parent cell line", 
-            "inferred from genetic background"
+            // "Direct_author_submission",        -- not considered a source
+            "from autologous cell line",   // + " " + $id -         in fields: var, donor-info 
+            "from autologous cell lines",  // + " " + $id; ...; $id in fields: var, donor-info 
+            "from child cell line",        // + " " + $id           in fields: var
+            "from child cell lines",       // + " " + $id; ...; $id in fields: var
+            "from familial inference of",  // + " " + $id; ... in fields: var
+            "from parent cell line"        // + (nothing) in fields: var, donor-info, karyo, characteristics, virology
             )
 
         if (xrefDbSet == null) {
@@ -55,6 +67,18 @@ object SourceChecker {
     The 2 sets just above should be set by the main parser using init() and loadInstituteFile() based on files that are up to date
     */
 
+    def isKnownCellosaurusId(id: String): Boolean = {
+        return knownParentLinkMap.contains(id)
+    }
+
+    def getCellosaurusAcFromId(id: String) : String = {
+        return knownParentLinkMap(id).ac
+    }
+
+    def getCellosaurusParentIdFromId(id: String) : String = {
+        return knownParentLinkMap(id).parentId
+    }
+
     def isKnownXref(db_ac: String): Boolean = {
         val elems = db_ac.split("=")
         if (elems.length != 2) return false
@@ -85,6 +109,9 @@ object SourceChecker {
         return knownMiscSet.find(el => name.startsWith(el)) != None
     }
 
+    def getMiscRefPrefix(name:String) : String = {
+        return knownMiscSet.filter(el => name.startsWith(el)).maxBy(_.length)
+    }
 
     def isKnown(name: String): Boolean = {
         if (isKnownXref(name)) return true
@@ -128,13 +155,52 @@ object SourceChecker {
         return instMap
     }
 
+    def loadHierarchy(filename: String): Map[String, ParentLink] = {
+        var parentLinkMap = Map[String, ParentLink]()
+        println("Reading " + filename)
+        val lines = Source.fromFile(filename).getLines()
+        var lineNo = 0
+        var id: String = null
+        var ac: String = null
+        var parentId: String = null
+        for (line <- lines) {
+            lineNo += 1
+            if (line.startsWith("ID   ")) {
+                id = line.substring(5).strip()
+            } else if (line.startsWith("AC   ")) {
+                ac = line.substring(5).strip()
+            } else if (line.startsWith("HI   ")) {
+                parentId = line.substring(5).split(" ! ")(1).strip()
+            } else if (line.startsWith("//")) {
+                val parentLink = ParentLink(id, ac, parentId)
+                parentLinkMap += (id, parentLink)
+                id = null
+                ac = null
+                parentId = null
+            }
+        }
+        return parentLinkMap
+    }
+
 
     def main(args: Array[String]): Unit = {
   
         val datadir = "/home/pmichel/work/cellosaurus-api/data_in/"
         DbXrefInfo.load(datadir + "cellosaurus_xrefs.txt")
         val instMap = SourceChecker.loadInstitutionFile(datadir + "institution_list")
-        SourceChecker.init(DbXrefInfo.getDbSet(), instMap)
+        val childParentMap = SourceChecker.loadHierarchy(datadir + "cellosaurus.txt")
+        SourceChecker.init(DbXrefInfo.getDbSet(), instMap, childParentMap)
+
+        // check that parentId (found in HI) is also present in ID.
+        childParentMap.foreach {
+            case (id, record) => {
+                if (record.parentId != null) {
+                    if (! childParentMap.contains(record.parentId)) {
+                        println(s"ERROR: parent found in HI never appears in ID: ${record.parentId}")
+                    }
+                } 
+            }
+        }
 
         println("ICLAC: " + SourceChecker.isKnownOrgRef("ICLAC"))
         println("Center for iPS Cell Research and Application: " + SourceChecker.isKnownOrgRef("Center for iPS Cell Research and Application"))
