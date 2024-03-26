@@ -770,9 +770,6 @@ object CelloParser {
             val raw_sc = entryline.substring(5 + cctopic.length + 2)
             // next line can yield some INFO, WARNING, ERROR prints
             val sc = SimpleSourcedCommentParser.parse(raw_sc, id)
-            //println(s"CHECK COMMENT() cellId: $id")
-            //println(sc)
-            //println("----")
 
           } else if (cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
             // These discontinued CCs must also exist as DR lines
@@ -954,19 +951,7 @@ object CelloParser {
             // check source(s) at the end of line
             SimpleSourcedCommentParser.verbose = true
             val sc = SimpleSourcedCommentParser.parse(entrylinedata, clId = id)
-/*
-            val idx1 = entrylinedata.lastIndexOf("(")
-            val idx2 = entrylinedata.lastIndexOf(")")
-            if (idx1 > -1 && idx2 > idx1) {
-              val sources = entrylinedata.substring(idx1+1, idx2)
-              sources.split("; ").foreach(src => {
-                if (src.split("=").length>2) {
-                  Console.err.println("Invalid source at: " + entryline)
-                  errcnt += 1
-                }
-              })
-            }
-*/
+
             allseqvartoks.foreach(token => {
               if (token.contains("Zygosity=")) {
                 val tokfields = token.split("=")
@@ -2276,12 +2261,7 @@ object CelloParser {
           var seqvartype = seqvartoks(0)
           var zygotype = ""
           var mutyp = ""
-/*    
-          if (textdata.contains(")")) {
-            // some source exists (last parenthesis)
-            srctok = textdata.substring(textdata.lastIndexOf('(') + 1, textdata.lastIndexOf(')'))
-          }
-*/
+
           SimpleSourcedCommentParser.verbose = false
           val sc = SimpleSourcedCommentParser.parse(textdata, clId = id)
 
@@ -2652,31 +2632,6 @@ class SequenceVariation(
     srcPublist = sourcedComment.publist
     srcXreflist = sourcedComment.xreflist
     srcOrglist = sourcedComment.orglist
-
-/*
-    val srcList = sources.split("; ") // split what's parenthesis in last token
-    srcList.foreach(elem => {
-      val src = elem.trim()
-      if (src.contains("=")) {
-        val parts = src.split("=")
-        val db = parts(0).trim()
-        val ac = parts(1).trim()
-        if (SourceChecker.isKnownPubliRef(src)) {
-          srcPublist = new PubliRef(db_ac = src) :: srcPublist
-        } else if (SourceChecker.isKnownXref(src)) {
-          srcXreflist = new DbXref(db, ac) :: srcXreflist
-        }
-      } else {
-        if (! SourceChecker.isKnown(src)) {
-          Console.err.println(s"WARNING, unknown organization in source of sequence variation: '${src}' in ${cl_ac}")
-        }
-        val clean_src = src.trim()
-        if (clean_src.length > 0) {
-          srcOrglist = new STsource(src = clean_src) :: srcOrglist
-        }
-      }
-    })
-*/
 
   }
 
