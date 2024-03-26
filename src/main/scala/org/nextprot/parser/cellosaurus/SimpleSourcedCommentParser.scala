@@ -3,7 +3,7 @@ package org.nextprot.parser.cellosaurus
 import scala.io.Source
 import scala.collection.mutable.Map
 
-enum SOURCES_STATUS { case NONE_VALID, SOME_VALID, ALL_VALID }
+enum SOURCES_STATUS { case NONE_VALID, SOME_VALID, ALL_VALID, IGNORED, NONE }
 
 class SimpleSourcedComment(val rawline: String) {
 
@@ -15,12 +15,18 @@ class SimpleSourcedComment(val rawline: String) {
   var publist = List[PubliRef]()
   var orglist = List[STsource]()
  
+  // to be used after parsing
+  def getFinalValue() : String = {
+    if (sources == "") return body
+    return s"$body ($sources)"
+  }
+
   def getSourceCount() : Integer = {
     return xreflist.size + publist.size + orglist.size
   }
 
   override def toString() : String = {
-    s"\nSimpleSourcedComment(\n  body: '$body'\n  sources: '$sources'\n  status: $status\n  xrefs: $xreflist\n  pubs: $publist\n  orgs:$orglist\n)"
+    s"\nSimpleSourcedComment(\n  value: $value\n  body: '$body'\n  sources: '$sources'\n  status: $status\n  xrefs: $xreflist\n  pubs: $publist\n  orgs: $orglist\n)"
   }
 }
 
@@ -28,6 +34,7 @@ class SimpleSourcedComment(val rawline: String) {
 object SimpleSourcedCommentParser {
 
   var verbose: Boolean = true
+  var logLevel: Integer = 0 // 0=INFO+WARNING+ERROR, 1=WARNING+ERROR, 2=ERROR
 
   val name = "SimpleSourcedCommentParser"
 
@@ -50,6 +57,7 @@ object SimpleSourcedCommentParser {
           stack match {
             case Nil =>
             // Ignore unmatched closing brackets
+              if (verbose && logLevel < 2) println(s"WARNING: unbalanced closing parenthese in ${text}")
             case (start, depth) :: tail =>
               val end = index + 1
               val matchedText = text.slice(start + 1, end - 1)
@@ -86,7 +94,13 @@ object SimpleSourcedCommentParser {
 
   def parseSources(sc: SimpleSourcedComment, cellLineId: String = ""): Unit = {
     
+    if (sc.sources == "") {
+      sc.status = SOURCES_STATUS.NONE
+      return
+    }
+
     sc.status = SOURCES_STATUS.NONE_VALID
+    
     var validCount: Integer = 0
 
     if (SourceChecker.isKnownMiscRef(sc.sources)) {
@@ -94,20 +108,24 @@ object SimpleSourcedCommentParser {
       val prefix = SourceChecker.getMiscRefPrefix(sc.sources)
 
       // special case of parent cell line: we need to get parent id and update source
-      if (prefix == "from parent cell line") {
+      if (prefix == "from inference of" || prefix == "Direct_author_submission") {
+          sc.status = SOURCES_STATUS.IGNORED
+          if (verbose && logLevel < 1) println(s"INFO: ignoring source in comment '${sc.value}'")
+
+      } else if (prefix == "from parent cell line") {
         val parentId = SourceChecker.getCellosaurusParentIdFromId(cellLineId)
         if (parentId != null) {
-          sc.body = prefix + " " + parentId
+          sc.sources = prefix + " " + parentId
           sc.xreflist = new DbXref("Cellosaurus", SourceChecker.getCellosaurusAcFromId(parentId), label=parentId) :: sc.xreflist
           sc.status = SOURCES_STATUS.ALL_VALID
         } else {
           sc.status = SOURCES_STATUS.NONE_VALID
-          if (verbose) println(s"ERROR: cell line '$cellLineId' has no parent but found comment '${sc.value}'")
+          if (verbose) println(s"ERROR: cell line '$cellLineId' has no parent but found in comment '${sc.value}'")
         }
     
       } else {
  
-        // create one sxref for each cell line id found after the prefix
+        // create one xref for each cell line id found after the prefix
         val items = sc.sources.substring(prefix.length).split("; ")
         items.foreach(item => {
           val id = item.trim()
@@ -135,7 +153,8 @@ object SimpleSourcedCommentParser {
           validCount+=1
           sc.status = SOURCES_STATUS.SOME_VALID
 
-        } else if (SourceChecker.isKnownXref(src)) {
+        // cellosaurus xrefs appearing at the end of comments are not consdered sources
+        } else if (SourceChecker.isKnownXref(src)  && ! SourceChecker.isInDbSet(src, Set("Cellosaurus"))) {
           val parts = src.split("=")
           sc.xreflist = new DbXref(db=parts(0), ac=parts(1)) :: sc.xreflist
           validCount+=1
@@ -147,7 +166,7 @@ object SimpleSourcedCommentParser {
           sc.status = SOURCES_STATUS.SOME_VALID
 
         } else {
-          if (verbose) println(s"ERROR: Unknown source '$src' in '${sc.value}'")
+          if (verbose && logLevel < 2) println(s"WARNING: Unknown source '$src' in '${sc.value}'")
         }
       })
       if (src_count > 0 && validCount == src_count) sc.status = SOURCES_STATUS.ALL_VALID       
@@ -184,6 +203,7 @@ object SimpleParserPlayground {
 
     val parser = SimpleSourcedCommentParser
     parser.verbose = false
+    
 
     // Tests
     var sc: SimpleSourcedComment = null
@@ -246,7 +266,7 @@ object SimpleParserPlayground {
     parser.splitBodySources(sc)
     parser.parseSources(sc, cellLineId = "1.2B4")
     assertEquals(sc.status, SOURCES_STATUS.ALL_VALID, "Status of a value with a valid parent cell line source")
-    assertEquals(sc.body, "from parent cell line HuP-T3", "Modified comment of a value with a valid parent cell line source")
+    assertEquals(sc.sources, "from parent cell line HuP-T3", "Modified sources of a value with a valid parent cell line")
     assertEquals(sc.xreflist.size, 1,  "xref created from a value with a valid parent cell line source")
 
     sc = new SimpleSourcedComment("Some comment (PubMed=1234; ATCC=2345; ECACC; Codex BioSolutions)")
@@ -275,6 +295,23 @@ object SimpleParserPlayground {
     sc = parser.parse("My (detailed) comment (PubMed=12345; ECACC)", "someId")
     assertEquals(sc.status, SOURCES_STATUS.ALL_VALID, "Status of comment with 2 / 2 valid sources")
     assertEquals(sc.getSourceCount(), 2, "Count our sources in value with 2 / 2 valid sources")
+
+    sc = parser.parse("My comment (Direct_author_submission)", "someId")
+    assertEquals(sc.status, SOURCES_STATUS.IGNORED, "Status of comment with direct author submission as source")
+    assertEquals(sc.getSourceCount(), 0, "Count of sources in value when direct author submission is the source")
+    //println(sc)
+
+    sc = parser.parse("My comment (from inference of genome of donor)", "someId")
+    assertEquals(sc.status, SOURCES_STATUS.IGNORED, "Status of comment with 'from inference of ...' as source")
+    assertEquals(sc.getSourceCount(), 0, "Count of sources in value when 'from inference of ...' is the source")
+    //println(sc)
+    
+    sc = parser.parse("Some comment.", "someId")
+    assertEquals( sc.body, "Some comment", "Body extraction from value with no (...)")
+    assertEquals( sc.sources, "", "Sources extraction from value with no (...)")
+    assertEquals(sc.status, SOURCES_STATUS.NONE, "Status of comment with no (...)")
+    //println(sc)
+
 
     println("\nEnd")
 

@@ -432,6 +432,7 @@ object CelloParser {
     DbXrefInfo.load(celloXrefpath)
     // Initialize the source checker (recognizes PubliRefs, Xrefs and OrgRefs)
     val instDict = SourceChecker.loadInstitutionFile(celloInstitutionListPath)
+    println("args(0):" + args(0))
     val cpDict = SourceChecker.loadHierarchy(args(0))
     SourceChecker.init(DbXrefInfo.getDbSet(), instDict, cpDict)
 
@@ -764,29 +765,14 @@ object CelloParser {
             }
           }
 
-          if (SourcedCommentParser.categories.contains(cctopic)) {
-            val topic_offset = 5 + cctopic.length + 2
-            var raw_sc = entryline.substring(topic_offset)
-            if (raw_sc.endsWith(".")) raw_sc = raw_sc.substring(0, raw_sc.length - 1).trim()
-            try {
-              // next line may throw error
-              val sc_list = SourcedCommentParser.parseLine(raw_sc)
-              // next one as well ;-)
-              if (sc_list.size != 1) throw new Exception(s"Expected 1 sourced comment but got ${sc_list.size} in: ${raw_sc}")
-              val sc = sc_list(0)
-              /*
-              println(s"DEBUG SC - topic: ${cctopic}")
-              println(s"DEBUG SC - line : ${raw_sc}")
-              println(s"DEBUG SC - comm : ${sc.comment}")
-              println(s"DEBUG SC - src  : ${sc.sources}")
-              println(s"DEBIG SC - act  : ${sc.patternAction}") 
-             */
-            } catch {
-              case e: Exception => {
-                errcnt += 1
-                Console.err.println(s"ERROR while parsing sourced comment of ${ac}: ${e.getMessage}")
-              }
-            }
+          if (SimpleSourcedCommentParser.categories.contains(cctopic)) {
+            SimpleSourcedCommentParser.verbose = true
+            val raw_sc = entryline.substring(5 + cctopic.length + 2)
+            // next line can yield some INFO, WARNING, ERROR prints
+            val sc = SimpleSourcedCommentParser.parse(raw_sc, id)
+            //println(s"CHECK COMMENT() cellId: $id")
+            //println(sc)
+            //println("----")
 
           } else if (cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
             // These discontinued CCs must also exist as DR lines
@@ -934,31 +920,19 @@ object CelloParser {
           } else if (cctopic == "Sequence variation") { // one of 4 categorie listed in ok_seqvarlist
             val allseqvartoks = cctext.split("; ")
             if (!ok_seqvarlist.contains(allseqvartoks(0))) {
-              Console.err.println(
-                "Illegal sequence variation category found at: " + entryline
-              ); errcnt += 1
+              Console.err.println("Illegal sequence variation category found at: " + entryline) 
+              errcnt += 1
             }
-            if (
-              allseqvartoks(0) == "Mutation" && !ok_vartyplist
-                .contains(allseqvartoks(4))
-            ) {
-              Console.err.println(
-                "Illegal or missing Mutation type found at: " + entryline
-              ); errcnt += 1
-            } else if (
-              allseqvartoks(0) == "Gene fusion" && !allseqvartoks(3)
-                .contains("+")
-            ) {
-              Console.err.println("Illegal Gene fusion found at: " + entryline);
+            if (allseqvartoks(0) == "Mutation" && !ok_vartyplist.contains(allseqvartoks(4))) {
+              Console.err.println("Illegal or missing Mutation type found at: " + entryline); 
+              errcnt += 1
+            } else if (allseqvartoks(0) == "Gene fusion" && !allseqvartoks(3).contains("+")) {
+              Console.err.println("Illegal Gene fusion found at: " + entryline)
               errcnt += 1
             } // implement check for names= ?
-            else if (
-              allseqvartoks(0) == "Gene amplification" && !ok_amplityplist
-                .contains(allseqvartoks(4))
-            ) {
-              Console.err.println(
-                "Illegal Gene amplification found at: " + entryline
-              ); errcnt += 1
+            else if (allseqvartoks(0) == "Gene amplification" && !ok_amplityplist.contains(allseqvartoks(4))) {
+              Console.err.println("Illegal Gene amplification found at: " + entryline) 
+              errcnt += 1
             }
             if (allseqvartoks(0) == "Mutation") { // Zygozity mandatory for Mutation
               var zygofound = false
@@ -970,8 +944,6 @@ object CelloParser {
                 errcnt += 1
               }
             }
-
-
             // check gene db
             val db = allseqvartoks(1)
             if (! CelloParser.ok_seqvardblist.contains(db)) {
@@ -980,6 +952,9 @@ object CelloParser {
             }
 
             // check source(s) at the end of line
+            SimpleSourcedCommentParser.verbose = true
+            val sc = SimpleSourcedCommentParser.parse(entrylinedata, clId = id)
+/*
             val idx1 = entrylinedata.lastIndexOf("(")
             val idx2 = entrylinedata.lastIndexOf(")")
             if (idx1 > -1 && idx2 > idx1) {
@@ -991,7 +966,7 @@ object CelloParser {
                 }
               })
             }
-
+*/
             allseqvartoks.foreach(token => {
               if (token.contains("Zygosity=")) {
                 val tokfields = token.split("=")
@@ -1230,8 +1205,7 @@ object CelloParser {
           }
           val oxlist = entrylinedata.split(";")
           if (oxlist.length != 2) {
-            Console.err.println(
-              "Illegal taxonomy format found at: " + entryline
+            Console.err.println("Illegal taxonomy format found at: " + entryline
             ); errcnt += 1
           }
           if(oxlist(0).split("=").length > 2) {
@@ -1241,25 +1215,19 @@ object CelloParser {
           val dbname = oxlist(0).split("=")(0)
           val taxid = oxlist(0).split("=")(1)
           if (dbname != "NCBI_TaxID") {
-            Console.err.println(
-              "Illegal taxonomy db:" + dbname + " found at: " + entryline
-            ); errcnt += 1
+            Console.err.println("Illegal taxonomy db:" + dbname + " found at: " + entryline); 
+            errcnt += 1
           }
           if (!oxlist(1).contains(" ! ")) {
-            Console.err.println(
-              "Illegal taxonomy format found at: " + entryline
-            ); errcnt += 1
+            Console.err.println("Illegal taxonomy format found at: " + entryline); 
+            errcnt += 1
           }
-          if (
-            (oxlist(1) == " ! Homo sapiens" && (taxid != "9606")) || (oxlist(
-              1
-            ) == " ! Mus musculus" && (taxid != "10090"))
-          ) Console.err.println("Wrong taxid at: " + entryline)
-          if (!oxmap.contains(taxid)) oxmap(taxid) = 1
-          else oxmap(taxid) += 1
-        } else if (
-          entryline.startsWith("HI   ") || entryline.startsWith("OI   ")
-        ) { // Hierarchy
+          if ((oxlist(1) == " ! Homo sapiens" && (taxid != "9606")) || (oxlist(1) == " ! Mus musculus" && (taxid != "10090"))) {
+              Console.err.println("Wrong taxid at: " + entryline) 
+          }
+          if (!oxmap.contains(taxid)) oxmap(taxid) = 1 else oxmap(taxid) += 1
+
+        } else if (entryline.startsWith("HI   ") || entryline.startsWith("OI   ")) { // Hierarchy
           var hitoken = "";
           if (entryline.endsWith(";") || entryline.endsWith(".")) {
             Console.err.println("HI/OI trailing ;/. found at: " + entryline);
@@ -2308,15 +2276,18 @@ object CelloParser {
           var seqvartype = seqvartoks(0)
           var zygotype = ""
           var mutyp = ""
-          var srctok = ""
-          if (textdata.contains(")")) // some source exists (last parenthesis)
-            srctok = textdata.substring(
-              textdata.lastIndexOf('(') + 1,
-              textdata.lastIndexOf(')')
-            )
+/*    
+          if (textdata.contains(")")) {
+            // some source exists (last parenthesis)
+            srctok = textdata.substring(textdata.lastIndexOf('(') + 1, textdata.lastIndexOf(')'))
+          }
+*/
+          SimpleSourcedCommentParser.verbose = false
+          val sc = SimpleSourcedCommentParser.parse(textdata, clId = id)
 
-          if (seqvartype == "Mutation" || seqvartype == "Gene amplification")
+          if (seqvartype == "Mutation" || seqvartype == "Gene amplification") {
             mutyp = seqvartoks(4)
+          }
           seqvartoks.foreach(token => {
             if (token.contains("Zygosity=")) {
               zygotype = token.split("=")(1)
@@ -2327,15 +2298,10 @@ object CelloParser {
             }
           })
           celloSeqVarlist = new SequenceVariation(
-            cl_ac = ac,
-            vartyp = seqvartype,
-            mutyp = mutyp,
-            zygosity = zygotype,
-            text = textdata,
-            sources = srctok
+            cl_ac = ac, vartyp = seqvartype,
+            mutyp = mutyp, zygosity = zygotype,
+            text = textdata, sourcedComment = sc
           ) :: celloSeqVarlist
-
-
 
 
         } else if (category.equals("Registration")) { // prepare registration list
@@ -2353,10 +2319,7 @@ object CelloParser {
         }
 
         // default handler for normal comments
-        celloCommentlist = new Comment(
-          category = category,
-          text = textdata
-        ) :: celloCommentlist
+        celloCommentlist = new Comment(category = category, text = textdata, cellId = id) :: celloCommentlist
 
       } else if (entryline.startsWith("WW   ")) { // web pages
         celloWebPagelist =
@@ -2402,7 +2365,10 @@ object CelloParser {
             1
           ) + "-" + orgdatlist(0) // convert to YYYY-MM-DD, the official xs:date
         celloVersion = entrylinedata.split("; ")(2).split(": ")(1)
+
+
       } else if (entryline.startsWith("ST   Source")) { // short tandem repeats source
+
         val srcList = entrylinedata.substring(11).split("; ") // skip the 'Source(s):' comment
         srcList.foreach(src => {
           if (src.contains("=")) {
@@ -2411,8 +2377,10 @@ object CelloParser {
             val ac = dbac(1)
             if (db == "PubMed" || db == "DOI" || db == "Patent" || db == "CelloPub") {
               celloStrSourceRefList = new PubliRef(db_ac = src) :: celloStrSourceRefList    
-            } else {
+            } else if (DbXrefInfo.contains(db) ) {
               celloStrSourceXrefList = new DbXref(db, ac) :: celloStrSourceXrefList
+            } else {
+              println("ERROR: unknown xref database: sb")
             }
           } else {
             celloStrSourceList = new STsource(src = src) :: celloStrSourceList
@@ -2623,7 +2591,7 @@ class SequenceVariation(
     val mutyp: String,
     val zygosity: String,
     var text: String,
-    val sources: String
+    val sourcedComment: SimpleSourcedComment
 ) {
   var varXreflist = List[DbXref]()
   var srcOrglist = List[STsource]()
@@ -2681,6 +2649,11 @@ class SequenceVariation(
       varXreflist = varXreflist.reverse
     }
 
+    srcPublist = sourcedComment.publist
+    srcXreflist = sourcedComment.xreflist
+    srcOrglist = sourcedComment.orglist
+
+/*
     val srcList = sources.split("; ") // split what's parenthesis in last token
     srcList.foreach(elem => {
       val src = elem.trim()
@@ -2703,6 +2676,8 @@ class SequenceVariation(
         }
       }
     })
+*/
+
   }
 
   def toXML =
@@ -3143,7 +3118,7 @@ class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
 }
 
 
-class Comment(val category: String, var text: String) {
+class Comment(val category: String, var text: String, val cellId: String) {
 
   var xreflist = List[DbXref]()
   var publist = List[PubliRef]()
@@ -3155,29 +3130,14 @@ class Comment(val category: String, var text: String) {
 
   def init = { // prepare data for complex comments (methods, xrefs...)
 
-    if (SourcedCommentParser.categories.contains(category) ) {
-      var raw_sc = text.trim()
-      if (raw_sc.endsWith(".")) raw_sc = raw_sc.substring(0, raw_sc.length - 1).trim()
-      val sc_list = SourcedCommentParser.parseLine(raw_sc)
-      if (sc_list.size != 1) throw new Exception(s"ERROR Expected 1 sourced comment but got ${sc_list.size} in: ${text}")
-      val sc = sc_list(0)
-      text = sc.comment
-      sc.sources.foreach(s => {
-        hasSources = true
-        if (SourceChecker.isKnownXref(s)) {
-          val parts = s.split("=")
-          xreflist = new DbXref(db = parts(0), ac = parts(1)) :: xreflist
-        } else if (SourceChecker.isKnownPubliRef(s)) {
-          publist = new PubliRef(s) :: publist
-        } else if (SourceChecker.isKnownOrgRef(s)) {
-          srclist = new STsource(s) :: srclist
-        } else if (SourceChecker.isKnownMiscRef(s)) {
-          // get cellosaurus cell lines(s) db=ac from sources
-          // generate and store the corresponding xrefs
-          // optionally: modify the comment by re-appending the source
-          srclist = new STsource(s) :: srclist
-        }
-      })
+    if (SimpleSourcedCommentParser.categories.contains(category) ) {
+      SimpleSourcedCommentParser.verbose = false
+      val sc = SimpleSourcedCommentParser.parse(text, cellId)
+      text = sc.getFinalValue()
+      xreflist = sc.xreflist
+      publist = sc.publist
+      srclist = sc.orglist
+      hasSources = (sc.getSourceCount() > 0)
 
     } else if (category.equals("Transfected with") && text.contains(";")) {
       val linetoks = text.split("; ")

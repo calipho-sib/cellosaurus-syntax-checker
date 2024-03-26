@@ -19,12 +19,11 @@ object SourceChecker {
     // MUST be called otherwise error occurs
     def init(xrefDbSet: Set[String], instMap: Map[String, String], parentLinkMap: Map[String, ParentLink]) : Unit = {
 
-        knownParentLinkMap = parentLinkMap
-
         knownPubliDbSet = Set("PubMed", "DOI", "CelloPub", "Patent")
                             
         knownMiscSet = Set(
-            // "Direct_author_submission",        -- not considered a source
+            "Direct_author_submission",    // will trigger NO xref creation in parser, kept as is
+            "from inference of",           // will trigger NO xref creation in parser, kept as is
             "from autologous cell line",   // + " " + $id -         in fields: var, donor-info 
             "from autologous cell lines",  // + " " + $id; ...; $id in fields: var, donor-info 
             "from child cell line",        // + " " + $id           in fields: var
@@ -33,34 +32,17 @@ object SourceChecker {
             "from parent cell line"        // + (nothing) in fields: var, donor-info, karyo, characteristics, virology
             )
 
-        if (xrefDbSet == null) {
-            // default list for tests
-            knownXrefDbSet = Set(
-                "4DN", "Abcam", "ABCD", "ABM", "AddexBio", "ArrayExpress", "ATCC", "BCGO", "BCRC", "BCRJ", "BEI_Resources", 
-                "BioGRID_ORCS", "BioSample", "BioSamples", "BTO", "cancercelllines", "CancerTools", "CBA", "CCLV", "CCRID", 
-                "CCTCC", "Cell_Biolabs", "Cell_Model_Passport", "Cellosaurus", "CGH-DB", "ChEBI", "ChEMBL-Cells", 
-                "ChEMBL-Targets", "CL", "CLDB", "ClinVar", "CLO", "CLS", "ColonAtlas", "Coriell", "Cosmic", "Cosmic-CLP", "dbGAP", 
-                "dbMHC", "dbSNP", "DepMap", "DGRC", "DiscoverX", "DrugBank", "DSHB", "DSMZ", "DSMZCellDive", "EBiSC", "ECACC", 
-                "EFO", "EGA", "ENCODE", "ESTDAB", "FCDI", "FCS-free", "FlyBase_Cell_line", "FlyBase_Gene", "GDSC", "GeneCopoeia", 
-                "GEO", "HGNC", "HipSci", "HIVReagentProgram", "Horizon_Discovery", "hPSCreg", "IARC_TP53", "IBRC", "ICLC", "ICLDB", 
-                "IGRhCellID", "IGSR", "IHW", "Imanis", "Innoprot", "IPD-IMGT/HLA", "ISCR", "IZSLER", "JCRB", "KCB", "KCLB", "Kerafast", 
-                "KYinno", "LiGeA", "LIMORE", "LINCS_HMS", "LINCS_LDP", "Lonza", "MCCL", "MeSH", "MetaboLights", "MGI", "Millipore", 
-                "MMRRC", "NCBI_Iran", "NCBI_TaxID", "NCI-DTP", "NCIt", "NHCDR", "NIHhESC", "NISES", "NRFC", "ORDO", 
-                "PerkinElmer", "PharmacoDB", "PRIDE", "Progenetix", "PubChem", "PubChem_Cell_line", "RCB", "RGD", "Rockland", 
-                "RSCB", "SKIP", "SKY/M-FISH/CGH", "SLKBase", "TKG", "TNGB", "TOKU-E", "UBERON", "Ubigene", "UniProtKB", "VGNC", 
-                "WiCell", "Wikidata", "Ximbio")
-        } else {
-            // real and up to date list for production time, excludes publi refs PubMed, DOI, CelloPub and Patent
-            knownXrefDbSet = xrefDbSet -- knownPubliDbSet
-        }
+        // xref db list read from cellosaurus_xrefs.txt
+        knownXrefDbSet = xrefDbSet -- knownPubliDbSet // "4DN", "Abcam", "ABCD", ..., "Wikidata", "Ximbio
 
-        if (instMap == null)  {
-            knownInstituteMap = Map("Sanger" -> "Sanger", "Boston_University" -> "Boston_University", "BNLC" -> "BNLC", "Cedars-Sinai" -> "Cedars-Sinai") // just a samples
-        } else {
-            // read from file institution_list
-            knownInstituteMap = instMap
-        }
+        // read from file institution_list
+        knownInstituteMap = instMap
         println("INFO, init SourceChecker")
+
+        // build by reading cellosaurus.txt, see loadHierarchy
+        knownParentLinkMap = parentLinkMap
+
+
     }
 
     /*
@@ -140,8 +122,9 @@ object SourceChecker {
             var terms = List[String]()
             var id: String = null
             for (el <- elems) {
-                if (el.startsWith("Synonym=")) { // we assume it is the last element of the line when len(elems) > 1
-                    id = el.substring(8)
+                //if (el.startsWith("Synonym=")) { // we assume it is the last element of the line when len(elems) > 1
+                if (el.startsWith("Short=")) { // we assume it is the last element of the line when len(elems) > 1
+                    id = el.substring(6)
                     terms = id :: terms
                 } else  {
                     terms = el :: terms
