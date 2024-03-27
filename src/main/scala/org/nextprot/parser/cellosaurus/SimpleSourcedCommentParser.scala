@@ -33,17 +33,20 @@ class SimpleSourcedComment(val rawline: String) {
 
 object SimpleSourcedCommentParser {
 
-  var verbose: Boolean = true
-  var logLevel: Integer = 0 // 0=INFO+WARNING+ERROR, 1=WARNING+ERROR, 2=ERROR
-
   val name = "SimpleSourcedCommentParser"
+  
+  var verbose: Boolean = false
 
+  // 0=INFO+WARNING+ERROR, 1=WARNING+ERROR, 2=ERROR
+  var logLevel: Integer = 0
+  
+  // This parser is useful for the topics (categories) mentioned below, 
+  // it is used when we generate a Comment object matching one of the categories.
+  // More specialized CC lines generate a specific object with a dedicated parser
+  // which sometimes also uses this parser to handle sources
   val categories = Set(
     "Anecdotal", "Biotechnology", "Caution", "Characteristics", "Donor information", 
     "Karyotypic information", "Miscellaneous", "Senescence", "Virology")
-
-  def sourceIsValid(src: String): Boolean = { 
-    SourceChecker.isKnown(src) && ! SourceChecker.isInDbSet(src, Set("Cellosaurus")) }
 
   def findListOfBracketContentWithNestedLevelAndPosition(text: String): List[(String, Int, Int)] = {
     var result: List[(String, Int, Int)] = List()
@@ -70,11 +73,13 @@ object SimpleSourcedCommentParser {
     result.reverse
   }
 
-  def parse(line: String, clId: String) : SimpleSourcedComment = {
+  def setVerbose(v: Boolean) = { verbose = v }
 
+  def parse(line: String, clId: String, verbose: Boolean = false, ignoreSpecialSources: Boolean = false) : SimpleSourcedComment = {
+    setVerbose(verbose)
     var sc = new SimpleSourcedComment(line)
     splitBodySources(sc)
-    parseSources(sc, cellLineId = clId)
+    parseSources(sc, cellLineId = clId, ignore = ignoreSpecialSources)
     return sc
   }
 
@@ -92,7 +97,7 @@ object SimpleSourcedCommentParser {
     }
   }
 
-  def parseSources(sc: SimpleSourcedComment, cellLineId: String = ""): Unit = {
+  def parseSources(sc: SimpleSourcedComment, cellLineId: String = "", ignore: Boolean = true): Unit = {
     
     if (sc.sources == "") {
       sc.status = SOURCES_STATUS.NONE
@@ -107,11 +112,17 @@ object SimpleSourcedCommentParser {
 
       val prefix = SourceChecker.getMiscRefPrefix(sc.sources)
 
-      // special case of parent cell line: we need to get parent id and update source
       if (prefix == "from inference of" || prefix == "Direct_author_submission") {
+        if (ignore) {
           sc.status = SOURCES_STATUS.IGNORED
           if (verbose && logLevel < 1) println(s"INFO: ignoring source in comment '${sc.value}'")
+        } else {
+          sc.status = SOURCES_STATUS.ALL_VALID
+          sc.orglist = new STsource(sc.sources) :: sc.orglist
+          if (verbose && logLevel < 1) println(s"INFO: NOT ignoring source in comment '${sc.value}'")
+        }
 
+      // special case of parent cell line: we need to get parent id and update source
       } else if (prefix == "from parent cell line") {
         val parentId = SourceChecker.getCellosaurusParentIdFromId(cellLineId)
         if (parentId != null) {
@@ -312,10 +323,22 @@ object SimpleParserPlayground {
     assertEquals(sc.status, SOURCES_STATUS.NONE, "Status of comment with no (...)")
     //println(sc)
 
+    println("\n --- verbosity ---\n")
+
+    println("ON")
+    sc = parser.parse("Some comment (Direct_author_submission)", "someId", verbose=true)
+    println("OFF")    
+    sc = parser.parse("Some comment (Direct_author_submission)", "someId", verbose=false)
+
+    println("\n --- ignore special sources ---\n")
+
+    sc = parser.parse("Some comment (Direct_author_submission)", "someId")
+    assertEquals(sc.orglist.size, 0, "Organization list of comment with ignored source")
+
+    sc = parser.parse("Some comment (Direct_author_submission)", "someId", ignoreSpecialSources=false)
+    assertEquals(sc.orglist.size, 1, "Organization list of comment with NON ignored source")
 
     println("\nEnd")
-
-
 
   }
 

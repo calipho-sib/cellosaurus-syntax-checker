@@ -3,31 +3,14 @@ package org.nextprot.parser.cellosaurus
 import scala.io.Source
 import scala.xml._
 
-class Msi(value: String, note: String, sources: List[String]) {
+class Msi(value: String, note: String, sc: SimpleSourcedComment) {
     
-    var xrefs = List[DbXref]()
-    var publiRefs = List[String]()
-    var orgRefs = List[String]()
-    
-    init()
-
-    def init() : Unit = {
-        sources.foreach(s => {
-            if (SourceChecker.isKnownPubliRef(s)) { 
-                publiRefs = s :: publiRefs }
-            else if (SourceChecker.isKnownXref(s)) { 
-                val dbac = s.split("=")
-                xrefs = new DbXref(dbac(0), dbac(1)) :: xrefs 
-            } else if (SourceChecker.isKnownOrgRef(s) || SourceChecker.isKnownMiscRef(s)) {
-                orgRefs = s :: orgRefs 
-            } else {
-                Console.err.println(s"WARN. unknown source '${s}'")
-            }
-        })
-    }
+    var xrefs = sc.xreflist
+    var publiRefs = sc.publist
+    var orgRefs = sc.orglist
 
     override def toString() : String = {
-        s"Msi(value=$value, note:${if (note==null) "(null)" else note}, sources:$sources)"
+        s"Msi(value=$value, note:${if (note==null) "(null)" else note}, sources:$sc.sources)"
     }
 
 //          <microsatellite-instability-value>{value}</microsatellite-instability-value>
@@ -47,13 +30,13 @@ class Msi(value: String, note: String, sources: List[String]) {
             }
             {
             if (publiRefs.size > 0)
-                <reference-list>{publiRefs.map(id => <reference resource-internal-ref={id}/>)}</reference-list>
+                <reference-list>{publiRefs.map(_.toXML)}</reference-list>
             else  
                 Null
             }
             {
             if (orgRefs.size > 0) 
-                <source-list>{orgRefs.map(src => <source>{src}</source>)}</source-list>
+                <source-list>{orgRefs.map(_.toXML)}</source-list>
             else
                 Null
             }
@@ -77,14 +60,11 @@ object MsiParser {
             note = tail.substring(6, closeNotePos)
             tail = tail.substring(closeNotePos + 1)
         }
-        val openPos = tail.indexOf("(")
-        val closePos = tail.indexOf(")")
-        tail = tail.substring(openPos + 1,closePos)
-        var sources = tail.split("; ")
-        sources.foreach(src => {
+        val sc = SimpleSourcedCommentParser.parse(rawtext, clId="unused cell line id", verbose=false)
+        sc.sources.split("; ").foreach(src => {
             if (! SourceChecker.isKnown(src) ) throw new Exception(s"Unknown Microsatellite instability comment source '${src}'")
         })
-        return new Msi(value, note, sources.toList)
+        return new Msi(value, note, sc)
     }
 
 

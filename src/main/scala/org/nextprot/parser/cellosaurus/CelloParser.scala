@@ -766,10 +766,9 @@ object CelloParser {
           }
 
           if (SimpleSourcedCommentParser.categories.contains(cctopic)) {
-            SimpleSourcedCommentParser.verbose = true
             val raw_sc = entryline.substring(5 + cctopic.length + 2)
             // next line can yield some INFO, WARNING, ERROR prints
-            val sc = SimpleSourcedCommentParser.parse(raw_sc, id)
+            val sc = SimpleSourcedCommentParser.parse(raw_sc, id, verbose=true)
 
           } else if (cctopic == "Discontinued" && !entrylinedata.contains("Catalog number")) {
             // These discontinued CCs must also exist as DR lines
@@ -949,8 +948,7 @@ object CelloParser {
             }
 
             // check source(s) at the end of line
-            SimpleSourcedCommentParser.verbose = true
-            val sc = SimpleSourcedCommentParser.parse(entrylinedata, clId = id)
+            val sc = SimpleSourcedCommentParser.parse(entrylinedata, clId = id, verbose=true)
 
             allseqvartoks.foreach(token => {
               if (token.contains("Zygosity=")) {
@@ -2262,8 +2260,7 @@ object CelloParser {
           var zygotype = ""
           var mutyp = ""
 
-          SimpleSourcedCommentParser.verbose = false
-          val sc = SimpleSourcedCommentParser.parse(textdata, clId = id)
+          val sc = SimpleSourcedCommentParser.parse(textdata, clId = id, verbose=false)
 
           if (seqvartype == "Mutation" || seqvartype == "Gene amplification") {
             mutyp = seqvartoks(4)
@@ -3086,8 +3083,7 @@ class Comment(val category: String, var text: String, val cellId: String) {
   def init = { // prepare data for complex comments (methods, xrefs...)
 
     if (SimpleSourcedCommentParser.categories.contains(category) ) {
-      SimpleSourcedCommentParser.verbose = false
-      val sc = SimpleSourcedCommentParser.parse(text, cellId)
+      val sc = SimpleSourcedCommentParser.parse(text, cellId, verbose=false)
       text = sc.getFinalValue()
       xreflist = sc.xreflist
       publist = sc.publist
