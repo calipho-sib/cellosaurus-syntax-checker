@@ -23,9 +23,9 @@ class CelloEntry(
     val origin: List[DbXref],
     val derived: List[DbXref],
     val publis: List[PubliRef],
-    val strSources: List[STsource],
-    val strSourceRefs: List[PubliRef],
-    val strSourceXrefs: List[DbXref],
+    val strSTsources: List[STsource],
+    val strPBsources: List[PBsource],
+    val strXRsources: List[XRsource],
     val strmarkers: List[Strmarker],
     val reglist: List[Registration],
     val hlalists: List[HLAlistwithSource],
@@ -131,28 +131,13 @@ class CelloEntry(
       }
 
       {
-      if (strSources.size > 0 || strSourceRefs.size > 0 || strSourceXrefs.size > 0)
+      if (strSTsources.size > 0 || strPBsources.size > 0 || strXRsources.size > 0)
         <str-list>
-          <str-sources>
-            {
-            if (strSourceXrefs.size > 0)
-              <xref-list>{strSourceXrefs.map(_.toXML)}</xref-list>
-            else 
-              Null
-            }
-            {
-            if (strSourceRefs.size > 0)
-              <reference-list>{strSourceRefs.map(_.toXML)}</reference-list>
-            else 
-              Null
-            }
-            {
-            if (strSources.size > 0)
-                <source-list>{strSources.map(_.toXML)}</source-list>
-            else 
-              Null
-            }
-          </str-sources>
+          <source-list>          
+          { if (strXRsources.size > 0) strXRsources.map(_.toXML) else Null }
+          { if (strPBsources.size > 0) strPBsources.map(_.toXML) else Null }
+          { if (strSTsources.size > 0) strSTsources.map(_.toXML) else Null }   
+          </source-list>
           <marker-list>{strmarkers.map(_.toXML)}</marker-list>
         </str-list>
       else

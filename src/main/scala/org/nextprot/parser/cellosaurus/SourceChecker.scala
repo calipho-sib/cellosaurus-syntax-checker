@@ -88,7 +88,9 @@ object SourceChecker {
     }
 
     def isKnownMiscRef(name: String): Boolean = {
-        return knownMiscSet.find(el => name.startsWith(el)) != None
+        val auth_sub = "Direct_author_submission"
+        if (name == auth_sub) return true
+        return knownMiscSet.find(el => ( name.startsWith(el) && el != auth_sub )) != None
     }
 
     def getMiscRefPrefix(name:String) : String = {

@@ -13,6 +13,35 @@ class STsource(val src: String) {
     <source>{src}</source>
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+class XRsource(val text: String, val xref: DbXref) {
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  def toXML = {
+    <source>
+      {if (text != null && text.size > 0) {text} else Null }
+      {xref.toXML}
+    </source>
+  }
+  override def toString() :String = {
+    return s"XRsource('$text', $xref)"
+  }
+
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+class PBsource(val db_ac: String) {
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  val publiRef = new PubliRef(db_ac)
+  def toXML = {
+    <source>
+      {publiRef.toXML}
+    </source>
+  }
+  override def toString() :String = {
+    return s"PBsource($publiRef)"
+  }
+
+}
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 class PubliRef(val db_ac: String) {
@@ -118,19 +147,6 @@ class DbXref(
       }
     </xref>
 
-/*
-  def old_CvTermToOBO = {
-    var db = _terminology
-    var drline = ""
-    if (db.equals("NCBI-Taxonomy")) db = "NCBI_TaxID"
-    if (_terminology.equals("Cellosaurus"))
-      drline =
-        "relationship: originate_from_same_individual_as " + _ac + " ! " + _name + "\n"
-    else
-      drline = "xref: " + db + ":" + _ac + " ! " + _name + "\n"
-    drline
-  }
-*/
 
   def toOBO = {
     var drline = ""

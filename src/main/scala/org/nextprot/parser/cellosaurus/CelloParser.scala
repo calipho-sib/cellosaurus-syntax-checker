@@ -31,6 +31,7 @@ https://mvnrepository.com/search?q=sbt-assembly
 
 object CelloParser {
 
+  var doesntDie: Boolean = false
 
   val ok_seqvardblist = List("HGNC", "MGI", "RGD", "UniProtKB", "VGNC")
 
@@ -316,6 +317,8 @@ object CelloParser {
     args.foreach(arg => {
       if (arg.contains("obo")) {
         toOBO = true; obofile = new PrintWriter(new File("cellosaurus.obo"))
+      } else if (arg.toLowerCase().contains("dontdie")) {
+        doesntDie = true
       } else if (arg.contains("xml")) {
         toxml = true; xmlfile = new PrintWriter(new File("cellosaurus.xml"))
       } // xmlfile.write("<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>")
@@ -1076,8 +1079,15 @@ object CelloParser {
               if (!ok_stlist.contains(sttopic)) {
                 Console.err.println("Unknown ST site found at: " + entryline);
                 errcnt += 1
-              } else { // check ST data format
-                val chrdata = stdata.split("\\(")(0).trim()
+              } else {
+                val data_src = stdata.split("\\(")
+                // check ST data sources if any
+                if (data_src.size > 1) {
+                  val srclist = "(" + data_src(1).trim()
+                  SimpleSourcedCommentParser.parse("ST   alleles ... "+ srclist, id, verbose=true)
+                }
+                // check ST data format
+                val chrdata = data_src(0).trim()
                 if (sttopic.contains("Amelogenin")) {
                   if (ameloregexp.findFirstIn(stdata) == None) {
                     Console.err.println(
@@ -1139,6 +1149,11 @@ object CelloParser {
                 }
               }
             } else { // ST   Source(s) line
+
+              // pam check sources
+              SimpleSourcedCommentParser.parse("ST   Source(s) ... (" + stdata + ")", id, verbose=true)
+
+              // check sources syntax
               strsrcCnt += 1
               if (stdata.contains(",")) {
                 Console.err.println(
@@ -1412,6 +1427,7 @@ object CelloParser {
     // All Entries level checks
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
+    println("Checking AC duplicates..." + new java.util.Date())
     duplist = aclist.diff(aclist.distinct)
     if (duplist.length != 0) {
       duplist.foreach(ac => {
@@ -1419,6 +1435,7 @@ object CelloParser {
       })
     }
 
+    println("Checking ID duplicates..." + new java.util.Date())
     duplist = idlist.diff(idlist.distinct)
     if (duplist.length != 0) {
       duplist.foreach(id => {
@@ -1427,6 +1444,7 @@ object CelloParser {
     }
 
     // Check that no AS exists as a living AC
+    println("Checking AC AS  collisions..." + new java.util.Date())
     aslist.foreach { as =>
       if (aclist.contains(as)) {
         Console.err.println("living AC in AS: " + as); errcnt += 1
@@ -1434,7 +1452,9 @@ object CelloParser {
     }
 
     // Check for orphans hierarchies (inexistant ACs)
-    val misslist = hilist.filter(s => !aclist.contains(s)).toSet
+    println("Checking orphan cell lines..." + new java.util.Date())
+    val acSet = aclist.toSet
+    val misslist = hilist.filter(s => !acSet.contains(s)).toSet
     if (misslist.size != 0) {
       misslist.foreach(ac => {
         Console.err.println("Inexistent HI/OI AC: " + ac); errcnt += 1
@@ -1442,6 +1462,7 @@ object CelloParser {
     }
 
     if (toxml) {
+      println("Building XML..." + new java.util.Date())
       val xmlheader = // date, version, entry count and pub count are dynamic
         <header>
             <terminology-name>Cellosaurus</terminology-name>
@@ -1461,6 +1482,8 @@ object CelloParser {
       xmlfile.write("<cell-line-list>\n")
     }
 
+
+    println("Checking OI/HI consistency..." + new java.util.Date())
     // Check OI/HI lines consistency (inter-entry checks)
     var ac = ""
     var oiac = ""
@@ -1673,6 +1696,8 @@ object CelloParser {
       xmlfile.write(prettyXMLprinter.format(xmlcopyright))
       xmlfile.write("\n</Cellosaurus>")
       xmlfile.close
+      println("Closed XML..." + new java.util.Date())
+
     }
 
     if (toOBO) { // finnish OBO file
@@ -1833,8 +1858,6 @@ object CelloParser {
         "Sister cells with unexpected differences in Sex, Species, Population or Breed/subspecies: " + differCount
       )
 
-    Console.err.println("Parsing End")
-
     if (stats) {
       println("\n ===== Statistics =====\n")
       println(s"$drcnt Xrefs")
@@ -1848,6 +1871,9 @@ object CelloParser {
         else if (i == "10116") println("Rat: " + oxmap(i))
       }
     }
+
+    println("Parsing End " + new java.util.Date())
+
   }
 
   // ------------------ Utility methods, TODO: move in a separate package and import------------------------------
@@ -1998,9 +2024,7 @@ object CelloParser {
     publiEntry
   }
 
-  def toCelloEntry(
-      flatEntry: ArrayBuffer[String]
-  ): CelloEntry = {
+  def toCelloEntry(flatEntry: ArrayBuffer[String]): CelloEntry = {
     var entrylinedata = ""
     var ac = ""
     var id = ""
@@ -2015,9 +2039,9 @@ object CelloParser {
     var celloVersion = "0"
 
     var celloStrmarkerlist = List[Strmarker]()
-    var celloStrSourceList = List[STsource]()
-    var celloStrSourceRefList = List[PubliRef]()
-    var celloStrSourceXrefList = List[DbXref]()
+    var celloSTsrclist = List[STsource]()
+    var celloPBsrclist = List[PBsource]()
+    var celloXRsrclist = List[XRsource]()
     var celloHLAlists = List[HLAlistwithSource]()
     var celloDoublingTimeList = List[DoublingTime]()
     var celloKnockoutList = List[Knockout]()
@@ -2344,55 +2368,40 @@ object CelloParser {
         celloVersion = entrylinedata.split("; ")(2).split(": ")(1)
 
 
-      } else if (entryline.startsWith("ST   Source")) { // short tandem repeats source
+      } else if (entryline.startsWith("ST   Source")) {    // short tandem repeats source
 
-        val srcList = entrylinedata.substring(11).split("; ") // skip the 'Source(s):' comment
-        srcList.foreach(src => {
-          if (src.contains("=")) {
-            val dbac = src.split("=")
-            val db = dbac(0)
-            val ac = dbac(1)
-            if (db == "PubMed" || db == "DOI" || db == "Patent" || db == "CelloPub") {
-              celloStrSourceRefList = new PubliRef(db_ac = src) :: celloStrSourceRefList    
-            } else if (DbXrefInfo.contains(db) ) {
-              celloStrSourceXrefList = new DbXref(db, ac) :: celloStrSourceXrefList
-            } else {
-              println("ERROR: unknown xref database: sb")
-            }
-          } else {
-            celloStrSourceList = new STsource(src = src) :: celloStrSourceList
-          }
-        })
+        val srcList = entrylinedata.substring(11).strip()  // skip the 'Source(s):' comment
+        val sc = SimpleSourcedCommentParser.parse("ST   Source(s) ... (" + srcList + ")", id, verbose=false)
+        if (sc.getSourceCount() == 0) {
+          println(s"ERROR: No valid source at cell line '${id}' in ${entryline}, exiting.")
+          if (! CelloParser.doesntDie) System.exit(0)
+        }
+        celloXRsrclist = sc.xreflist
+        celloPBsrclist = sc.publist  
+        celloSTsrclist = sc.orglist
+
       } else if (entryline.startsWith("ST   ")) { // short tandem repeats
-        var markerSourceList = List[STsource]()
-        var markerSourceRefList = List[PubliRef]()
-        var markerSourceXrefList = List[DbXref]()
+
+        var markerSTsrclist = List[STsource]()
+        var markerPBsrclist = List[PBsource]()
+        var markerXRsrclist = List[XRsource]()
         val id = entrylinedata.split(": ")(0)
         val rawdata = entrylinedata.split(": ")(1)
         if (rawdata.contains("(")) { // ST   D21S11: 27,32.2 (PubMed=25877200)
           // Separate allele counts from references
           alleles = rawdata.split(" \\(")(0)
           val allelerefs = rawdata.split("[\\(||\\)]")(1)
-          allelerefs.split("; ").foreach(alleleref => {
-              if (alleleref.contains("=")) {
-                val dbac = alleleref.split("=")
-                val db = dbac(0)
-                val ac = dbac(1)
-                if (db == "PubMed" || db == "DOI" || db == "Patent" || db == "CelloPub") {
-                  markerSourceRefList = new PubliRef(db_ac = alleleref) :: markerSourceRefList
-                } else {
-                  markerSourceXrefList = new DbXref(db, ac) :: markerSourceXrefList
-                }
-              } else {
-                markerSourceList = new STsource(src = alleleref) :: markerSourceList
-              }
-            })
+          val sc = SimpleSourcedCommentParser.parse("ST   alleles ... (" + allelerefs + ")", id, verbose=false)
+          markerSTsrclist = sc.orglist 
+          markerPBsrclist = sc.publist     
+          markerXRsrclist = sc.xreflist
+
         } else alleles = rawdata
         val strMarkerdata = new StrmarkerData(
           alleles = alleles,
-          stSources = markerSourceList,
-          pubSources = markerSourceRefList,
-          xrefSources = markerSourceXrefList
+          stSources = markerSTsrclist,
+          pbSources = markerPBsrclist,
+          xrSources = markerXRsrclist
         )
         celloStrmarkerlist = new Strmarker(
           id = id,
@@ -2446,9 +2455,9 @@ object CelloParser {
       origin = celloOriglist.reverse,
       derived = celloDerivedlist.reverse,
       publis = celloPublilist.reverse,
-      strSources = celloStrSourceList,
-      strSourceRefs = celloStrSourceRefList,
-      strSourceXrefs = celloStrSourceXrefList,
+      strSTsources = celloSTsrclist,
+      strPBsources = celloPBsrclist,
+      strXRsources = celloXRsrclist,
       strmarkers = sortedMarkerList,
       reglist = celloReglist,
       hlalists = celloHLAlists.reverse,
@@ -2511,35 +2520,20 @@ class OiEntry(
 class StrmarkerData(
     val alleles: String,
     val stSources: List[STsource],
-    val pubSources: List[PubliRef],
-    val xrefSources: List[DbXref]    
+    val pbSources: List[PBsource],
+    val xrSources: List[XRsource]    
 ) {
 
   def toXML =
     <marker-data>
 			<marker-alleles>{alleles}</marker-alleles>
       {
-      if (stSources.size > 0 || pubSources.size > 0 || xrefSources.size > 0 )
-        <str-sources>
-          {
-          if (xrefSources.size > 0)
-            <xref-list>{xrefSources.map(_.toXML)}</xref-list>
-          else 
-            Null
-          }
-          {
-          if (pubSources.size > 0)
-            <reference-list>{pubSources.map(_.toXML)}</reference-list>
-          else 
-            Null
-          }
-          {
-          if (stSources.size > 0)
-              <source-list>{stSources.map(_.toXML)}</source-list>
-          else 
-            Null
-          }
-        </str-sources>
+      if (stSources.size > 0 || pbSources.size > 0 || xrSources.size > 0 )
+        <source-list>        
+        { if (xrSources.size > 0) xrSources.map(_.toXML) else Null }
+        { if (pbSources.size > 0) pbSources.map(_.toXML) else Null }
+        { if (stSources.size > 0) stSources.map(_.toXML) else Null }
+        </source-list>
       else
         Null
       }
@@ -2562,130 +2556,6 @@ class Strmarker(
 }
 
 
-class SequenceVariation(
-    val cl_ac: String,
-    val vartyp: String,
-    val mutyp: String,
-    val zygosity: String,
-    var text: String,
-    val sourcedComment: SimpleSourcedComment
-) {
-  var varXreflist = List[DbXref]()
-  var srcOrglist = List[STsource]()
-  var srcPublist = List[PubliRef]()
-  var srcXreflist = List[DbXref]()
-  var ac2 = ""
-  var db2 = ""
-  var geneName2 = ""
-  var mutdesc = ""
-  var varnote = ""
-
-  init
-  def init = {
-    val toklist = text.split("; ")
-    val db = toklist(1)
-    val ac = toklist(2)
-    var geneName = toklist(3)
-    var srctok = ""
-    if (
-      toklist.size > 5 && vartyp != "Gene amplification" && vartyp != "Gene deletion"
-    ) mutdesc = toklist(5)
-    if (text.contains(" + ")) { // Gene fusion, there is a second dbref: prepare it
-      // like  CC   Sequence variation: Gene fusion; HGNC; 3446; ERG + HGNC; 3508; EWSR1; Name(s)=EWSR1-ERG, EWS-ERG; Note=In frame (PubMed=8162068).
-      geneName = geneName.split(" ")(0)
-      ac2 = toklist(4)
-      geneName2 = toklist(5).split("\\.")(0)
-      mutdesc = toklist(6).split("=")(1)
-      if (mutdesc.contains(" (")) mutdesc = mutdesc.split(" \\(")(0)
-    }
-  
-    toklist.foreach(token => {
-      if (token.startsWith("Note=")) {
-        varnote = token.substring(5).trim()
-        if (varnote.contains(" (")) varnote = varnote.split(" \\(")(0)
-      }
-      // CC   Sequence variation: Mutation; HGNC; 11730; TERT; Simple; p.Arg631Gln (c.1892G>A); ClinVar=VCV000029899; Zygosity=Unspecified (Direct_author_submission).
-      else if (token.startsWith("ClinVar=") || token.startsWith("dbSNP=")) {
-        db2 = token.split("=")(0)
-        varXreflist = new DbXref(
-          db = db2,
-          ac = token.split("=")(1).split(" \\(")(0)
-        ) :: varXreflist
-      }
-    })
-
-    // 
-    if (! CelloParser.ok_seqvardblist.contains(db)) {
-      Console.err.println("FATAL error, Invalid db in Sequence variation: '" + db + "' , see details above.")
-      System.exit(1)
-    }
-
-    varXreflist = new DbXref(db, ac, label = geneName) :: varXreflist
-    if (ac2 != "") {
-      varXreflist = new DbXref(db, ac2, geneName2) :: varXreflist
-      varXreflist = varXreflist.reverse
-    }
-
-    srcPublist = sourcedComment.publist
-    srcXreflist = sourcedComment.xreflist
-    srcOrglist = sourcedComment.orglist
-
-  }
-
-  def toXML =
-    <sequence-variation 
-      variation-type={vartyp}
-  	  zygosity-type={ if (zygosity != "") { zygosity } else null }
-    	mutation-type={ if (mutyp != "") { mutyp } else null } >
-
-      {
-      if (mutdesc != "")
-        <mutation-description>{mutdesc}</mutation-description>
-      else
-        Null
-      }
-      {
-      if (varnote != "")
-        <variation-note>{varnote}</variation-note>
-      else 
-        Null
-      }
-      <xref-list>
-        {varXreflist.map(_.toXML)}
-      </xref-list>
-      {
-      if (srcOrglist.size > 0 || srcPublist.size > 0 || srcXreflist.size > 0) 
-        <variation-sources>
-          {
-          if (srcXreflist.size > 0)
-            <xref-list>
-        	    {srcXreflist.map(_.toXML)}
-						</xref-list>
-          else
-            Null
-          }
-          {
-          if (srcPublist.size > 0)
-            <reference-list>
-        	    {srcPublist.map(_.toXML)}
-						</reference-list>
-          else
-            Null
-          }
-          {
-          if (srcOrglist.size > 0) 
-            <source-list>
-              {srcOrglist.map(_.toXML)}
-            </source-list>
-          else
-            Null          
-          }
-        </variation-sources>        
-      else 
-        Null
-      }
-</sequence-variation>
-}
 
 class OldAc(val oldac: String) {
 
@@ -3072,8 +2942,8 @@ class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
 
 class Comment(val category: String, var text: String, val cellId: String) {
 
-  var xreflist = List[DbXref]()
-  var publist = List[PubliRef]()
+  var xreflist = List[XRsource]()
+  var publist = List[PBsource]()
   var srclist = List[STsource]()
   var hasSources: Boolean = false
   var hasTransfectedXref: Boolean = false
@@ -3092,7 +2962,7 @@ class Comment(val category: String, var text: String, val cellId: String) {
 
     } else if (category.equals("Transfected with") && text.contains(";")) {
       val linetoks = text.split("; ")
-      val db = linetoks(0);
+      val db = linetoks(0)
       if (DbXrefInfo.contains(db)) {
         var property = linetoks(2)
         if (linetoks.size > 3) {
@@ -3101,7 +2971,8 @@ class Comment(val category: String, var text: String, val cellId: String) {
           for (i <- 3 to linetoks.size - 1) property += "; " + linetoks(i)
         }
         hasTransfectedXref = true
-        xreflist = new DbXref(db, ac = linetoks(1), label = property) :: xreflist
+        val xref = new DbXref(db, ac = linetoks(1), label = property)
+        xreflist = new XRsource("", xref) :: xreflist
       }
     }
   }
@@ -3111,29 +2982,13 @@ class Comment(val category: String, var text: String, val cellId: String) {
     if (!CelloParser.specialCCTopics.contains(category))
       <comment category={category}> 
       {if (text != "") text else Null} 
-      {if (hasTransfectedXref)
-          <xref-list>{xreflist.map(_.toXML)}</xref-list>
-      else 
-        Null
-      }
+      {if (hasTransfectedXref) xreflist(0).xref.toXML else Null  }
       {if (hasSources)
-        <comment-sources>
-        {if (xreflist.size > 0) 
-          <xref-list>{xreflist.map(_.toXML)}</xref-list>
-        else
-          Null
-        }
-        {if (publist.size > 0)
-          <reference-list>{publist.map(_.toXML)}</reference-list>
-        else
-          Null
-        }
-        {if (srclist.size > 0)
-          <source-list>{srclist.map(_.toXML)}</source-list>
-        else
-          Null
-        }
-        </comment-sources>
+        <source-list>
+        { if (xreflist.size>0) xreflist.map(_.toXML) else Null }
+        { if (publist.size>0) publist.map(_.toXML) else Null }
+        { if (srclist.size>0) srclist.map(_.toXML) else Null }
+        </source-list>
       else
         Null
       }
@@ -3145,7 +3000,9 @@ class Comment(val category: String, var text: String, val cellId: String) {
   def toOBO = {
     var commtext = category + ": "
     if (xreflist.size > 0 && ! hasSources) {  // we want xref related to transfected comment, not the sources of the comment
-      commtext += xreflist(0).db + "; " + xreflist(0).ac + "; " + xreflist(0).label + "."
+      val xrsource = xreflist(0)
+      val xref = xrsource.xref
+      commtext += xref.db + "; " + xref.ac + "; " + xref.label + "."
     } else
       commtext += text + "."
     CelloParser.escape_chars_for_obo(commtext)
