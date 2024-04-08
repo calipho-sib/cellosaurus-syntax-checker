@@ -792,7 +792,16 @@ object CelloParser {
             try {
               val elems = DoublingTimeStateAutomaton.parseLine(cctext.trim)
               val dtlist = DoublingTimeStateAutomaton.buildDtList(elems)
-              dtlist.foreach(dt => { new DoublingTime(value = dt("value"), note = dt("note"), refs = dt("refs"))})
+              dtlist.foreach(dt => { 
+                val note = if (dt("note") != null) " (Note=" + dt("note") + ")" else ""
+                val refs = if (dt("refs") != null) " (" + dt("refs") + ")" else ""
+                var text = dt("value") + note + refs
+                val sc = SimpleSourcedCommentParser.parse(text, clId = id, verbose = true)
+                if (sc.getSourceCount() == 0) {
+                  println(s"ERROR: No valid source at cell line '${id}' in ${entryline}")
+                }
+                new DoublingTime(value = dt("value"), note = dt("note"), sc = sc)
+              })
             } catch {
               case e: Exception => {
                 errcnt += 1
@@ -2171,7 +2180,15 @@ object CelloParser {
             val elems = DoublingTimeStateAutomaton.parseLine(textdata)
             val dtlist = DoublingTimeStateAutomaton.buildDtList(elems)
             dtlist.foreach(dt => {
-              val doublingTime = new DoublingTime(value = dt("value"), note = dt("note"), refs = dt("refs"))
+              val note = if (dt("note") != null) " (Note=" + dt("note") + ")" else ""
+              val refs = if (dt("refs") != null) " (" + dt("refs") + ")" else ""
+              var text = dt("value") + note + refs
+              val sc = SimpleSourcedCommentParser.parse(text, clId = id, verbose = false) // err msg handled earlier
+              if (sc.getSourceCount() == 0) {
+                println(s"ERROR: No valid source at cell line '${id}' in ${entryline}, exiting.")
+                if (! CelloParser.doesntDie) sys.exit(1) // exit on fatal error
+              }
+              val doublingTime = new DoublingTime(value = dt("value"), note = dt("note"), sc = sc)
               celloDoublingTimeList = doublingTime :: celloDoublingTimeList
             })
           } catch {
@@ -2374,7 +2391,7 @@ object CelloParser {
         val sc = SimpleSourcedCommentParser.parse("ST   Source(s) ... (" + srcList + ")", id, verbose=false)
         if (sc.getSourceCount() == 0) {
           println(s"ERROR: No valid source at cell line '${id}' in ${entryline}, exiting.")
-          if (! CelloParser.doesntDie) System.exit(0)
+          if (! CelloParser.doesntDie) sys.exit(1)
         }
         celloXRsrclist = sc.xreflist
         celloPBsrclist = sc.publist  
@@ -2835,36 +2852,12 @@ class DerivedFromSite(
     </derived-from-site>
 }
 
-class DoublingTime(val value: String, val note: String, val refs: String) {
+class DoublingTime(val value: String, val note: String, val sc: SimpleSourcedComment) {
 
-  var xrefList = List[DbXref]()
-  var refList = List[String]()
-  var srcList = List[String]()
-
-  init
-
-  def init = {
-    val items = refs.split("; ")
-    items.foreach(item => {
-      val itemParts = item.split("=")
-      if (itemParts.length == 1) {
-        srcList = item :: srcList
-      } else if (itemParts.length == 2) {
-        val db = itemParts(0)
-        if (
-          db == "PubMed" || db == "DOI" || db == "Patent" || db == "CelloPub"
-        ) {
-          refList = item :: refList
-        } else {
-          val ac = itemParts(1)
-          val xref = new DbXref(db, ac)
-          xrefList = xref :: xrefList
-        }
-      } else {
-        throw new Exception("Unexpected number of elements in doubling time reference " + item)
-      }
-    })
-  }
+  val xreflist = sc.xreflist
+  val publist = sc.publist
+  val srclist = sc.orglist
+  val hasSources = (sc.getSourceCount() > 0)
 
   def toXML =
     <doubling-time>
@@ -2875,26 +2868,16 @@ class DoublingTime(val value: String, val note: String, val refs: String) {
       else
         Null
       }
-      <doubling-time-sources>
       {
-      if (xrefList.size > 0)
-        <xref-list>{xrefList.map(_.toXML)}</xref-list>
+      if (hasSources)
+        <source-list>
+        { if (xreflist.size>0) xreflist.map(_.toXML) else Null }
+        { if (publist.size>0) publist.map(_.toXML) else Null }
+        { if (srclist.size>0) srclist.map(_.toXML) else Null }
+        </source-list>
       else
         Null
       }
-      {
-      if (refList.size > 0)
-        <reference-list>{refList.map(id => <reference resource-internal-ref={id}/>)}</reference-list>
-      else  
-        Null
-      }
-      {
-      if (srcList.size > 0) 
-        <source-list>{srcList.map(src => <source>{src}</source>)}</source-list>
-      else
-        Null
-      }
-      </doubling-time-sources>
     </doubling-time>
 }
 
