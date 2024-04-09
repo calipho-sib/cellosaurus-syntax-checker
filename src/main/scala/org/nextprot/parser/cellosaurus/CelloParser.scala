@@ -835,7 +835,8 @@ object CelloParser {
 
           } else if (cctopic == "Monoclonal antibody isotype") {
             try {
-              MabisoParser.parseLine(cctext.trim)
+              MabisoParser.parseLine(cctext.trim, cellLineId = id, verbose = true)
+
             } catch {
               case e: Exception => {
                 errcnt += 1
@@ -2220,7 +2221,7 @@ object CelloParser {
 
         } else if (category.equals("Monoclonal antibody isotype")) {
           try {
-            celloMabisoList = MabisoParser.parseLine(textdata)
+            celloMabisoList = MabisoParser.parseLine(textdata, cellLineId = id, verbose = false)
           } catch {
             case e: Exception => {} // handled earlier
           }

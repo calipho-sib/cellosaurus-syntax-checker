@@ -4,10 +4,15 @@ import scala.io.Source
 import scala.util.matching.Regex
 import scala.xml._
 
-class Mabiso(heavyChain: String, lightChain: String, refList: List[PubliRef], xrefList: List[DbXref], srcList: List[STsource]) {
+class Mabiso(heavyChain: String, lightChain: String, sc: SimpleSourcedComment) {
   
+  val xreflist = sc.xreflist
+  val publist = sc.publist
+  val srclist = sc.orglist
+  val hasSources = (sc.getSourceCount() > 0)
+
   override def toString() : String = {
-    s"Mabiso(heavyChain=$heavyChain, lightChain:$lightChain, publiRefs:$refList, xrefs:$xrefList, sources:$srcList)"
+    s"Mabiso(heavyChain=$heavyChain, lightChain:$lightChain, sc:$sc)"
   }
 
   def toXML =
@@ -19,33 +24,16 @@ class Mabiso(heavyChain: String, lightChain: String, refList: List[PubliRef], xr
       else
         Null
       }
-
-      { 
-      if (refList.size + xrefList.size + srcList.size > 0) 
-        <monoclonal-antibody-isotype-sources>
-        {
-        if (xrefList.size > 0)
-          <xref-list>{xrefList.map(_.toXML)}</xref-list>
-        else
-          Null
-        }
-        {
-        if (refList.size > 0)
-          <reference-list>{refList.map(_.toXML)}</reference-list>
-        else  
-          Null
-        }
-        {
-        if (srcList.size > 0) 
-          <source-list>{srcList.map(_.toXML)}</source-list>
-        else
-          Null
-        }
-        </monoclonal-antibody-isotype-sources>
+      {
+      if (hasSources)
+          <source-list>
+          { if (xreflist.size>0) xreflist.map(_.toXML) else Null }
+          { if (publist.size>0) publist.map(_.toXML) else Null }
+          { if (srclist.size>0) srclist.map(_.toXML) else Null }
+          </source-list>
       else
-        Null
+          Null
       }
-
     </monoclonal-antibody-isotype>    
   
 } // end class
@@ -117,7 +105,7 @@ object MabisoParser {
   }
 
 
-  def parseLine(rawline: String): List[Mabiso] = {
+  def parseLine(rawline: String, cellLineId: String, verbose:Boolean): List[Mabiso] = {
 
     // CC   Monoclonal antibody isotype: IgG1 (PubMed=2646376); IgM (PubMed=6466869; PubMed=6863545).
 
@@ -134,11 +122,14 @@ object MabisoParser {
       if (hc == null || ! validHeavyChains.contains(hc)) throw Exception("Invalid heavy chain '" + hc + "'' in: " + rawline)
       val lc = getLightChain(item, lightIdx, srcIdx)
       if (lc != null && ! validLightChains.contains(lc)) throw Exception("Invalid light chain '" + lc + "'' in: " + rawline)
-      val srcList = splitSources(item, lightIdx, srcIdx)
-      val raw = getRawSources(srcList)             
-      val xrf = getXrefSources(srcList)            
-      val pub = getPubliRefSources(srcList)
-      Mabiso(hc, lc, pub, xrf, raw)
+      val sc = SimpleSourcedCommentParser.parse(item, clId = cellLineId, verbose = verbose)
+      if (verbose) {
+          sc.sources.split("; ").foreach(src => {
+              if (! SourceChecker.isKnown(src) ) 
+                  println(s"ERROR: Monoclonal antibody isotype comment source '${src}' at cell line ${cellLineId}")
+          })
+      }
+      Mabiso(hc, lc, sc)
     }).toList
   }
 
@@ -159,7 +150,7 @@ object MabisoParser {
         try {
             println("--------------")
             println(line)
-            val mabisoList = parseLine(linevalue)
+            val mabisoList = parseLine(linevalue, cellLineId = "some cell id", verbose = true)
             mabisoList.foreach(m => { println(m.toXML ) })
         } catch {
            case e: Exception => {}
@@ -175,7 +166,7 @@ object MabisoParser {
         val linevalue = line.substring(34).trim()
         lineNo += 1
         try {
-          parseLine(linevalue)
+          parseLine(linevalue, cellLineId = "some cell id", verbose = true)
         } catch {
           case e: Exception => {
             println("--------------")
