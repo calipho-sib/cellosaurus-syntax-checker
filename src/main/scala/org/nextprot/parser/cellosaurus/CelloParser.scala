@@ -1043,39 +1043,36 @@ object CelloParser {
             // Retokenize to separate items from source Check types
             val alltoks = cctext.split(" \\(")
             if (alltoks.size != 2) {
-              Console.err.println(
-                "Wrong format for HLA typing source in " + ac
-              );
+              Console.err.println("Wrong format for HLA typing source in " + ac)
               errcnt += 1
             } else {
-              val srctok = alltoks(1).split("\\)")(
-                0
-              ) // content of parentheses at the end of the line (source / xref)
+              val srctok = alltoks(1).split("\\)")(0) // content of parentheses at the end of the line (source / xref)
               val hlatoks = alltoks(0).split("; ") // first part of the line
               hlatoks.foreach(token => {
                 val onetoklist = token.split("\\*")
                 if (onetoklist.size != 2) {
-                  Console.err.println(
-                    "Unknown HLA type (" + token + ") found in: " + ac
-                  ); errcnt += 1
+                  Console.err.println("Unknown HLA type (" + token + ") found in: " + ac)
+                  errcnt += 1
                 } else {
                   val tokstart = onetoklist(0) + "*"
                   if (!ok_hlatypeslist.contains(tokstart)) {
-                    Console.err.println(
-                      "Unknown HLA type (" + token + ") found in: " + ac
-                    ); errcnt += 1
+                    Console.err.println("Unknown HLA type (" + token + ") found in: " + ac)
+                    errcnt += 1
                   }
                 }
               })
               if (!alltoks(1).endsWith(").")) {
-                Console.err.println(
-                  "Wrong format for HLA typing source at " + entryline
-                ); errcnt += 1
-              } else if (
-                srctok.contains("PubMed=") || srctok.contains(
-                  "Patent="
-                ) || srctok.contains("DOI=") || srctok.contains("CelloPub=")
-              ) { uniquerefs += srctok } // add references
+                Console.err.println("Wrong format for HLA typing source at " + entryline)
+                errcnt += 1
+              } else if (srctok.contains("PubMed=") || srctok.contains("Patent=") || 
+                         srctok.contains("DOI=") || srctok.contains("CelloPub=")) { 
+                uniquerefs += srctok // add references
+              }
+              // perform source checking
+              val sc = SimpleSourcedCommentParser.parse(cctext, clId = id, verbose = true)
+              if (sc.getSourceCount() == 0) {
+                println(s"ERROR: No valid source at cell line '${id}' in HLA typing: ${cctext}")
+              }
             }
           }
         } else if (entryline.startsWith("ST   ")) { // Short tandem repeats
@@ -2125,59 +2122,34 @@ object CelloParser {
         val linetokens = entrylinedata.split(": ")
         val category = linetokens(0)
         var textdata = linetokens(1).trim()
-        if (
-          linetokens.size > 2
-        ) // The text token may contain a colon which is not a separator
-          textdata += ": " + linetokens(2).trim()
-        if (
-          !(category.equals("Miscellaneous") || category
-            .equals("Doubling time") || category.equals("Caution") || category
-            .equals("Problematic cell line"))
-        )
-          textdata = textdata.dropRight(1) // Drop final dot
+        // The text token may contain a colon which is not a separator
+        if (linetokens.size > 2) textdata += ": " + linetokens(2).trim()
+        // Drop final dot
+        if ( ! (category.equals("Miscellaneous") || category.equals("Doubling time") || 
+                category.equals("Caution") || category.equals("Problematic cell line"))) {
+          textdata = textdata.dropRight(1) 
+        }
+
         if (category.equals("HLA typing")) { // prepare hla-lists of gene/alleles with sources
-          var hlaSrc = textdata.split(" \\(")(1).split("\\)")(0)
-          val dbAc = hlaSrc.split("=")
-          var hlaSrcXref: DbXref = null
-          if (dbAc.length == 2) {
-            val db = dbAc(0)
-            val ac = dbAc(1)
-            if (!DbXrefInfo.contains(db)) {
-              Console.err.println(
-                "Error: no entry for \"" + db + "\" in cellosaurus_xrefs.txt"
-              )
-            } else if (!ok_rxdblist.contains(db) && DbXrefInfo.contains(db)) {
-              hlaSrc = null
-              hlaSrcXref = new DbXref(db, ac)
-            }
-          }
-          // Console.err.println("===hlaSrc:" + hlaSrc)
           var celloHLAlist = List[HLAData]()
           val hlatoks = textdata.split(" \\(")(0).split("; ")
-          // Console.err.println("HLA textdata: " + textdata)
           hlatoks.foreach(hlaItem => {
-            // Console.err.println("HLA hlaItem: " + hlaItem)
             val hlaItemParts = hlaItem.split("\\*")
             val geneSymbol = "HLA-" + hlaItemParts(0)
             if (hlaItemParts.length > 1) {
               var hlaAlleles = hlaItemParts(1)
-              celloHLAlist = new HLAData(
-                geneSymbol = geneSymbol,
-                alleles = hlaAlleles
-              ) :: celloHLAlist
+              celloHLAlist = new HLAData(geneSymbol = geneSymbol, alleles = hlaAlleles) :: celloHLAlist
             } else {
-              Console.err.println(
-                "Error: missing '*' in HLA typing line: " + textdata
-              )
+              Console.err.println("Error: missing '*' in HLA typing line: " + textdata)
             }
           })
-          val celloHLAlistwithSource = new HLAlistwithSource(
-            glist = celloHLAlist.reverse,
-            src = hlaSrc,
-            srcXref = hlaSrcXref
-          ) // add source or source xref to list
-          celloHLAlists =
-            celloHLAlistwithSource :: celloHLAlists // add list to list of list
+          val sc = SimpleSourcedCommentParser.parse(textdata, clId = id, verbose = false)
+          if (sc.getSourceCount() == 0) {
+            println(s"ERROR: No valid source at cell line '${id}' in HLA typing: ${textdata}, exiting.")
+            if (! CelloParser.doesntDie) sys.exit(1) // exit on fatal error
+          }
+          val celloHLAlistwithSource = new HLAlistwithSource(glist = celloHLAlist.reverse, sc = sc)
+          celloHLAlists = celloHLAlistwithSource :: celloHLAlists
 
         } else if (category.equals("Doubling time")) {
           try {
@@ -2889,24 +2861,22 @@ class DoublingTime(val value: String, val note: String, val sc: SimpleSourcedCom
     </doubling-time>
 }
 
-class HLAlistwithSource(
-    val glist: List[HLAData],
-    val src: String,
-    val srcXref: DbXref
-) {
+class HLAlistwithSource(val glist: List[HLAData], sc: SimpleSourcedComment) {
+
+  val xreflist = sc.xreflist
+  val publist = sc.publist
+  val srclist = sc.orglist
+  val hasSources = (sc.getSourceCount() > 0)
+
   def toXML =
     <hla-typing>
       <hla-gene-alleles-list>{glist.map(_.toXML)}</hla-gene-alleles-list>
-      <hla-typing-source>
-      {
-      if (srcXref != null) 
-        srcXref.toXML
-      else if (src.contains("PubMed") || src.contains("Patent") || src.contains("DOI") || src.contains("CelloPub"))
-        <reference resource-internal-ref={src}/>
-      else
-        <source>{src}</source>
+      { 
+      if (xreflist.size>0) xreflist.map(_.toXML)
+      else if (publist.size>0) publist.map(_.toXML) 
+      else if (srclist.size>0) srclist.map(_.toXML) 
+      else Null 
       }
-		  </hla-typing-source>
     </hla-typing>
 }
 
