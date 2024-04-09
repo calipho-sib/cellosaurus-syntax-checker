@@ -822,7 +822,10 @@ object CelloParser {
 
           } else if (cctopic == "Microsatellite instability") {
             try {
-              MsiParser.parseLine(cctext.trim)
+              val msi = MsiParser.parseLine(cctext.trim, cellLineId = id, verbose = true)
+              if (! msi.hasSources ) {
+                println(s"ERROR: No valid source at cell line '${id}' in ${entryline}.")
+              }
             } catch {
               case e: Exception => {
                 errcnt += 1
@@ -2197,15 +2200,19 @@ object CelloParser {
 
         } else if (category.equals("Knockout cell")) {
           try {
-            val msi = KnockoutParser.parseLine(textdata)
-            celloKnockoutList = msi :: celloKnockoutList
+            val koc = KnockoutParser.parseLine(textdata)
+            celloKnockoutList = koc :: celloKnockoutList
           } catch {
             case e: Exception => {} // handled earlier
           }
 
         } else if (category.equals("Microsatellite instability")) {
           try {
-            val msi = MsiParser.parseLine(textdata)
+            val msi = MsiParser.parseLine(textdata, cellLineId = id, verbose = false)
+            if (! msi.hasSources ) {
+              println(s"ERROR: No valid source at cell line '${id}' in ${entryline}, exiting.")
+              if (! CelloParser.doesntDie) sys.exit(1)  // exit on fatal error
+            }
             celloMsiList = msi :: celloMsiList
           } catch {
             case e: Exception => {} // handled earlier

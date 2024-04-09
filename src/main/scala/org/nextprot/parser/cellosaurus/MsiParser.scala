@@ -5,49 +5,37 @@ import scala.xml._
 
 class Msi(value: String, note: String, sc: SimpleSourcedComment) {
     
-    var xrefs = sc.xreflist
-    var publiRefs = sc.publist
-    var orgRefs = sc.orglist
+    val xreflist = sc.xreflist
+    val publist = sc.publist
+    val srclist = sc.orglist
+    val hasSources = (sc.getSourceCount() > 0)
 
     override def toString() : String = {
         s"Msi(value=$value, note:${if (note==null) "(null)" else note}, sources:$sc.sources)"
     }
-
-//          <microsatellite-instability-value>{value}</microsatellite-instability-value>
-
 
     def toXML = 
         <microsatellite-instability msi-value={value}>
             {
             if (note != null) <microsatellite-instability-note>{note}</microsatellite-instability-note> else Null
             }
-            <microsatellite-instability-sources>
             {
-            if (xrefs.size > 0)
-                <xref-list>{xrefs.map(_.toXML)}</xref-list>
+            if (hasSources)
+                <source-list>
+                { if (xreflist.size>0) xreflist.map(_.toXML) else Null }
+                { if (publist.size>0) publist.map(_.toXML) else Null }
+                { if (srclist.size>0) srclist.map(_.toXML) else Null }
+                </source-list>
             else
                 Null
             }
-            {
-            if (publiRefs.size > 0)
-                <reference-list>{publiRefs.map(_.toXML)}</reference-list>
-            else  
-                Null
-            }
-            {
-            if (orgRefs.size > 0) 
-                <source-list>{orgRefs.map(_.toXML)}</source-list>
-            else
-                Null
-            }
-            </microsatellite-instability-sources>
         </microsatellite-instability>
 
 }
 
 object MsiParser {
 
-    def parseLine(rawtext: String) : Msi = {
+    def parseLine(rawtext: String, cellLineId: String, verbose: Boolean) : Msi = {
         val text = if (rawtext.endsWith(".")) rawtext.substring(0,rawtext.length-1) else rawtext
         val possibleValues = Set("Instable (MSI)", "Instable (MSI-high)", "Instable (MSI-low)", "Stable (MSS)")
         val pv = possibleValues.find(v => text.startsWith(v + " "))
@@ -60,10 +48,13 @@ object MsiParser {
             note = tail.substring(6, closeNotePos)
             tail = tail.substring(closeNotePos + 1)
         }
-        val sc = SimpleSourcedCommentParser.parse(rawtext, clId="unused cell line id", verbose=false)
-        sc.sources.split("; ").foreach(src => {
-            if (! SourceChecker.isKnown(src) ) throw new Exception(s"Unknown Microsatellite instability comment source '${src}'")
-        })
+        val sc = SimpleSourcedCommentParser.parse(rawtext, clId = cellLineId, verbose = verbose)
+        if (verbose) {
+            sc.sources.split("; ").foreach(src => {
+                if (! SourceChecker.isKnown(src) ) 
+                    println(s"ERROR: Unknown Microsatellite instability comment source '${src}' at cell line ${cellLineId}")
+            })
+        }
         return new Msi(value, note, sc)
     }
 
@@ -87,7 +78,7 @@ object MsiParser {
                 try {
                     println("--------------")
                     println(line)
-                    val msi = parseLine(linevalue)
+                    val msi = parseLine(linevalue, cellLineId = "some cell line id", verbose=true)
                     println(msi)
                     println(msi.toXML)
                } catch {
