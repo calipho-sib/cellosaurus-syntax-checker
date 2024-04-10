@@ -992,37 +992,31 @@ object CelloParser {
           } else if (cctopic == "Genome ancestry") { // check populations cv
             val allpoptoks = cctext.split(" \\(")
             if (allpoptoks.size != 2) {
-              Console.err.println(
-                "Wrong format for Genome ancestry source in " + ac
-              ); errcnt += 1
+              Console.err.println("Wrong format for Genome ancestry source in " + ac)
+              errcnt += 1
             } else {
               val popsrctok = allpoptoks(1).split("\\)")(0)
               val poptoks = allpoptoks(0).split("; ")
               if (poptoks.size != 7) {
-                Console.err.println(
-                  "Wrong population count for Genome ancestry source in " + ac
-                ); errcnt += 1
+                Console.err.println("Wrong population count for Genome ancestry source in " + ac)
+                errcnt += 1
               }
               var totalpercent = 0.0
               poptoks.foreach(token => {
                 val onepoptoklist = token.split("=")
                 if (onepoptoklist.size != 2) {
-                  Console.err.println(
-                    "Unknown Genome ancestry (" + token + ") found in: " + ac
-                  ); errcnt += 1
+                  Console.err.println("Unknown Genome ancestry (" + token + ") found in: " + ac)
+                  errcnt += 1
                 } else {
-                  if (
-                    new Regex("^[0-9.]+%$")
-                      .findFirstIn(onepoptoklist(1)) == None
-                  ) {
-                    Console.err.println(
-                      "Wrong population frequency format: " + entryline
-                    ); errcnt += 1
-                  } else totalpercent += onepoptoklist(1).dropRight(1).toFloat
+                  if (new Regex("^[0-9.]+%$").findFirstIn(onepoptoklist(1)) == None) {
+                    Console.err.println("Wrong population frequency format: " + entryline)
+                    errcnt += 1
+                  } else {
+                    totalpercent += onepoptoklist(1).dropRight(1).toFloat
+                  }
                   if (!ok_poptypeslist.contains(onepoptoklist(0))) {
-                    Console.err.println(
-                      "Unknown Genome ancestry population (" + token + ") found in: " + ac
-                    ); errcnt += 1
+                    Console.err.println("Unknown Genome ancestry population (" + token + ") found in: " + ac)
+                    errcnt += 1
                   }
                 }
               })
@@ -1032,13 +1026,17 @@ object CelloParser {
                 errcnt += 1
               }
               if (!allpoptoks(1).endsWith(").")) {
-                Console.err.println(
-                  "Wrong format for Genome ancestry source at " + entryline
-                ); errcnt += 1
+                Console.err.println("Wrong format for Genome ancestry source at " + entryline)
+                errcnt += 1
               } else if (popsrctok.contains("PubMed=")) {
-                uniquerefs += popsrctok
-              } // add pubmeds to refs list
+                uniquerefs += popsrctok // add pubmeds to refs list
+              }
+              val sc = SimpleSourcedCommentParser.parse(cctext, clId = id, verbose = true)
+              if (sc.getSourceCount() == 0) {
+                println(s"ERROR: No valid source at cell line '${id}' in HLA typing: ${cctext}")
+              }
             }
+
           } else if (cctopic == "HLA typing") { // sample HLA typing: A*02:01,02:06; B*40:01:02:01,67:01:01; C*03,07; DPB1*04:01,05:01 (IMGT/HLA).
             // Retokenize to separate items from source Check types
             val alltoks = cctext.split(" \\(")
@@ -2262,18 +2260,15 @@ object CelloParser {
           val poptoks = textdata.split(" \\(")(0).split("; ")
           poptoks.foreach(popItem => {
             val popName = popItem.split("=")(0)
-            val popFreq =
-              popItem.split("=")(1).dropRight(1) // Remove the % sign
-            cellopoplist = new PopFreqData(
-              popName = popName,
-              popFreq = popFreq
-            ) :: cellopoplist
+            val popFreq = popItem.split("=")(1).dropRight(1) // Remove the % sign
+            cellopoplist = new PopFreqData(popName = popName, popFreq = popFreq) :: cellopoplist
           })
-          popDatawithSource = new PopulistwithSource(
-            poplist = cellopoplist.reverse,
-            src = popuSrc
-          ) // add source to list
-
+          val sc = SimpleSourcedCommentParser.parse(textdata, clId = id, verbose = false) // err msg handled earlier
+          if (sc.getSourceCount() == 0) {
+            println(s"ERROR: No valid source at cell line '${id}' in ${entryline}, exiting.")
+            if (! CelloParser.doesntDie) sys.exit(1) // exit on fatal error
+          }
+          popDatawithSource = new PopulistwithSource(poplist = cellopoplist.reverse, sc = sc)
 
         } else if (category.equals("Sequence variation")) { // prepare stuff
           var seqvartoks = textdata.split("; ")
@@ -2885,18 +2880,21 @@ class PopFreqData(val popName: String, val popFreq: String) {
     <population population-name={popName} population-percentage={popFreq} />
 }
 
-class PopulistwithSource(val poplist: List[PopFreqData], val src: String) {
+class PopulistwithSource(val poplist: List[PopFreqData], val sc: SimpleSourcedComment) {
+  val xreflist = sc.xreflist
+  val publist = sc.publist
+  val srclist = sc.orglist
+  val hasSources = (sc.getSourceCount() > 0)
+
   def toXML =
     <genome-ancestry>
       <population-list>{poplist.map(_.toXML)}</population-list>
-      <genome-ancestry-source>
-      {
-      if (src.contains("PubMed") || src.contains("Patent") || src.contains("DOI") || src.contains("CelloPub"))
-        <reference resource-internal-ref={src}/>
-      else
-        <source>{src}</source>
+      { 
+      if (xreflist.size>0) xreflist.map(_.toXML)
+      else if (publist.size>0) publist.map(_.toXML) 
+      else if (srclist.size>0) srclist.map(_.toXML) 
+      else Null 
       }
-		  </genome-ancestry-source>
     </genome-ancestry>
 }
 
