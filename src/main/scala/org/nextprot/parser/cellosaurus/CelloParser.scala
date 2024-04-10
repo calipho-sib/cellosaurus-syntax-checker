@@ -2144,7 +2144,7 @@ object CelloParser {
           val sc = SimpleSourcedCommentParser.parse(textdata, clId = id, verbose = false)
           if (sc.getSourceCount() == 0) {
             println(s"ERROR: No valid source at cell line '${id}' in HLA typing: ${textdata}, exiting.")
-            if (! CelloParser.doesntDie) sys.exit(1) // exit on fatal error
+            if (CelloParser.doesntDie) sc.orglist = new STsource("(none)") :: sc.orglist else sys.exit(1) // exit on fatal error
           }
           val celloHLAlistwithSource = new HLAlistwithSource(glist = celloHLAlist.reverse, sc = sc)
           celloHLAlists = celloHLAlistwithSource :: celloHLAlists
@@ -2160,7 +2160,7 @@ object CelloParser {
               val sc = SimpleSourcedCommentParser.parse(text, clId = id, verbose = false) // err msg handled earlier
               if (sc.getSourceCount() == 0) {
                 println(s"ERROR: No valid source at cell line '${id}' in ${entryline}, exiting.")
-                if (! CelloParser.doesntDie) sys.exit(1) // exit on fatal error
+                if (CelloParser.doesntDie) sc.orglist = new STsource("(none)") :: sc.orglist else sys.exit(1) // exit on fatal error
               }
               val doublingTime = new DoublingTime(value = dt("value"), note = dt("note"), sc = sc)
               celloDoublingTimeList = doublingTime :: celloDoublingTimeList
@@ -2182,7 +2182,7 @@ object CelloParser {
             val msi = MsiParser.parseLine(textdata, cellLineId = id, verbose = false)
             if (! msi.hasSources ) {
               println(s"ERROR: No valid source at cell line '${id}' in ${entryline}, exiting.")
-              if (! CelloParser.doesntDie) sys.exit(1)  // exit on fatal error
+              if (CelloParser.doesntDie) msi.sc.orglist = new STsource("(none)") :: msi.sc.orglist else sys.exit(1) // exit on fatal error
             }
             celloMsiList = msi :: celloMsiList
           } catch {
@@ -2266,7 +2266,7 @@ object CelloParser {
           val sc = SimpleSourcedCommentParser.parse(textdata, clId = id, verbose = false) // err msg handled earlier
           if (sc.getSourceCount() == 0) {
             println(s"ERROR: No valid source at cell line '${id}' in ${entryline}, exiting.")
-            if (! CelloParser.doesntDie) sys.exit(1) // exit on fatal error
+            if (CelloParser.doesntDie) sc.orglist = new STsource("(none)") :: sc.orglist else sys.exit(1) // exit on fatal error
           }
           popDatawithSource = new PopulistwithSource(poplist = cellopoplist.reverse, sc = sc)
 
@@ -2366,7 +2366,7 @@ object CelloParser {
         val sc = SimpleSourcedCommentParser.parse("ST   Source(s) ... (" + srcList + ")", id, verbose=false)
         if (sc.getSourceCount() == 0) {
           println(s"ERROR: No valid source at cell line '${id}' in ${entryline}, exiting.")
-          if (! CelloParser.doesntDie) sys.exit(1)
+          if (CelloParser.doesntDie) sc.orglist = new STsource("(none)") :: sc.orglist else sys.exit(1) // exit on fatal error
         }
         celloXRsrclist = sc.xreflist
         celloPBsrclist = sc.publist  

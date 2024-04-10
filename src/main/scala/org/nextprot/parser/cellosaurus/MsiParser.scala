@@ -3,7 +3,7 @@ package org.nextprot.parser.cellosaurus
 import scala.io.Source
 import scala.xml._
 
-class Msi(value: String, note: String, sc: SimpleSourcedComment) {
+class Msi(value: String, note: String, val sc: SimpleSourcedComment) {
     
     val xreflist = sc.xreflist
     val publist = sc.publist

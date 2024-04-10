@@ -233,8 +233,8 @@
       <xs:complexType mixed="true">
          <xs:sequence>
             <xs:element ref="method" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="xref-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="comment-sources" minOccurs="0" maxOccurs="1"/>
+            <xs:element ref="xref" minOccurs="0" maxOccurs="1"/>
+            <xs:element ref="source-list" minOccurs="0" maxOccurs="1"/>
          </xs:sequence>
          <xs:attribute name="category" use="required">
             <xs:simpleType>
@@ -265,20 +265,6 @@
 
    <xs:element name="label" />
    <xs:element name="discontinued" />
-
-
-   <xs:element name="comment-sources">
-      <xs:annotation>
-         <xs:documentation>Describes sources of information related to various comments regarding the cell line.</xs:documentation>
-      </xs:annotation>
-      <xs:complexType>
-         <xs:sequence>
-            <xs:element ref="xref-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="reference-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="source-list" minOccurs="0" maxOccurs="1"/>
-         </xs:sequence>
-      </xs:complexType>
-   </xs:element>
 
    <!-- Comment element definition ends -->
 
@@ -371,28 +357,13 @@
       </xs:annotation>
       <xs:complexType>
          <xs:sequence>
-            <xs:element ref="str-sources" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="source-list" minOccurs="1" maxOccurs="1"/>
             <xs:element ref="marker-list" minOccurs="1" maxOccurs="1"/>
          </xs:sequence>
       </xs:complexType>
    </xs:element>
 
-   <xs:element name="str-sources">
-      <xs:annotation>
-         <xs:documentation>Describes sources of information related to short tandem repetitions of the cell line.</xs:documentation>
-      </xs:annotation>
-      <xs:complexType>
-         <xs:sequence>
-            <xs:element ref="xref-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="reference-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="source-list" minOccurs="0" maxOccurs="1"/>
-         </xs:sequence>
-      </xs:complexType>
-   </xs:element>
-
    <!-- STR list element definition ends -->
-
-
 
    <!-- STR source list element definition begins -->
    <xs:element name="source-list">
@@ -407,7 +378,20 @@
    </xs:element>
    <!-- STR source list element definition ends -->
 
-   <xs:element name="source" type="xs:string"/>
+   <xs:element name="source">
+      <xs:annotation>
+         <xs:documentation>Describes the source or provenance of an annotation about a cell line. Can contain text and / or a xref or a reference to a publication</xs:documentation>
+      </xs:annotation>
+      <xs:complexType mixed="true">
+         <xs:sequence>
+            <xs:choice minOccurs="0" maxOccurs="1">
+               <xs:element ref="xref"/>
+               <xs:element ref="reference"/>
+          </xs:choice>
+         </xs:sequence>
+      </xs:complexType>
+   </xs:element>
+
 
    <!-- STR reference list element definition begins -->
    <xs:element name="reference-list">
@@ -482,7 +466,7 @@
       <xs:complexType>
          <xs:sequence>
             <xs:element ref="marker-alleles" minOccurs="1" maxOccurs="1"/>
-            <xs:element ref="str-sources" minOccurs="0" maxOccurs="1"/>
+            <xs:element ref="source-list" minOccurs="0" maxOccurs="1"/>
          </xs:sequence>
       </xs:complexType>
    </xs:element>
@@ -602,7 +586,7 @@
       <xs:complexType>
          <xs:sequence>
             <xs:element ref="microsatellite-instability-note" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="microsatellite-instability-sources" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="source-list" minOccurs="1" maxOccurs="1"/>
          </xs:sequence>
          <xs:attribute name="msi-value" use="required">
              <xs:simpleType>
@@ -619,19 +603,6 @@
 
    <xs:element name="microsatellite-instability-value" type="xs:string"/>
    <xs:element name="microsatellite-instability-note" type="xs:string"/>
-
-   <xs:element name="microsatellite-instability-sources">
-      <xs:annotation>
-         <xs:documentation>Describes sources of information related to microsatellite instability of the cell line.</xs:documentation>
-      </xs:annotation>
-      <xs:complexType>
-         <xs:sequence>
-            <xs:element ref="xref-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="reference-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="source-list" minOccurs="0" maxOccurs="1"/>
-         </xs:sequence>
-      </xs:complexType>
-   </xs:element>
 
 <!-- msi end -->
 
@@ -654,7 +625,7 @@
          <xs:sequence>
             <xs:element ref="doubling-time-value" minOccurs="1" maxOccurs="1"/>
             <xs:element ref="doubling-time-note" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="doubling-time-sources" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="source-list" minOccurs="1" maxOccurs="1"/>
          </xs:sequence>
       </xs:complexType>
    </xs:element>
@@ -662,18 +633,6 @@
    <xs:element name="doubling-time-value" type="xs:string"/>
    <xs:element name="doubling-time-note" type="xs:string"/>
 
-   <xs:element name="doubling-time-sources">
-      <xs:annotation>
-         <xs:documentation>Describes doubling time observed for the cell line.</xs:documentation>
-      </xs:annotation>
-      <xs:complexType>
-         <xs:sequence>
-            <xs:element ref="xref-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="reference-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="source-list" minOccurs="0" maxOccurs="1"/>
-         </xs:sequence>
-      </xs:complexType>
-   </xs:element>
 <!--   ======== ends CC Topic : Doubling time ==================  -->
 
 
@@ -696,7 +655,7 @@
          <xs:sequence>
             <xs:element ref="heavy-chain" minOccurs="1" maxOccurs="1"/>
             <xs:element ref="light-chain" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="monoclonal-antibody-isotype-sources" minOccurs="0" maxOccurs="1"/>
+            <xs:element ref="source-list" minOccurs="0" maxOccurs="1"/>
          </xs:sequence>
       </xs:complexType>
    </xs:element>
@@ -710,19 +669,6 @@
             <xs:enumeration value="lambda"/>
          </xs:restriction>
       </xs:simpleType>
-   </xs:element>
-
-   <xs:element name="monoclonal-antibody-isotype-sources">
-      <xs:annotation>
-         <xs:documentation>Describes sources of information regarding the monoclonal antibody isotype of the cell line.</xs:documentation>
-      </xs:annotation>
-      <xs:complexType>
-         <xs:sequence>
-            <xs:element ref="xref-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="reference-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="source-list" minOccurs="0" maxOccurs="1"/>
-         </xs:sequence>
-      </xs:complexType>
    </xs:element>
 
 <!-- monoclonal antibody target list -->
@@ -800,7 +746,7 @@
       <xs:complexType>
          <xs:sequence>
             <xs:element ref="hla-gene-alleles-list" minOccurs="1" maxOccurs="1"/>
-            <xs:element ref="hla-typing-source" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="source" minOccurs="1" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
    </xs:element>
@@ -830,23 +776,6 @@
    </xs:element>
    <!-- HLA gene data element definition ends -->
 
-   <!-- HLA list source element definition begins -->
-   <xs:element name="hla-typing-source">
-      <xs:annotation>
-         <xs:documentation>Describes the HLA source for a cell line and a HLA typing list.</xs:documentation>
-      </xs:annotation>
-      <xs:complexType>
-         <xs:sequence>
-            <xs:choice maxOccurs="1">
-               <xs:element ref="source"/>
-               <xs:element ref="xref"/>
-               <xs:element ref="reference"/>
-            </xs:choice>
-         </xs:sequence>
-      </xs:complexType>
-   </xs:element>
-   <!-- HLA list source element definition ends -->
-
    <!-- Sequence variation list element definition begins -->
    <xs:element name="sequence-variation-list">
       <xs:annotation>
@@ -863,21 +792,6 @@
    <xs:element name="mutation-description" type="xs:string"/>
    <xs:element name="variation-note" type="xs:string"/>
 
-   <!-- variation-sources list element definition begins -->
-   <xs:element name="variation-sources">
-      <xs:annotation>
-         <xs:documentation>Describes the sources for sequence variation for a cell line.</xs:documentation>
-      </xs:annotation>
-      <xs:complexType>
-         <xs:sequence>
-            <xs:element ref="xref-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="reference-list" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="source-list" minOccurs="0" maxOccurs="1"/>
-         </xs:sequence>
-      </xs:complexType>
-   </xs:element>
-   <!-- variation-sources list element definition ends -->
-
    <!-- Sequence variation element definition begins -->
     <xs:element name="sequence-variation">
       <xs:complexType>
@@ -885,7 +799,7 @@
             <xs:element ref="mutation-description" minOccurs="0" maxOccurs="1"/>
             <xs:element ref="variation-note" minOccurs="0" maxOccurs="1"/>
             <xs:element ref="xref-list" minOccurs="1" maxOccurs="1"/>
-            <xs:element ref="variation-sources" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="source-list" minOccurs="0" maxOccurs="unbounded"/>
          </xs:sequence>
          <xs:attribute name="variation-type" use="required">
              <xs:simpleType>
@@ -945,7 +859,7 @@
       <xs:complexType>
          <xs:sequence>
             <xs:element ref="population-list" minOccurs="1" maxOccurs="1"/>
-            <xs:element ref="genome-ancestry-source" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="source" minOccurs="1" maxOccurs="1"/>
         </xs:sequence>
       </xs:complexType>
    </xs:element>
@@ -987,22 +901,6 @@
       </xs:complexType>
    </xs:element>
    <!-- Population data element definition ends -->
-
-   <!-- Genome ancestry source element definition begins -->
-   <xs:element name="genome-ancestry-source">
-      <xs:annotation>
-         <xs:documentation>Describes the source for a genome ancestry record.</xs:documentation>
-      </xs:annotation>
-      <xs:complexType>
-         <xs:sequence>
-            <xs:choice maxOccurs="1">
-               <xs:element ref="source"/>
-               <xs:element ref="reference"/>
-            </xs:choice>
-         </xs:sequence>
-      </xs:complexType>
-   </xs:element>
-   <!-- Genome ancestry source element definition ends -->
 
    <!-- Transformant list element definition begins -->
    <xs:element name="transformant-list">
