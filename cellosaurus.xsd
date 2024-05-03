@@ -472,7 +472,6 @@
    </xs:element>
    <!-- STR marker data element definition ends -->
 
-   <xs:element name="hla-alleles" type="xs:string"/>
    <xs:element name="marker-alleles" type="xs:string"/>
 
 
