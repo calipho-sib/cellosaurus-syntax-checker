@@ -2037,7 +2037,6 @@ object CelloParser {
     var ac = ""
     var id = ""
     var category = ""
-    var entrycategory = ""
     var sex = ""
     var age = ""
     var source_pmid = ""
@@ -2075,18 +2074,6 @@ object CelloParser {
     var celloMisspellingList = List[Misspelling]()
     var popDatawithSource: PopulistwithSource = null
 
-    flatEntry.foreach(
-      entryline =>
-        { // First pass just to get the cell line category, it can influence the urls in DbXrefs
-          if (
-            entryline.startsWith("CC   Part of: ECACC") || entryline
-              .startsWith("CC   Part of: Motor Neurone Disease")
-          ) entrycategory = entryline.substring(20) // Category
-          else if (entryline.startsWith("CA   ") && entrycategory == "")
-            entrycategory = entryline.substring(5) // Category
-        }
-    )
-
     flatEntry.foreach(entryline => {
       if (entryline.length() > 5) entrylinedata = entryline.substring(5)
 
@@ -2112,10 +2099,7 @@ object CelloParser {
         if (!DbXrefInfo.contains(db))
           Console.err.println("Error: no entry for \"" + db + "\" in cellosaurus_xrefs.txt")
         else
-          celloXreflist = new DbXref(
-            db = db, 
-            ac = entrylinedata.split(";")(1).trim(), 
-            entryCategory = entrycategory) :: celloXreflist
+          celloXreflist = new DbXref(db = db, ac = entrylinedata.split(";")(1).trim()) :: celloXreflist
       } else if (entryline.startsWith("CC   ")) { // comment
         val linetokens = entrylinedata.split(": ")
         val category = linetokens(0)

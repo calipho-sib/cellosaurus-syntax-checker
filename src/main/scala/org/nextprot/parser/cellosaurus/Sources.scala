@@ -71,7 +71,6 @@ class DbXref(
     val ac: String,
     var label: String = "",
     var discontinued: String = "",
-    val entryCategory: String = ""
 ) {
 
   val category = DbXrefInfo.getCat(db)
@@ -82,43 +81,26 @@ class DbXref(
   def init = { // prepare final url from template and accession
     if (url.contains("%s")) {
       // Deal with a few exceptions...
-      if (db.equals("BTO"))
+      if (db.equals("BTO")) {
         // BTO:  %s is the numerical part of the BTO:nnnnnnn identifier
         final_url = url.replace("%s", ac.substring(4)) 
-      else if (db.equals("CGH-DB"))
+      } else if (db.equals("CGH-DB")) {
         // CGH-DB: Note: %s and %t are respectively the values before and after the dash in the DR line.
         final_url = url.replace("%s", ac.split("-")(0)).replace("%t", ac.split("-")(1)) 
-      else if (db.equals("AddexBio"))
+      } else if (db.equals("AddexBio")) {
         // AddexBio: Note: %s is the value after the slash "/" in the DR line.
         final_url = url.replace("%s", ac.split("/")(1)) 
-      else if (db.equals("ECACC")) {
-        var urlCategory = ""
-        var modifiedUrl = ""
-        var collection = ""
-        if (entryCategory.equals("Hybridoma")) {
-          urlCategory = "hybridoma"; collection = "ecacc_gc";
-        } else if (entryCategory.equals("Induced pluripotent stem cell")) {
-          urlCategory = "ipsc"; collection = "ecacc_ipsc";
-        } else if (entryCategory.startsWith("chromosomal")) {
-          urlCategory = "humangeneticca"; collection = "ecacc_hgc";
-        } else if (entryCategory.startsWith("Neurone Disease (MND)")) {
-          urlCategory = "diseaseandnormalcohortcollections";
-          collection = "ecacc_mnd";
-        } else if (entryCategory.startsWith("randomly")) {
-          urlCategory = "humanrandomcontrol"; collection = "ecacc_hrc";
-        }
-        if (urlCategory != "")
-          modifiedUrl = url.replace("generalcell", urlCategory).split("&")(0) + "&collection=" + collection
-        else modifiedUrl = url
-        final_url = modifiedUrl.replace("%s", ac)
       } else if (db.equals("TKG")) { 
         // TKG: Note: n% is the second digit of the cell line AC and %s is the cell line AC without the 'TKG'
         val digits = ac.split(" ")(1)
         final_url = url.replace("%n", digits.substring(1, 2)).replace("%s", digits); // wtf! digits.substring(1,1) is empty!!!
-      } else // General form
+      } else {
+        // General form
         final_url = url.replace("%s", ac)
-    } else
+      }
+    } else {
       final_url = "" // for xrefs like ICLC
+    }
   }
 
   override def toString() :String = {
