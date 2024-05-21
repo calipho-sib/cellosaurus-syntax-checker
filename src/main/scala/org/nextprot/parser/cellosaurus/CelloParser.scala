@@ -1692,11 +1692,18 @@ object CelloParser {
       for (line <- Source.fromFile(celloRefpath).getLines()) {
         publiFlat += line
         if (line.startsWith("//")) { // Record complete
-          val Cellopub = toCellopublication(publiFlat)
+        try {
+          val Cellopub = PublicationBuilder.toCellopublication(publiFlat)
           cellorefs += Cellopub.internal_id // For a subsequent sanity check with uniquerefs as collected in the cellosaurus.txt parsing loop
           xmlfile.write(prettyXMLprinter.format(Cellopub.toXML) + "\n")
-          publiFlat.clear
           pubcnt += 1
+        } catch {
+          case e: Exception => {
+            println(e.getMessage())
+            errcnt += 1          
+          }
+        }
+        publiFlat.clear
         }
       }
       // Console.err.println(pubcnt + " refs in cellosaurus_refs.txt")
@@ -1886,151 +1893,6 @@ object CelloParser {
 
   // ------------------ Utility methods, TODO: move in a separate package and import------------------------------
 
-  def toCellopublication(
-      publiFlatentry: ArrayBuffer[String]
-  ): CelloPublication = {
-    var authorlist = ArrayBuffer[String]()
-    var editorlist = ArrayBuffer[String]()
-    var xreflist = ArrayBuffer[String]()
-    var pubXreflist = List[DbXref]()
-    var celloPubAuthorlist = List[Author]()
-    var celloPubEditorlist = List[Author]()
-    var linedata = ""
-    var journal = ""
-    var volume = ""
-    var year = ""
-    var firstpage = ""
-    var lastpage = ""
-    var title = ""
-    var publisher = ""
-    var city = ""
-    var country = ""
-    var institute = ""
-    var pubtype = ""
-    var internalId = ""
-    val editorregexp =
-      new Regex(
-        "[A-Z][a-z]+.* .*[A-Z]\\.$"
-      ) // eg: Saunders S.J., Gruev B., Park J.-G.
-
-    // Parse cellosaurus ref file to build the Cellopublication class instances
-    for (line <- publiFlatentry) {
-      if (line.size > 5) linedata = line.substring(5).trim()
-      if (line.startsWith("RX   ")) { // The line occurs only once per entry in cellosaurus refs
-        val xref_arr : Array[String] = linedata.substring(0, linedata.size - 1).split("; ") 
-        for (xref <- xref_arr) xreflist.append(xref)
-        internalId = xreflist(0) // Pubmed comes first when PubMed + DOI
-      } else if (line.startsWith("RA   "))
-        val auth_arr = linedata.substring(0, linedata.size - 1).split(", ")
-        for (auth <- auth_arr) authorlist.append(auth)
-      else if (line.startsWith("RG   "))
-        val rg_arr = linedata.split(";")
-        for (rg <-rg_arr) authorlist.append(rg)
-      else if (line.startsWith("RT   ")) {
-        if (title == "") title = linedata.trim()
-        else title += " " + linedata.trim() // Titles can span several lines
-      } else if (line.startsWith("RL   ")) {
-        if (linedata.startsWith("Patent")) { // RL   Patent number CN1061093C, 24-Jan-2001.
-          year = linedata.substring(
-            linedata.size - 12,
-            linedata.size - 1
-          ) // keep day and month
-          pubtype = "patent"
-        } else if (linedata.startsWith("Thesis")) { // RL   Thesis PhD (1971), Erasmus University Rotterdam, Netherlands.
-          year = linedata.split("[\\(||\\)]")(1)
-          val rltokens = linedata.split(", ")
-          institute = rltokens(rltokens.size - 2)
-          country = rltokens(rltokens.size - 1).split("\\.")(0)
-          pubtype =
-            "t" + linedata
-              .split(" \\(")(0)
-              .substring(1) // t + hesis + level (phd, ms, ..)
-        } else if (linedata.startsWith("(In)")) { // RL   (In) Abstracts of the 91st meeting of the Japanese Society of Veterinary Science, pp.149-149, Tokyo (1981).
-          year = linedata.substring(linedata.size - 10).split("[\\(||\\)]")(1)
-          val rltokens = linedata.split("; ")
-          for (rltoken <- rltokens) {
-            if (rltoken.startsWith("pp.")) {
-              firstpage = rltoken.substring(3).split("-")(0)
-              lastpage = rltoken.substring(3).split("-")(1)
-            } else if (rltoken.contains("(eds.)")) { // Collect editors (Hiddemann W., Haferlach T., Unterhalt M., Buechner T., Ritter J. (eds.))
-              val ed_arr = rltoken.dropRight(7).split(", ")
-              for (ed <- ed_arr) editorlist.append(ed)
-            }
-          }
-          publisher = rltokens(rltokens.size - 2)
-          if (
-            publisher.startsWith("pp") || publisher.startsWith(
-              "Abs"
-            ) || publisher.startsWith("Abs")
-          ) publisher = ""
-          city = rltokens(rltokens.size - 1).split(" \\(")(0)
-          journal = rltokens(0).substring(
-            5
-          ) // Actually the 'book' title ((In) is skipped)
-          pubtype = "book chapter"
-        } else { // General journal RL eg: RL   Naunyn Schmiedebergs Arch. Pharmacol. 352:662-669(1995).
-          year = linedata.split(":")(1).split("[\\(||\\)]")(1)
-          val rltokens = linedata.split(":")(0).split(" ")
-          pubtype = "article"
-          journal = rltokens.dropRight(1).mkString(" ")
-          if (journal.contains("Suppl")) { // add the Suppl part to volume, eg: J. Physiol. Pharmacol. 60 Suppl.
-            var digitpos = 0
-            val matchlist =
-              new Regex("[0-9]").findAllIn(journal).matchData.toList
-            if (matchlist.size != 0)
-              digitpos = matchlist(0).start
-            else
-              digitpos = journal.indexOf("Suppl")
-            volume = journal.substring(digitpos)
-            journal = journal.substring(0, digitpos - 1)
-          }
-
-          if (volume == "")
-            volume = rltokens(rltokens.size - 1)
-          else // Add to suppl part
-            volume = volume + " " + rltokens(rltokens.size - 1)
-
-          val pages = linedata.split(":")(1).split("\\(")(0).split("-")
-          firstpage = pages(0)
-          if (pages.size > 1)
-            lastpage = pages(1)
-          else // like RL   Cancer Genet. Cytogenet. 84:142 Abs. A10(1995).
-            lastpage = firstpage
-        }
-      } else if (line.startsWith("//")) { // Record complete
-        authorlist.foreach(author => {
-          celloPubAuthorlist = new Author(name = author) :: celloPubAuthorlist
-        })
-        editorlist.foreach(editor => {
-          celloPubEditorlist = new Author(name = editor) :: celloPubEditorlist
-        })
-        xreflist.foreach(xref => {
-          val db = xref.split("=")(0)
-          pubXreflist = new DbXref(db = db, ac = xref.split("=")(1))  :: pubXreflist
-        })
-      }
-    }
-    // .reverse in author lists to recover original order
-    val publiEntry = new CelloPublication(
-      year = year,
-      name = journal,
-      pubtype = pubtype,
-      volume = volume,
-      firstpage = firstpage,
-      lastpage = lastpage,
-      publisher = publisher,
-      institute = institute,
-      city = city,
-      country = country,
-      internal_id = internalId,
-      title = title.split("\"")(1),
-      authors = celloPubAuthorlist.reverse,
-      editors = celloPubEditorlist.reverse,
-      dbrefs = pubXreflist
-    )
-
-    publiEntry
-  }
 
   def toCelloEntry(flatEntry: ArrayBuffer[String]): CelloEntry = {
     var entrylinedata = ""
@@ -2456,12 +2318,6 @@ object CelloParser {
 }
 
 //----------------- Modeling classes, TODO: move in a separate package and import---------------
-
-class Author(val name: String) {
-
-  def toXML =
-    <person name={name}/>
-}
 
 // pam
 class OiEntry(
@@ -2952,51 +2808,3 @@ class Comment(val category: String, var text: String, val cellId: String) {
   }
 }
 
-class CelloPublication(
-    val year: String,
-    val name: String,
-    val pubtype: String,
-    val volume: String,
-    val firstpage: String,
-    val lastpage: String,
-    val publisher: String,
-    val institute: String,
-    val city: String,
-    val country: String,
-    val internal_id: String,
-    val title: String,
-    val authors: List[Author],
-    val editors: List[Author],
-    val dbrefs: List[DbXref]
-) {
-
-  def toXML =
-    <publication 
-      date={year} 
-      type={pubtype} 
-      journal-name={ if (name != "") name else null } 
-      volume={ if (volume != "") volume else null } 
-      first-page={ if (firstpage != "") firstpage else null } 
-      last-page={ if (lastpage != "") lastpage else null } 
-      publisher={ if (publisher != "") publisher else null } 
-      institution={ if (institute != "") institute else null } 
-      city={ if (city != "") city else null } 
-      country={ if (country != "") country else null } 
-      internal-id={internal_id} >
-
-      <title>{scala.xml.PCData(title)}</title>
-      {
-      if (editors.size > 0)
-        <editor-list>{editors.map(_.toXML)}</editor-list>
-      else
-        Null
-      }
-      <author-list>{authors.map(_.toXML)}</author-list>
-      {
-      if (dbrefs.size > 0)
-        <xref-list>{dbrefs.map(_.toXML)}</xref-list>
-      else
-        Null
-      }
-    </publication>
-}
