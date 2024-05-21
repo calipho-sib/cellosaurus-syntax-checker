@@ -1080,7 +1080,11 @@
             <xs:simpleType>
                <xs:restriction base="xs:string">
                   <xs:enumeration value="article"/>
+                  <xs:enumeration value="book"/>
                   <xs:enumeration value="book chapter"/>
+                  <xs:enumeration value="conference"/>
+                  <xs:enumeration value="technical document"/>
+                  <xs:enumeration value="miscellaneous document"/>
                   <xs:enumeration value="patent"/>
                   <xs:enumeration value="thesis BSc"/>
                   <xs:enumeration value="thesis MD"/>
@@ -1098,6 +1102,11 @@
             </xs:simpleType>
          </xs:attribute>
          <xs:attribute name="journal-name" type="xs:string" use="optional"/>
+         <xs:attribute name="book-title" type="xs:string" use="optional"/>
+         <xs:attribute name="conference-title" type="xs:string" use="optional"/>
+         <xs:attribute name="document-title" type="xs:string" use="optional"/>
+         <xs:attribute name="serie-title" type="xs:string" use="optional"/>
+         <xs:attribute name="issn-13" type="xs:string" use="optional"/>
          <xs:attribute name="volume" type="xs:string" use="optional"/>
          <xs:attribute name="first-page" type="xs:string" use="optional"/>
          <xs:attribute name="last-page" type="xs:string" use="optional"/>

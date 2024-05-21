@@ -41,7 +41,7 @@ class CelloPublication(
       book-title={ if (booktitle != "") booktitle else null } 
       conference-title={ if (conftitle != "") conftitle else null } 
       serie-title={ if (serietitle != "") serietitle else null } 
-      doc-title={ if (doctitle != "") doctitle else null } 
+      document-title={ if (doctitle != "") doctitle else null } 
       volume={ if (volume != "") volume else null } 
       issn-13={ if (issn13 != "") issn13 else null } 
       first-page={ if (firstpage != "") firstpage else null } 
@@ -209,7 +209,7 @@ object PublicationBuilder {
                 parseCommonFields(elems)
 
             } else if (linedata.startsWith("(In misc. document) ")) {
-                pubtype = "misc. document"
+                pubtype = "miscellaneous document"
                 val elems = linedata.substring(20).split("; ")
                 doctitle = elems(0)
                 parseCommonFields(elems)
