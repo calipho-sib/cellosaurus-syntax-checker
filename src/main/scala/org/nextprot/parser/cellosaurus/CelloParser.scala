@@ -699,7 +699,7 @@ object CelloParser {
                 "Wrong format for " + rxdbname + " identifier: " + identifier + " found at: " + entryline
               ); errcnt += 1
             } else if (
-              (rxdbname == "Patent") && ("^[A-Z]{2}(RE)?[0-9]{5,11}[A-Z]{0,1}[1-9]{0,1}".r
+              (rxdbname == "Patent") && ("^[A-Z]{2}(RE)?(H)?[0-9]{5,11}[A-Z]{0,1}[1-9]{0,1}".r
                 .findFirstIn(identifier)) == None
             ) {
               Console.err.println(
