@@ -1105,7 +1105,7 @@
          <xs:attribute name="book-title" type="xs:string" use="optional"/>
          <xs:attribute name="conference-title" type="xs:string" use="optional"/>
          <xs:attribute name="document-title" type="xs:string" use="optional"/>
-         <xs:attribute name="serie-title" type="xs:string" use="optional"/>
+         <xs:attribute name="document-serie-title" type="xs:string" use="optional"/>
          <xs:attribute name="issn-13" type="xs:string" use="optional"/>
          <xs:attribute name="volume" type="xs:string" use="optional"/>
          <xs:attribute name="first-page" type="xs:string" use="optional"/>

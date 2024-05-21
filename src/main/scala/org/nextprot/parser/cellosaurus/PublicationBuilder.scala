@@ -40,7 +40,7 @@ class CelloPublication(
       journal-name={ if (journal != "") journal else null } 
       book-title={ if (booktitle != "") booktitle else null } 
       conference-title={ if (conftitle != "") conftitle else null } 
-      serie-title={ if (serietitle != "") serietitle else null } 
+      document-serie-title={ if (serietitle != "") serietitle else null } 
       document-title={ if (doctitle != "") doctitle else null } 
       volume={ if (volume != "") volume else null } 
       issn-13={ if (issn13 != "") issn13 else null } 
