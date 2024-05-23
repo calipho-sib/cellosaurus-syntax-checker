@@ -16,7 +16,7 @@ object SiteMapping {
     var prefix: String = null
     for (line <- lines) {
       lineNo += 1
-      if (line.startsWith("CL_") || line.startsWith("UBERON_")) {
+      if (line.startsWith("CL_") || line.startsWith("UBERON_") || line.startsWith("PO_")) {
         val idx = line.indexOf(" ") // first <space> separates accession from label
         val ac = line.substring(0,idx)
         val label = line.substring(idx+1)
@@ -44,7 +44,7 @@ object SiteMapping {
     val filename = args(0)
     load(filename)
     println("Loaded")
-    var myacs = List("xx", "CL_0002603", "UBERON_0001708", "UBERON_0000955", "UBERON_0008339")
+    var myacs = List("xx", "CL_0002603", "UBERON_0001708", "UBERON_0000955", "UBERON_0008339", "PO_0020030")
     for (ac <- myacs) {
       println(ac + " : " + getLabel(ac))
     }

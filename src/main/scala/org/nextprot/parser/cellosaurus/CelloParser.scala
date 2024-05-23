@@ -2665,7 +2665,13 @@ class DerivedFromSite(
       // use split on char rather on string (would be double escaped "\\+")
       val items = uber.split('+') 
       items.foreach(item => {
-        val xref = new DbXref("UBERON", item, label = SiteMapping.getLabel(item))
+        val xref =
+          if (item.startsWith("UBERON"))
+            new DbXref("UBERON", item, label = SiteMapping.getLabel(item))
+          else if (item.startsWith("PO"))
+            new DbXref("PO", item, label = SiteMapping.getLabel(item))
+          else 
+            new DbXref("Unknown", item, label = SiteMapping.getLabel(item)) // should throw an error
         xrefs = xref :: xrefs
       })
     }

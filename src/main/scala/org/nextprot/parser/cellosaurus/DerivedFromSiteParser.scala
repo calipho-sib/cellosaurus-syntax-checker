@@ -25,7 +25,7 @@ object DerivedFromSiteParser {
 
     // extract second element : name
     val name : String = elems(1)
-    if (name.startsWith("Note=") || name.startsWith("UBERON=")) {
+    if (name.startsWith("Note=") || name.startsWith("UBERON=") || name.startsWith("PO=")) {
       throw new Exception("Missing anatomy term name: " + name)
     }
 
@@ -33,10 +33,12 @@ object DerivedFromSiteParser {
     var note: String = null
     var uber: String = null
 
-    // if we have 3 elements, the 3rd  must be either a note element or a uberon element
+    // if we have 3 elements, the 3rd  must be either a note element or a UBERON or PO element
     if (elems.length>2) {
       if (elems(2).startsWith("UBERON=")) {
         uber = elems(2).substring(7)
+      } else if (elems(2).startsWith("PO=")) {
+        uber = elems(2).substring(3)
       } else if (elems(2).startsWith("Note=")) {
         note = elems(2).substring(5)
       } else {
@@ -44,10 +46,12 @@ object DerivedFromSiteParser {
       }
     }
 
-    // if we have 4 elements, the 4th must be a uberon element    
+    // if we have 4 elements, the 4th must be a uberon element or PO element
     if (elems.length==4) {
       if (elems(3).startsWith("UBERON=")) {
         uber = elems(3).substring(7)
+      } else if (elems(3).startsWith("PO=")) {
+        uber = elems(3).substring(3)
       } else {
         throw new Exception("Unexpected element : " + elems(3))
       }
@@ -64,7 +68,17 @@ object DerivedFromSiteParser {
 
   def main(args: Array[String]): Unit = {
 
-    val filename = args(0)
+    /* 
+    
+    line command example:
+
+    $ clear && sbt "run ../cellosaurus-api/data_in/cellosaurus_xrefs.txt dsite.txt" | less
+
+    */
+
+    DbXrefInfo.load(args(0)) // read cellosaurus_xrefs.txt
+    val filename = args(1)   // read input file
+
     val lines = Source.fromFile(filename).getLines()
     var lineNo = 0
     for (line <- lines) {
