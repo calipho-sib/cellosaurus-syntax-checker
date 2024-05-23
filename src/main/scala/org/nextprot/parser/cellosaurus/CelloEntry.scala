@@ -40,7 +40,8 @@ class CelloEntry(
     val derivedFromSiteList: List[DerivedFromSite],
     val cellType: CellType,
     val transformantList: List[Transformant],
-    val resistanceList: List[Resistance]
+    val resistanceList: List[Resistance],
+    val breed: Breed
 ) {
 
   // pam
@@ -255,6 +256,13 @@ class CelloEntry(
       {
       if (resistanceList.size > 0)
         <resistance-list>{resistanceList.map(_.toXML)}</resistance-list>
+      else
+        Null
+      }
+
+      {
+      if (breed != null)
+        breed.toXML
       else
         Null
       }

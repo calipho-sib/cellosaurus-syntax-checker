@@ -49,7 +49,8 @@ object CelloParser {
     "Derived from site",
     "Cell type",
     "Transformant",
-    "Selected for resistance to"
+    "Selected for resistance to",
+    "Breed/subspecies"
   )
   val ok_rxdblist = List("PubMed", "Patent", "DOI", "CelloPub")
 
@@ -888,6 +889,19 @@ object CelloParser {
                 )
               }
             }
+
+          } else if (cctopic == "Breed/subspecies") {
+            try {
+              val result = BreedParser.parseLine(cctext.trim)
+            } catch {
+              case e: Exception => {
+                errcnt += 1
+                println(
+                  s"ERROR while parsing Breed/subspecies comment: ${e.getMessage} at line: ${cctext.trim}"
+                )
+              }
+            }
+
           } else if (cctopic == "Cell type") {
             try {
               new CellType(cctext.trim) // just try to create the element
@@ -1920,6 +1934,7 @@ object CelloParser {
     var celloDerivedFromSiteList = List[DerivedFromSite]()
     var celloTransformantList = List[Transformant]()
     var celloResistanceList = List[Resistance]()
+    var celloBreed : Breed = null
     var celloCellType: CellType = null
     var celloOldaclist = List[OldAc]()
     var celloSynlist = List[Synonym]()
@@ -2085,13 +2100,20 @@ object CelloParser {
           try {
             val el = ResistanceParser.parseLine(textdata)
             if (el != null) {
-              val resistance =
-                new Resistance(db = el("db"), ac = el("ac"), name = el("name"))
+              val resistance = new Resistance(db = el("db"), ac = el("ac"), name = el("name"))
               celloResistanceList = resistance :: celloResistanceList
             }
           } catch {
             case e: Exception => {} // handled earlier
           }
+
+        } else if (category.equals("Breed/subspecies")) {
+          try {
+            celloBreed = BreedParser.parseLine(textdata)
+          } catch {
+            case e: Exception => {} // handled earlier
+          }
+
         } else if (category.equals("Cell type")) {
           try {
             val ct = new CellType(textdata)
@@ -2310,7 +2332,8 @@ object CelloParser {
       derivedFromSiteList = celloDerivedFromSiteList,
       cellType = celloCellType,
       transformantList = celloTransformantList,
-      resistanceList = celloResistanceList
+      resistanceList = celloResistanceList,
+      breed = celloBreed
     )
     entry
   }
