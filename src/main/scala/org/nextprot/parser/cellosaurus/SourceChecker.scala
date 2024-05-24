@@ -121,19 +121,19 @@ object SourceChecker {
         for (line <- lines) {
             lineNo += 1
             val elems = line.strip().split("; ")
-            var terms = List[String]()
-            var id: String = null
-            for (el <- elems) {
-                //if (el.startsWith("Synonym=")) { // we assume it is the last element of the line when len(elems) > 1
-                if (el.startsWith("Short=")) { // we assume it is the last element of the line when len(elems) > 1
-                    id = el.substring(6)
-                    terms = id :: terms
-                } else  {
-                    terms = el :: terms
-                }
+            if (line.trim()=="") {
+                // do nothing
+            } else if (elems.size < 3 || elems.size > 4) {
+                println(s"ERROR, unexpected number of fields, skipping line ${lineNo}: ${line}")
+            } else {
+                val name = elems(0).trim()
+                val city = if (elems(1) == "-") null else elems(1).trim()
+                val country =  if (elems(2) == "-") null else elems(2).trim()
+                val shortname = if (elems.size == 4) elems(3).substring(6).trim() else null
+                val id = if (shortname==null) name else shortname
+                instMap += (name -> id)
+                if (shortname != null) instMap += (shortname -> id)
             }
-            if (id == null) id = terms(0)
-            for (t <- terms) instMap += (t -> id)
         }
         //println("file " + filename + "content:")
         //for (el <- instMap) println(el)
@@ -167,6 +167,9 @@ object SourceChecker {
         return parentLinkMap
     }
 
+    def isOk(expr: Boolean): String = {
+        if (expr) return "OK   : " else return "ERROR: "
+    }
 
     def main(args: Array[String]): Unit = {
   
@@ -187,18 +190,20 @@ object SourceChecker {
             }
         }
 
-        println("ICLAC: " + SourceChecker.isKnownOrgRef("ICLAC"))
-        println("Center for iPS Cell Research and Application: " + SourceChecker.isKnownOrgRef("Center for iPS Cell Research and Application"))
-        println("CiRA: " + SourceChecker.isKnownOrgRef("CiRA"));
+        // Tests
+        println(isOk(SourceChecker.isKnownOrgRef("ICLAC")) + "'ICLAC' should be known org")
+        println(isOk(SourceChecker.isKnownOrgRef("Center for iPS Cell Research and Application")) + "'Center for iPS Cell Research and Application' should be known org")
+        println(isOk(SourceChecker.isKnownOrgRef("CiRA")) + "'CiRA' should be known org");
 
-        println("from parent cell line bla bla: " + SourceChecker.isKnownMiscRef("from parent cell line bla bla"))
-        println("from parent cell line bla bla: " + SourceChecker.isKnown("from parent cell line bla bla"))
+        println(isOk(SourceChecker.isKnownMiscRef("from parent cell line bla bla")) + "'from parent cell line bla bla' should be known misc ref");
+        println(isOk(SourceChecker.isKnown("from parent cell line bla bla")) + "'from parent cell line bla bla' should be known");
 
-        println("check org ids:")
-        println("ICLAC -- id --> " + SourceChecker.getKnownOrgRefId("ICLAC"))
-        println("Center for iPS Cell Research and Application -- id --> " + SourceChecker.getKnownOrgRefId("Center for iPS Cell Research and Application"))
-        println("UniProtKB --> " + SourceChecker.getKnownOrgRefId("UniProtKB"))
-        println("Schtroupf -- id --> " + SourceChecker.getKnownOrgRefId("Schtroupf"))
+        println(isOk(SourceChecker.getKnownOrgRefId("ICLAC")=="ICLAC")  + "id should be 'ICLAC'")
+        println(isOk(SourceChecker.getKnownOrgRefId("Center for iPS Cell Research and Application")=="CiRA")  + "id should be 'CiRA'")
+        println(isOk(SourceChecker.getKnownOrgRefId("UniProtKB")=="UniProtKB")  + "id should be 'UniProtKB'")
+        println(isOk(SourceChecker.getKnownOrgRefId("Schtroupf")==null)  + "id should be null")
+
+
     }
   
 
