@@ -13,7 +13,7 @@ class Breed(val name: String, val vbo: String) {
   def init = {
     if (vbo != null && vbo.length > 0) {
       // use split on char rather on string (would be double escaped "\\+")
-      val acs = vbo.split('+') 
+      val acs = vbo.substring(4).split('+') 
       val labels = name.split(" x ") 
       var idx = 0
       acs.foreach(ac => {
