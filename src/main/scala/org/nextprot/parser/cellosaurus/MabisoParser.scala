@@ -123,7 +123,7 @@ object MabisoParser {
       val lc = getLightChain(item, lightIdx, srcIdx)
       if (lc != null && ! validLightChains.contains(lc)) throw Exception("Invalid light chain '" + lc + "'' in: " + rawline)
       val sc = SimpleSourcedCommentParser.parse(item, clId = cellLineId, verbose = verbose)
-      if (verbose) {
+      if (verbose && sc.status != SOURCES_STATUS.NONE) {
           sc.sources.split("; ").foreach(src => {
               if (! SourceChecker.isKnown(src) ) 
                   println(s"ERROR: Monoclonal antibody isotype comment source '${src}' at cell line ${cellLineId}")
