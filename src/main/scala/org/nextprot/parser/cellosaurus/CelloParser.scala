@@ -451,6 +451,10 @@ object CelloParser {
     println(s"Checking ${args(0)} for non UTF-8 characters...")
     if (Utf8Checker.check(args(0))) { println("ok") } else { println("Exiting"); sys.exit() }
 
+    println(s"Checking ${celloRefpath} for non UTF-8 characters...")
+    if (Utf8Checker.check(celloRefpath)) { println("ok") } else { println("Exiting"); sys.exit() }
+
+
     // Parse cellosaurus txt file, build headers for obo file, and split in flat entries
     // and detect line doublons within cell line records
     var cl_line_map = Map[String,String]()

@@ -158,20 +158,18 @@ object PublicationBuilder {
       } else if (line.startsWith("RL   ")) {
         try {
             if (linedata.startsWith("Patent")) { // RL   Patent number CN1061093C, 24-Jan-2001.
-            year = linedata.substring(
-                linedata.size - 12,
-                linedata.size - 1
-            ) // keep day and month
-            pubtype = "patent"
-            } else if (linedata.startsWith("Thesis")) { // RL   Thesis PhD (1971), Erasmus University Rotterdam, Netherlands.
-            year = linedata.split("[\\(||\\)]")(1)
-            val rltokens = linedata.split(", ")
-            institute = rltokens(rltokens.size - 2)
-            country = rltokens(rltokens.size - 1).split("\\.")(0)
-            pubtype =
-                "t" + linedata
-                .split(" \\(")(0)
-                .substring(1) // t + hesis + level (phd, ms, ..)
+              pubtype = "patent"
+              year = linedata.substring(linedata.size - 12, linedata.size - 1) // keep day and month
+
+            } else if (linedata.startsWith("Thesis")) { // RL   Thesis PhD (1971); Erasmus University Rotterdam; Rotherdam; Netherlands.
+              val rltokens = linedata.split("; ")
+              val type_year = rltokens(0).split('(')           // example: Thesis PhD (1971)
+              pubtype = "t" + type_year(0).substring(1).trim() // t + hesis + level (phd, ms, ..)
+              year = type_year(1).split(')')(0)
+              institute = rltokens(1)
+              city = rltokens(2)
+              country = rltokens(3)
+              if (country.endsWith(".")) country = country.dropRight(1)
 
             } else if (linedata.startsWith("(In book) ")) {
                 pubtype = "book"
@@ -364,7 +362,8 @@ RL   Acta Haematol. Jpn. 46:122-122(1983).
 RX   CelloPub=CLPUB00156;
 RA   Leung J.W.;
 RT   "The study of a human rhabdomyosarcoma cell line (HUS-2).";
-RL   Thesis PhD (1974), University of Kansas, United States.
+OLD RL   Thesis PhD (1974), University of Kansas, United States.
+RL   Thesis PhD (1974); University of Kansas; Kansas City; USA.
 //
 RX   CelloPub=CLPUB00262;
 RA   Gold M.;
@@ -446,7 +445,7 @@ RL   (In misc. document) Institute for Medical Research (Camden, N.J.); pp.1-351
   </xref-list>
 </publication>
 //
-<publication date="1974" type="thesis PhD" institution="University of Kansas" country="United States" internal-id="CelloPub=CLPUB00156">
+<publication date="1974" type="thesis PhD" institution="University of Kansas" city="Kansas City" country="USA" internal-id="CelloPub=CLPUB00156">
   <title><![CDATA[The study of a human rhabdomyosarcoma cell line (HUS-2).]]></title>
   <author-list>
     <person name="Leung J.W."/>
@@ -524,7 +523,7 @@ RL   (In misc. document) Institute for Medical Research (Camden, N.J.); pp.1-351
   </xref-list>
 </publication>
 //
-<publication date="2016" type="technical document" serie-title="ATCC application note 17" first-page="1" last-page="4" institution="ATCC" city="Manassas" country="USA" internal-id="DOI=10.13140/RG.2.2.17700.88960">
+<publication date="2016" type="technical document" document-serie-title="ATCC application note 17" first-page="1" last-page="4" institution="ATCC" city="Manassas" country="USA" internal-id="DOI=10.13140/RG.2.2.17700.88960">
   <title><![CDATA[hTERT-immortalized and primary keratinocytes differentiate into epidermal structures in 3D organotypic culture.]]></title>
   <author-list>
     <person name="Briley A."/>
@@ -537,7 +536,7 @@ RL   (In misc. document) Institute for Medical Research (Camden, N.J.); pp.1-351
   </xref-list>
 </publication>
 //
-<publication date="1994" type="misc. document" doc-title="Institute for Medical Research (Camden, N.J.)" first-page="1" last-page="351" institution="National Institutes of Health" city="Bethesda" country="USA" internal-id="CelloPub=CLPUB00597">
+<publication date="1994" type="miscellaneous document" document-title="Institute for Medical Research (Camden, N.J.)" first-page="1" last-page="351" institution="National Institutes of Health" city="Bethesda" country="USA" internal-id="CelloPub=CLPUB00597">
   <title><![CDATA[1994 catalog of cell lines. NIA Aging Cell Repository.]]></title>
   <author-list>
     <person name="National Institute on Aging"/>
