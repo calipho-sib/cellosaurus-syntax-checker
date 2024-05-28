@@ -98,6 +98,7 @@
              <xs:element ref="genome-ancestry" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="transformant-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="resistance-list" minOccurs="0" maxOccurs="1"/>
+             <xs:element ref="breed" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="misspelling-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="registration-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="sequence-variation-list" minOccurs="0" maxOccurs="1"/>
@@ -377,6 +378,19 @@
       </xs:complexType>
    </xs:element>
    <!-- STR source list element definition ends -->
+
+   <xs:element name="breed">
+      <xs:annotation>
+         <xs:documentation>Describes the breed or subspecies of a cell line. Can contain text and an optional xref describing the breed</xs:documentation>
+      </xs:annotation>
+      <xs:complexType mixed="true">
+         <xs:sequence>
+            <xs:element ref="xref-list" minOccurs="0" maxOccurs="unbounded"/>
+         </xs:sequence>
+      </xs:complexType>
+   </xs:element>
+
+
 
    <xs:element name="source">
       <xs:annotation>
