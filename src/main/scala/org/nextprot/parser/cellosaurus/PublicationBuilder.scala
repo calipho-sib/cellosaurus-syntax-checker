@@ -7,7 +7,13 @@ import org.nextprot.parser.cellosaurus._
 
 class Author(val name: String) {
   def toXML =
-    <person name={name}/>
+    val is_person = ! name.startsWith("RG/")
+    val clean_name = 
+      if (is_person) name else name.substring(3)
+    if (is_person) 
+      <person name={name}/>
+    else
+      <consortium name={clean_name}/>
 }
 
 class CelloPublication(
@@ -151,7 +157,7 @@ object PublicationBuilder {
         for (auth <- auth_arr) authorlist.append(auth)
       else if (line.startsWith("RG   "))
         val rg_arr = linedata.split(";")
-        for (rg <-rg_arr) authorlist.append(rg)
+        for (rg <-rg_arr) authorlist.append("RG/" + rg)
       else if (line.startsWith("RT   ")) {
         if (title == "") title = linedata.trim()
         else title += " " + linedata.trim() // Titles can span several lines
@@ -348,6 +354,8 @@ object PublicationBuilder {
   val data_in = """
 RX   PubMed=2868604; DOI=10.1530/acta.0.1110054;
 RA   Brandi M.L., Rotella C.M., Zonefrati R., Toccafondi R., Aloj S.M.;
+RG   Consortium1;
+RG   Consortium2;
 RT   "Loss of adrenergic regulation of cAMP production in the FRTL-5 cell
 RT   line.";
 RL   Acta Endocrinol. 111:54-61(1986).
@@ -414,10 +422,12 @@ RL   (In misc. document) Institute for Medical Research (Camden, N.J.); pp.1-351
     <person name="Zonefrati R."/>
     <person name="Toccafondi R."/>
     <person name="Aloj S.M."/>
+    <consortium name="Consortium1"/>
+    <consortium name="Consortium2"/>
   </author-list>
   <xref-list>
     <xref database="DOI" category="Reference resources" accession="10.1530/acta.0.1110054">
-      <url><![CDATA[https://dx.doi.org/10.1530/acta.0.1110054]]></url>
+      <url><![CDATA[https://doi.org/10.1530/acta.0.1110054]]></url>
     </xref>
     <xref database="PubMed" category="Reference resources" accession="2868604">
       <url><![CDATA[https://www.ncbi.nlm.nih.gov/pubmed/2868604]]></url>
@@ -484,7 +494,7 @@ RL   (In misc. document) Institute for Medical Research (Camden, N.J.); pp.1-351
   </author-list>
   <xref-list>
     <xref database="DOI" category="Reference resources" accession="10.1007/978-2-8178-0765-2_34">
-      <url><![CDATA[https://dx.doi.org/10.1007/978-2-8178-0765-2_34]]></url>
+      <url><![CDATA[https://doi.org/10.1007/978-2-8178-0765-2_34]]></url>
     </xref>
   </xref-list>
 </publication>
@@ -531,7 +541,7 @@ RL   (In misc. document) Institute for Medical Research (Camden, N.J.); pp.1-351
   </author-list>
   <xref-list>
     <xref database="DOI" category="Reference resources" accession="10.13140/RG.2.2.17700.88960">
-      <url><![CDATA[https://dx.doi.org/10.13140/RG.2.2.17700.88960]]></url>
+      <url><![CDATA[https://doi.org/10.13140/RG.2.2.17700.88960]]></url>
     </xref>
   </xref-list>
 </publication>
@@ -539,7 +549,7 @@ RL   (In misc. document) Institute for Medical Research (Camden, N.J.); pp.1-351
 <publication date="1994" type="miscellaneous document" document-title="Institute for Medical Research (Camden, N.J.)" first-page="1" last-page="351" institution="National Institutes of Health" city="Bethesda" country="USA" internal-id="CelloPub=CLPUB00597">
   <title><![CDATA[1994 catalog of cell lines. NIA Aging Cell Repository.]]></title>
   <author-list>
-    <person name="National Institute on Aging"/>
+    <consortium name="National Institute on Aging"/>
   </author-list>
   <xref-list>
     <xref database="CelloPub" category="Reference resources" accession="CLPUB00597">

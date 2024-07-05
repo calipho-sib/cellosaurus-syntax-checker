@@ -29,7 +29,7 @@ object KnockoutParser {
         val db = toklist(1)
         val ac = toklist(2)
         val dbac = db + "=" + ac
-        if (! SourceChecker.isInDbSet(dbac, Set("HGNC", "MGI", "UniProtKB", "FlyBase_Gene", "VGNC", "RGD")) ) 
+        if (! SourceChecker.isInDbSet(dbac, Set("HGNC", "MGI", "UniProtKB", "FlyBase_Gene", "VGNC", "RGD", "CGNC")) ) 
           throw new Exception(s"found invalid xref in Knockout cell comment '${rawtext}'")
         val geneAndNote = toklist(3).split(" \\(Note=")
         val geneName = geneAndNote(0)
