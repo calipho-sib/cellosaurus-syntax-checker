@@ -45,7 +45,7 @@ object GeneticIntegrationParser {
 
   val validDbs = Set("CGNC", "FlyBase_Gene", "FPbase", "HGNC", "MGI", "RGD", "UniProtKB", "VGNC")
   val validMethods = Set("CRISPR/Cas9", "Homologous recombination", "TALEN", "Transduction", 
-    "Transfection/transduction", "Transfection", "Transgenic mouse", "Transgenic rat", "Transgenic xfish", "ZFN")
+    "Transfection/transduction", "Transfection", "Transgenic mouse", "Transgenic rat", "Transgenic fish", "ZFN")
   
   def parseLine(rawline: String): GenInt = {
     // remove final '.' if necessary
