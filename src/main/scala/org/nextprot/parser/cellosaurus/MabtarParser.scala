@@ -6,7 +6,7 @@ import scala.xml._
 
 class Mabtar(name: String, db: String, ac: String, note:String) {
 
-  val trgXref : DbXref = if (db=="ChEBI" || db=="UniProtKB") new DbXref(db, ac, label = name) else null
+  val trgXref : DbXref = if (db=="ChEBI" || db=="UniProtKB" || db=="FPbase") new DbXref(db, ac, label = name) else null
   
   override def toString() : String = {
     s"Mabtar(name=$name, db:$db, ac:$ac, note:$note)"
@@ -31,7 +31,7 @@ class Mabtar(name: String, db: String, ac: String, note:String) {
 // MonoclonalAntibodyTargetParser
 object MabtarParser {
 
-  val validDbs = Set("ChEBI", "UniProtKB")
+  val validDbs = Set("ChEBI", "UniProtKB", "FPbase")
 
   def parseLine(rawline: String): Mabtar = {
 

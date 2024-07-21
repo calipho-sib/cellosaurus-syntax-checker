@@ -566,8 +566,11 @@ object CelloParser {
           Console.err.println("Trailing space found at: " + entryline)
         else if (entryline.endsWith(".."))
           Console.err.println("Double dot found at: " + entryline)
-        if (entryline.startsWith("ID   ")) { id = entrylinedata; idlist += id }
-        else if (entryline.startsWith("AC   ")) {
+        
+        if (entryline.startsWith("ID   ")) { 
+          id = entrylinedata; idlist += id 
+        
+        } else if (entryline.startsWith("AC   ")) {
           ac = entrylinedata
           if (acregexp.findFirstIn(ac) == None) {
             Console.err.println("Incorrect AC format at: " + entryline);
@@ -599,6 +602,7 @@ object CelloParser {
           }
           entrynb += 1;
           lastid = id
+
         } else if (entryline.startsWith("AS   ")) { // AC Secundary
           val locaslist = entrylinedata.split("; ")
           locaslist.foreach(as => {
@@ -608,6 +612,7 @@ object CelloParser {
               errcnt += 1
             }
           })
+
         } else if (entryline.startsWith("SY   ")) { // Synonyms
           if (entryline.endsWith(";")) {
             Console.err.println("SY trailing ; found at: " + entryline);
@@ -629,6 +634,7 @@ object CelloParser {
               synoaclist = synoaclist :+ ((synonym.toLowerCase, ac))
             } // add to map
           })
+
         } else if (entryline.startsWith("DR   ")) { // X-refs
           if (entryline.endsWith(";") || entryline.endsWith(".")) {
             Console.err.println("DR trailing ; found at: " + entryline);
@@ -655,6 +661,7 @@ object CelloParser {
               .split(";")(1)
               .trim() + "\t" + ac + "\t" + coreid + "\n"
           }
+
         } else if (entryline.startsWith("RX   ")) { // PubMed/DOIs
           if (!entryline.endsWith(";")) {
             Console.err.println("RX unterminated line found at: " + entryline);
@@ -713,6 +720,7 @@ object CelloParser {
             }
             rxcnt += 1
           }
+
         } else if (entryline.startsWith("WW   ")) { // Web links
           if (
             !(entrylinedata.startsWith("http://") || entrylinedata
@@ -722,6 +730,7 @@ object CelloParser {
             errcnt += 1
           }
           wwcnt += 1
+
         } else if (entryline.startsWith("CC   ")) { // Comments
           if (entryline.contains("==")) {
             Console.err.println("ERROR Found '==' string at: " + entryline);
@@ -748,28 +757,28 @@ object CelloParser {
           if (cctoks.size > 1) {
             val maybedb = cctoks(0)
             if (
-              ((maybedb.startsWith("UniProtKB")) || (maybedb.startsWith(
-                "HGNC"
-              )) || (maybedb.startsWith("NCBI_TaxID")) || (ok_dblist
-                .contains(maybedb))) && cctoks.size < 3
+              ((maybedb.startsWith("UniProtKB")) || 
+              (maybedb.startsWith("HGNC")) || 
+              (maybedb.startsWith("NCBI_TaxID")) || 
+              (ok_dblist.contains(maybedb))) && cctoks.size < 3
             ) {
               Console.err.println("Missing separator at : " + entryline);
               errcnt += 1
             } else if (maybedb.startsWith("CHEBI")) {
-              Console.err.println(
-                "Missing 'ChEBI;' database token at: " + entryline
-              ); errcnt += 1
+              Console.err.println("Missing 'ChEBI;' database token at: " + entryline); 
+              errcnt += 1
             } else if (
-              cctopic.contains("target") && !maybedb
-                .startsWith("UniProtKB") && !maybedb
-                .startsWith("ChEBI") && !maybedb.startsWith("PubChem")
+              cctopic.contains("target") && 
+              !maybedb.startsWith("UniProtKB") && 
+              !maybedb.startsWith("ChEBI") && 
+              !maybedb.startsWith("FPbase") && 
+              !maybedb.startsWith("PubChem")
             ) {
               Console.err.println("Missing database token at: " + entryline);
               errcnt += 1
             } else if (cctext.contains("=ZFN") && ! DbXrefInfo.contains(cctoks(1))) {
-              Console.err.println(
-                "Wrong database token at: " + entryline + " "
-              ); errcnt += 1
+              Console.err.println("Wrong database token at: " + entryline + " "); 
+              errcnt += 1
             }
           }
 
