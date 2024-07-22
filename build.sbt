@@ -12,6 +12,7 @@ lazy val root = project
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.SourceChecker"),
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.Utf8Checker"),
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.PublicationBuilder"),
+//    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.GeneticIntegrationParser"),
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.BreedParser"),
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.SiteMapping"),
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.DerivedFromSiteParser"),

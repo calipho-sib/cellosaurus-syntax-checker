@@ -49,6 +49,7 @@ object CelloParser {
     "Derived from site",
     "Cell type",
     "Transformant",
+    "Genetic integration",
     "Selected for resistance to",
     "Breed/subspecies"
   )
@@ -257,11 +258,12 @@ object CelloParser {
       "Problematic cell line",
       "Registration",
       "Selected for resistance to",
-      "Transfected with",
+      "Genetic integration",
       "Doubling time",
       "Derived from site",
       "Cell type",
-      "Transformant"
+      "Transformant",
+      "Genetic integration"
     )
     // Just a reminder, the actual CV is stored in celloparser.cv file
     val ok_catlist1 = List(
@@ -776,9 +778,12 @@ object CelloParser {
             ) {
               Console.err.println("Missing database token at: " + entryline);
               errcnt += 1
-            } else if (cctext.contains("=ZFN") && ! DbXrefInfo.contains(cctoks(1))) {
-              Console.err.println("Wrong database token at: " + entryline + " "); 
-              errcnt += 1
+            } else if (cctext.contains("=ZFN")) {
+              val somedb = if (cctoks(1).startsWith("Gene=")) cctoks(1).substring(5) else cctoks(1)
+              if (! DbXrefInfo.contains(somedb)) {
+                Console.err.println("Wrong database token at: " + entryline + " : <" + somedb + ">" ); 
+                errcnt += 1
+              }
             }
           }
 
@@ -891,6 +896,18 @@ object CelloParser {
                 )
               }
             }
+
+          } else if (cctopic == "Genetic integration") {
+            try {
+              GeneticIntegrationParser.parseLine(cctext.trim)
+            } catch {
+              case e: Exception => {
+                errcnt += 1
+                println(s"ERROR while parsing Genetic integration comment: ${e.getMessage}")
+              }
+            }
+
+
           } else if (cctopic == "Selected for resistance to") {
             try {
               val result = ResistanceParser.parseLine(cctext.trim)
@@ -1946,6 +1963,7 @@ object CelloParser {
     var celloMabtarList = List[Mabtar]()
     var celloDerivedFromSiteList = List[DerivedFromSite]()
     var celloTransformantList = List[Transformant]()
+    var celloGenintList = List[GenInt]()
     var celloResistanceList = List[Resistance]()
     var celloBreed : Breed = null
     var celloCellType: CellType = null
@@ -2109,6 +2127,14 @@ object CelloParser {
           } catch {
             case e: Exception => {} // handled earlier
           }
+
+        } else if (category.equals("Genetic integration")) {
+          try {
+            celloGenintList = GeneticIntegrationParser.parseLine(textdata) :: celloGenintList
+          } catch {
+            case e: Exception => {} // handled earlier
+          }
+          
         } else if (category.equals("Selected for resistance to")) {
           try {
             val el = ResistanceParser.parseLine(textdata)
@@ -2345,6 +2371,7 @@ object CelloParser {
       derivedFromSiteList = celloDerivedFromSiteList,
       cellType = celloCellType,
       transformantList = celloTransformantList,
+      genintList = celloGenintList,
       resistanceList = celloResistanceList,
       breed = celloBreed
     )
@@ -2787,7 +2814,6 @@ class Comment(val category: String, var text: String, val cellId: String) {
   var publist = List[PBsource]()
   var srclist = List[STsource]()
   var hasSources: Boolean = false
-  var hasTransfectedXref: Boolean = false
 
   init
 
@@ -2800,21 +2826,6 @@ class Comment(val category: String, var text: String, val cellId: String) {
       publist = sc.publist
       srclist = sc.orglist
       hasSources = (sc.getSourceCount() > 0)
-
-    } else if (category.equals("Transfected with") && text.contains(";")) {
-      val linetoks = text.split("; ")
-      val db = linetoks(0)
-      if (DbXrefInfo.contains(db)) {
-        var property = linetoks(2)
-        if (linetoks.size > 3) {
-          // like "Transfected with: UniProtKB; Q99ZW2; Streptomyces pyogenes Cas9 (nuclear version; nCas9n)."
-          var i = 0
-          for (i <- 3 to linetoks.size - 1) property += "; " + linetoks(i)
-        }
-        hasTransfectedXref = true
-        val xref = new DbXref(db, ac = linetoks(1), label = property)
-        xreflist = new XRsource("", xref) :: xreflist
-      }
     }
   }
 
@@ -2823,7 +2834,6 @@ class Comment(val category: String, var text: String, val cellId: String) {
     if (!CelloParser.specialCCTopics.contains(category))
       <comment category={category}> 
       {if (text != "") text else Null} 
-      {if (hasTransfectedXref) xreflist(0).xref.toXML else Null  }
       {if (hasSources)
         <source-list>
         { if (xreflist.size>0) xreflist.map(_.toXML) else Null }
@@ -2840,6 +2850,8 @@ class Comment(val category: String, var text: String, val cellId: String) {
 
   def toOBO = {
     var commtext = category + ": "
+    // the condition below is for obsolete "Transfected with"
+    // it should never be true
     if (xreflist.size > 0 && ! hasSources) {  // we want xref related to transfected comment, not the sources of the comment
       val xrsource = xreflist(0)
       val xref = xrsource.xref

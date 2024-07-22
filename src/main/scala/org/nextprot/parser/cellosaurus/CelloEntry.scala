@@ -40,6 +40,7 @@ class CelloEntry(
     val derivedFromSiteList: List[DerivedFromSite],
     val cellType: CellType,
     val transformantList: List[Transformant],
+    val genintList: List[GenInt],
     val resistanceList: List[Resistance],
     val breed: Breed
 ) {
@@ -249,6 +250,13 @@ class CelloEntry(
       {
       if (transformantList.size > 0)
         <transformant-list>{transformantList.map(_.toXML)}</transformant-list>
+      else
+        Null
+      }
+
+      {
+      if (genintList.size > 0)
+        <genetic-integration-list>{genintList.map(_.toXML)}</genetic-integration-list>
       else
         Null
       }
