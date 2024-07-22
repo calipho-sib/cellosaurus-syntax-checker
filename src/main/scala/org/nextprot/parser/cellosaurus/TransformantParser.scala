@@ -11,16 +11,16 @@ object TransformantParser {
     var line = rawline
     if (rawline.endsWith(".")) line = rawline.substring(0,rawline.length-1) 
 
-    // extract optional final note [Note=...]
+    // extract optional final note (Note=...) , previously [Note=...]
     var note: String = null
-    val idx = line.indexOf("[Note=")
+    val idx = line.indexOf("(Note=")
     if (idx != -1) {
       note = line.substring(idx+6)
-      if (note.endsWith("]")) {
+      if (note.endsWith(")")) {
         note = note.substring(0, note.length-1)
         line = line.substring(0, idx).trim()
       } else {
-        throw new Exception("Note not terminated with ] in " + line)
+        throw new Exception("Note not terminated with ) in " + line)
       }
     }
 
