@@ -97,6 +97,7 @@
              <xs:element ref="cell-type" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="genome-ancestry" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="transformant-list" minOccurs="0" maxOccurs="1"/>
+             <xs:element ref="genetic-integration-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="resistance-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="breed" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="misspelling-list" minOccurs="0" maxOccurs="1"/>
@@ -233,8 +234,6 @@
       </xs:annotation>
       <xs:complexType mixed="true">
          <xs:sequence>
-            <xs:element ref="method" minOccurs="0" maxOccurs="1"/>
-            <xs:element ref="xref" minOccurs="0" maxOccurs="1"/>
             <xs:element ref="source-list" minOccurs="0" maxOccurs="1"/>
          </xs:sequence>
          <xs:attribute name="category" use="required">
@@ -256,7 +255,6 @@
                   <xs:enumeration value="Population"/>
                   <xs:enumeration value="Problematic cell line"/>
                   <xs:enumeration value="Senescence"/>
-                  <xs:enumeration value="Transfected with"/>
                   <xs:enumeration value="Virology"/>
                </xs:restriction>
             </xs:simpleType>
@@ -914,6 +912,39 @@
       </xs:complexType>
    </xs:element>
    <!-- Population data element definition ends -->
+
+
+   <!-- Genetic integration list element definition begins -->
+   <xs:element name="genetic-integration-list">
+      <xs:annotation>
+         <xs:documentation>Describes the list of genetic integration performed on the cell line.</xs:documentation>
+      </xs:annotation>
+      <xs:complexType>
+         <xs:sequence>
+            <xs:element ref="genetic-integration" minOccurs="1" maxOccurs="unbounded"/>
+         </xs:sequence>
+      </xs:complexType>
+   </xs:element>
+
+   <!-- Genetic integration element definition begins -->
+   <xs:element name="genetic-integration">
+      <xs:annotation>
+         <xs:documentation>Describes a genetic integration in the cell line.</xs:documentation>
+      </xs:annotation>
+      <xs:complexType  mixed="true">
+         <xs:sequence>
+            <xs:element ref="genetic-integration-method" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="xref" minOccurs="0" maxOccurs="1"/>
+            <xs:element ref="genetic-integration-note" minOccurs="0" maxOccurs="1"/>
+         </xs:sequence>
+      </xs:complexType>
+   </xs:element>
+
+   <xs:element name="genetic-integration-note" type="xs:string"/>
+
+   <xs:element name="genetic-integration-method" type="xs:string"/>
+
+
 
    <!-- Transformant list element definition begins -->
    <xs:element name="transformant-list">
