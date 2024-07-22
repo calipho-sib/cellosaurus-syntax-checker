@@ -10,8 +10,7 @@ class Knockout(method: String, xref: DbXref, note: String) {
     }
 
     def toXML = 
-        <knockout-cell>
-            <knockout-method>{method}</knockout-method>
+        <knockout-cell method={method}>
             {xref.toXML}
             {
             if (note != null) <knockout-cell-note>{note}</knockout-cell-note> else Null

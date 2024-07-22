@@ -15,8 +15,7 @@ class GenInt(method:String, name: String, db: String, ac: String, note:String) {
   }
 
   def toXML =
-    <genetic-integration>
-      <genetic-integration-method>{method}</genetic-integration-method>
+    <genetic-integration method={method}>
       {
       if (trgXref == null) name else Null
       }

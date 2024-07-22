@@ -566,10 +566,43 @@
       </xs:annotation>
       <xs:complexType>
          <xs:sequence>
-            <xs:element ref="knockout-method" minOccurs="1" maxOccurs="1"/>
             <xs:element ref="xref" minOccurs="1" maxOccurs="1"/>
+<!--            <xs:element ref="knockout-method" minOccurs="1" maxOccurs="1"/> -->
             <xs:element ref="knockout-cell-note" minOccurs="0" maxOccurs="1"/>
          </xs:sequence>
+         <xs:attribute name="method" use="required">
+            <xs:simpleType>
+               <xs:restriction base="xs:string">
+                  <xs:enumeration value="BAC homologous recombination"/>
+                  <xs:enumeration value="CRISPR/Cas9"/>
+                  <xs:enumeration value="CRISPR/Cas9n"/>
+                  <xs:enumeration value="Cre/loxP"/>
+                  <xs:enumeration value="EBV-based vector siRNA knockdown"/>
+                  <xs:enumeration value="Floxing/Cre recombination"/>
+                  <xs:enumeration value="Gamma radiation"/>
+                  <xs:enumeration value="Gene trap"/>
+                  <xs:enumeration value="Gene-targeted KO mouse"/>
+                  <xs:enumeration value="Homologous recombination"/>
+                  <xs:enumeration value="KO mouse"/>
+                  <xs:enumeration value="KO pig"/>
+                  <xs:enumeration value="Knockout-first conditional"/>
+                  <xs:enumeration value="Mutagenesis"/>
+                  <xs:enumeration value="Not specified"/>
+                  <xs:enumeration value="Null mutation"/>
+                  <xs:enumeration value="P-element"/>
+                  <xs:enumeration value="Promoterless gene targeting"/>
+                  <xs:enumeration value="Recombinant Adeno-Associated Virus"/>
+                  <xs:enumeration value="Spontaneous mutation"/>
+                  <xs:enumeration value="TALEN"/>
+                  <xs:enumeration value="Targeted integration"/>
+                  <xs:enumeration value="X-ray"/>
+                  <xs:enumeration value="ZFN"/>
+                  <xs:enumeration value="miRNA knockdown"/>
+                  <xs:enumeration value="shRNA knockdown"/>
+                  <xs:enumeration value="siRNA knockdown"/>
+               </xs:restriction>
+            </xs:simpleType>
+         </xs:attribute>
       </xs:complexType>
    </xs:element>
 
@@ -933,16 +966,32 @@
       </xs:annotation>
       <xs:complexType  mixed="true">
          <xs:sequence>
-            <xs:element ref="genetic-integration-method" minOccurs="1" maxOccurs="1"/>
             <xs:element ref="xref" minOccurs="0" maxOccurs="1"/>
+   <!--         <xs:element ref="genetic-integration-method" minOccurs="1" maxOccurs="1"/> -->
             <xs:element ref="genetic-integration-note" minOccurs="0" maxOccurs="1"/>
          </xs:sequence>
+         <xs:attribute name="method" use="required">
+            <xs:simpleType>
+               <xs:restriction base="xs:string">
+                  <xs:enumeration value="CRISPR/Cas9"/>
+                  <xs:enumeration value="Homologous recombination"/>
+                  <xs:enumeration value="TALEN"/>
+                  <xs:enumeration value="Transduction"/>
+                  <xs:enumeration value="Transfection/transduction"/>
+                  <xs:enumeration value="Transfection"/>
+                  <xs:enumeration value="Transgenic fish"/>
+                  <xs:enumeration value="Transgenic mouse"/>
+                  <xs:enumeration value="Transgenic rat"/>
+                  <xs:enumeration value="ZFN"/>
+               </xs:restriction>
+            </xs:simpleType>
+         </xs:attribute>
       </xs:complexType>
    </xs:element>
 
    <xs:element name="genetic-integration-note" type="xs:string"/>
 
-   <xs:element name="genetic-integration-method" type="xs:string"/>
+<!--   <xs:element name="genetic-integration-method" type="xs:string"/> -->
 
 
 
