@@ -2817,7 +2817,7 @@ class Comment(val category: String, var text: String, val cellId: String) {
 
   init
 
-  def init = { // prepare data for complex comments (methods, xrefs...)
+  def init = { // prepare data for complex comments ...)
 
     if (SimpleSourcedCommentParser.categories.contains(category) ) {
       val sc = SimpleSourcedCommentParser.parse(text, cellId, verbose=false)
@@ -2850,7 +2850,7 @@ class Comment(val category: String, var text: String, val cellId: String) {
 
   def toOBO = {
     var commtext = category + ": "
-    // the condition below is for obsolete "Transfected with"
+    // the condition below is for obsolete topi "Transfected with"
     // it should never be true
     if (xreflist.size > 0 && ! hasSources) {  // we want xref related to transfected comment, not the sources of the comment
       val xrsource = xreflist(0)
