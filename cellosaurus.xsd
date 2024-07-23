@@ -567,7 +567,6 @@
       <xs:complexType>
          <xs:sequence>
             <xs:element ref="xref" minOccurs="1" maxOccurs="1"/>
-<!--            <xs:element ref="knockout-method" minOccurs="1" maxOccurs="1"/> -->
             <xs:element ref="knockout-cell-note" minOccurs="0" maxOccurs="1"/>
          </xs:sequence>
          <xs:attribute name="method" use="required">
@@ -606,7 +605,6 @@
       </xs:complexType>
    </xs:element>
 
-   <xs:element name="knockout-method" type="xs:string"/>
    <xs:element name="knockout-cell-note" type="xs:string"/>
 
 
@@ -967,7 +965,6 @@
       <xs:complexType  mixed="true">
          <xs:sequence>
             <xs:element ref="xref" minOccurs="0" maxOccurs="1"/>
-   <!--         <xs:element ref="genetic-integration-method" minOccurs="1" maxOccurs="1"/> -->
             <xs:element ref="genetic-integration-note" minOccurs="0" maxOccurs="1"/>
          </xs:sequence>
          <xs:attribute name="method" use="required">
@@ -990,9 +987,6 @@
    </xs:element>
 
    <xs:element name="genetic-integration-note" type="xs:string"/>
-
-<!--   <xs:element name="genetic-integration-method" type="xs:string"/> -->
-
 
 
    <!-- Transformant list element definition begins -->
