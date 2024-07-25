@@ -31,9 +31,21 @@ class XRsource(val text: String, val xref: DbXref) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 class PBsource(val db_ac: String) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-  val publiRef = new PubliRef(db_ac)
+  val parts = db_ac.split("=")
+  val db : String = parts(0)
+  // case for a few ST allele sources (pmid concat with some sub identifier)
+  var ac : String = parts(1)
+  var subid : String = null
+  if (db=="PubMed" && ac.contains("_")) {
+    ac = ac.split("_")(0)
+    val pos = parts(1).indexOf("_") 
+    subid = parts(1).substring(pos + 1)
+  }
+  val publiRef = new PubliRef(db + "=" + ac)
+
   def toXML = {
     <source>
+      {if (subid != null && subid.size > 0) {subid} else Null }
       {publiRef.toXML}
     </source>
   }
