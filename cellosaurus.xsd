@@ -241,7 +241,6 @@
                <xs:restriction base="xs:string">
                   <xs:enumeration value="Anecdotal"/>
                   <xs:enumeration value="Biotechnology"/>
-                  <xs:enumeration value="Breed/subspecies"/>
                   <xs:enumeration value="Caution"/>
                   <xs:enumeration value="Characteristics"/>
                   <xs:enumeration value="Discontinued"/>
