@@ -971,6 +971,7 @@
                <xs:restriction base="xs:string">
                   <xs:enumeration value="CRISPR/Cas9"/>
                   <xs:enumeration value="Homologous recombination"/>
+                  <xs:enumeration value="PiggyBac transposition"/>
                   <xs:enumeration value="TALEN"/>
                   <xs:enumeration value="Transduction"/>
                   <xs:enumeration value="Transfection/transduction"/>
