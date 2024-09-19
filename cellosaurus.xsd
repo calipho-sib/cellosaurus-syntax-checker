@@ -2,7 +2,7 @@
 <!-- *****************************************************************************
         XML Schema Definition (XSD) for the Cellosaurus XML
 
-        Date: 2024-September-10; Release: 9.00
+        Date: 2024-December-xx; Release: 9.10
 
         Copyright (c) CALIPHO group @ SIB - Swiss Institute of Bioinformatics
         Distributed under the Creative Commons Attribution 4.0 International (CC BY 4.0) licence
@@ -972,6 +972,7 @@
                   <xs:enumeration value="CRISPR/Cas9"/>
                   <xs:enumeration value="Homologous recombination"/>
                   <xs:enumeration value="PiggyBac transposition"/>
+                  <xs:enumeration value="Sleeping Beauty transposition"/>
                   <xs:enumeration value="TALEN"/>
                   <xs:enumeration value="Transduction"/>
                   <xs:enumeration value="Transfection/transduction"/>
