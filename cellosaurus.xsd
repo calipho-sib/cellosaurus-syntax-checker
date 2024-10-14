@@ -580,6 +580,7 @@
                   <xs:enumeration value="Gamma radiation"/>
                   <xs:enumeration value="Gene trap"/>
                   <xs:enumeration value="Gene-targeted KO mouse"/>
+                  <xs:enumeration value="Helper-dependent adenoviral vector"/>
                   <xs:enumeration value="Homologous recombination"/>
                   <xs:enumeration value="KO mouse"/>
                   <xs:enumeration value="KO pig"/>
@@ -588,9 +589,9 @@
                   <xs:enumeration value="Not specified"/>
                   <xs:enumeration value="Null mutation"/>
                   <xs:enumeration value="P-element"/>
+                  <xs:enumeration value="Prime editing"/>
                   <xs:enumeration value="Promoterless gene targeting"/>
                   <xs:enumeration value="Recombinant Adeno-Associated Virus"/>
-                  <xs:enumeration value="Spontaneous mutation"/>
                   <xs:enumeration value="TALEN"/>
                   <xs:enumeration value="Targeted integration"/>
                   <xs:enumeration value="X-ray"/>
