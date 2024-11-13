@@ -25,34 +25,38 @@ object ShortTandemChecker {
 
     markers.sorted.foreach(m => {
       val elems = m.split(":")
-      val marker = elems(0).substring(5)
-      val allele = elems(1).split("\\(")(0).strip()
-      val srclst = get_marker_src(ac, m)
-
-      srclst.foreach( s => {
-        var ok = false
-        all_sources.foreach( ds => {
-          // source s must be same as one of all_sources element
-          if (s == ds) {  
-            ok = true
-          // or s must start with the same letters as a an element of all_sources + "_"
-          } else if (s.startsWith(ds + "_")) {
-            ok = true
-          }
-        })
-        if (!ok) println("ERROR, undeclared source " + s + " in " + ac + ", line: " + m)
-      })
-
-      if (marker != prev_marker) {
-        prev_marker = marker
-        prev_allele = allele
-        marker_wo_src = srclst.isEmpty
+      if (elems.size != 2) {
+        println("ERROR, invalid ST marker line in " + ac + ", line: " + m)
       } else {
-        if (allele == prev_allele) {
-          println("ERROR, duplicate alleles for marker " + marker + " in " + ac + ", line: " + m)
-        }
-        if (marker_wo_src || srclst.isEmpty) {
-          println("ERROR, some alleles with no source for marker " + marker + " in " + ac + ", at or near line: " + m)
+        val marker = elems(0).substring(5)
+        val allele = elems(1).split("\\(")(0).strip()
+        val srclst = get_marker_src(ac, m)
+
+        srclst.foreach( s => {
+          var ok = false
+          all_sources.foreach( ds => {
+            // source s must be same as one of all_sources element
+            if (s == ds) {  
+              ok = true
+            // or s must start with the same letters as a an element of all_sources + "_"
+            } else if (s.startsWith(ds + "_")) {
+              ok = true
+            }
+          })
+          if (!ok) println("ERROR, undeclared source " + s + " in " + ac + ", line: " + m)
+        })
+
+        if (marker != prev_marker) {
+          prev_marker = marker
+          prev_allele = allele
+          marker_wo_src = srclst.isEmpty
+        } else {
+          if (allele == prev_allele) {
+            println("ERROR, duplicate alleles for marker " + marker + " in " + ac + ", line: " + m)
+          }
+          if (marker_wo_src || srclst.isEmpty) {
+            println("ERROR, some alleles with no source for marker " + marker + " in " + ac + ", at or near line: " + m)
+          }
         }
       }
     })

@@ -1274,11 +1274,11 @@ object CelloParser {
             Console.err.println("Illegal taxonomy db:" + dbname + " found at: " + entryline); 
             errcnt += 1
           }
-          if (!oxlist(1).contains(" ! ")) {
+          if (oxlist.length == 2 && !oxlist(1).contains(" ! ")) {
             Console.err.println("Illegal taxonomy format found at: " + entryline); 
             errcnt += 1
           }
-          if ((oxlist(1) == " ! Homo sapiens" && (taxid != "9606")) || (oxlist(1) == " ! Mus musculus" && (taxid != "10090"))) {
+          if ((oxlist.length == 2 && oxlist(1) == " ! Homo sapiens" && (taxid != "9606")) || (oxlist.length == 2 && oxlist(1) == " ! Mus musculus" && (taxid != "10090"))) {
               Console.err.println("Wrong taxid at: " + entryline) 
           }
           if (!oxmap.contains(taxid)) oxmap(taxid) = 1 else oxmap(taxid) += 1
@@ -2292,29 +2292,32 @@ object CelloParser {
         var markerSTsrclist = List[STsource]()
         var markerPBsrclist = List[PBsource]()
         var markerXRsrclist = List[XRsource]()
-        val id = entrylinedata.split(": ")(0)
-        val rawdata = entrylinedata.split(": ")(1)
-        if (rawdata.contains("(")) { // ST   D21S11: 27,32.2 (PubMed=25877200)
-          // Separate allele counts from references
-          alleles = rawdata.split(" \\(")(0)
-          val allelerefs = rawdata.split("[\\(||\\)]")(1)
-          val sc = SimpleSourcedCommentParser.parse("ST   alleles ... (" + allelerefs + ")", id, verbose=false)
-          markerSTsrclist = sc.orglist 
-          markerPBsrclist = sc.publist     
-          markerXRsrclist = sc.xreflist
+        val splitdata = entrylinedata.split(": ") 
+        if ( splitdata.size == 2) { // otherwise data is invalid and an ERROR was sent earlier in code
+          val id = splitdata(0)
+          val rawdata = splitdata(1)
+          if (rawdata.contains("(")) { // ST   D21S11: 27,32.2 (PubMed=25877200)
+            // Separate allele counts from references
+            alleles = rawdata.split(" \\(")(0)
+            val allelerefs = rawdata.split("[\\(||\\)]")(1)
+            val sc = SimpleSourcedCommentParser.parse("ST   alleles ... (" + allelerefs + ")", id, verbose=false)
+            markerSTsrclist = sc.orglist 
+            markerPBsrclist = sc.publist     
+            markerXRsrclist = sc.xreflist
 
-        } else alleles = rawdata
-        val strMarkerdata = new StrmarkerData(
-          alleles = alleles,
-          stSources = markerSTsrclist,
-          pbSources = markerPBsrclist,
-          xrSources = markerXRsrclist
-        )
-        celloStrmarkerlist = new Strmarker(
-          id = id,
-          conflict = "false",
-          markerdatalist = List(strMarkerdata)
-        ) :: celloStrmarkerlist
+          } else alleles = rawdata
+          val strMarkerdata = new StrmarkerData(
+            alleles = alleles,
+            stSources = markerSTsrclist,
+            pbSources = markerPBsrclist,
+            xrSources = markerXRsrclist
+          )
+          celloStrmarkerlist = new Strmarker(
+            id = id,
+            conflict = "false",
+            markerdatalist = List(strMarkerdata)
+          ) :: celloStrmarkerlist
+        }
       }
     })
     // conflict example

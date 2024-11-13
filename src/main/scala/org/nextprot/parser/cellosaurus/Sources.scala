@@ -93,10 +93,10 @@ class DbXref(
   def init = { // prepare final url from template and accession
     if (url.contains("%s")) {
       // Deal with a few exceptions...
-      if (db.equals("BTO")) {
-        // BTO:  %s is the numerical part of the BTO:nnnnnnn identifier
-        final_url = url.replace("%s", ac.substring(4)) 
-      } else if (db.equals("CGH-DB")) {
+      // if (db.equals("BTO")) {
+      //   // BTO:  %s is the numerical part of the BTO:nnnnnnn identifier
+      //   final_url = url.replace("%s", ac.substring(4)) 
+      if (db.equals("CGH-DB")) {
         // CGH-DB: Note: %s and %t are respectively the values before and after the dash in the DR line.
         final_url = url.replace("%s", ac.split("-")(0)).replace("%t", ac.split("-")(1)) 
       } else if (db.equals("AddexBio")) {
