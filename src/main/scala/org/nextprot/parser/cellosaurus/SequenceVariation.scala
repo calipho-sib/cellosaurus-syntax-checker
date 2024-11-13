@@ -30,9 +30,9 @@ class SequenceVariation(
     val ac = toklist(2)
     var geneName = toklist(3)
     var srctok = ""
-    if (
-      toklist.size > 5 && vartyp != "Gene amplification" && vartyp != "Gene deletion"
-    ) mutdesc = toklist(5)
+    if (toklist.size > 5 && vartyp != "Gene amplification" && vartyp != "Gene deletion") {
+      mutdesc = toklist(5)
+    }
     if (text.contains(" + ")) { // Gene fusion, there is a second dbref: prepare it
       // like  CC   Sequence variation: Gene fusion; HGNC; 3446; ERG + HGNC; 3508; EWSR1; Name(s)=EWSR1-ERG, EWS-ERG; Note=In frame (PubMed=8162068).
       geneName = geneName.split(" ")(0)

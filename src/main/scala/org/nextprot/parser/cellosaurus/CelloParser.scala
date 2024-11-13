@@ -1003,33 +1003,39 @@ object CelloParser {
             // check gene db
             val db = allseqvartoks(1)
             if (! CelloParser.ok_seqvardblist.contains(db)) {
-              Console.err.println("Invalid db in Sequence variation '" + db + "' : " + entryline);
+              Console.err.println("Invalid db in Sequence variation '" + db + "' : " + entryline)
               errcnt += 1
             }
 
             // check source(s) at the end of line
             val sc = SimpleSourcedCommentParser.parse(entrylinedata, clId = id, verbose=true)
+            //println("sc body = <" + sc.body + ">")
 
+            // check zygosity allowed values
             allseqvartoks.foreach(token => {
-              if (token.contains("Zygosity=")) {
+              if (token.startsWith("Zygosity=")) {
                 val tokfields = token.split("=")
-                var zygotype = tokfields(1)
-                if (zygotype.contains(" ")) {
-                  zygotype = zygotype.split(" ")(0)
-                } else if (zygotype.contains(".")) {
-                  zygotype = zygotype.split("\\.")(0)
-                }
-                if (tokfields(0) != "Zygosity") {
-                  Console.err.println(
-                    "Illegal field name found at: " + entryline
-                  ); errcnt += 1
-                } else if (!ok_zygositylist.contains(zygotype)) {
-                  Console.err.println(
-                    "Illegal zygosity found at: " + entryline
-                  ); errcnt += 1
+                var zygotype = tokfields(1).split("\\(")(0).strip()
+                //println("token=<" + token + ">, zygosity=<" + zygotype + ">")
+                if (!ok_zygositylist.contains(zygotype)) {
+                  Console.err.println("Illegal zygosity found at: " + entryline)
+                  errcnt += 1
                 }
               }
             })
+
+            // Check optional note just before the sources actually starts with "Note="
+            val tokens = sc.body.split("; ")
+            val lastToken = tokens(tokens.size -1)
+            //println("line = <" + cctext + ">")
+            //println("last token = <" + lastToken + ">, line = <" + cctext + ">")
+            val expectedPrefixes = List("Note=", "Zygosity=", "Name(s)=", "Clinvar=", "dbSNP=")
+            var found = false
+            expectedPrefixes.foreach(pfx => { if (lastToken.startsWith(pfx)) found = true })
+            if (! found) {
+                Console.err.println("Illegal element before source(s) at: " + entryline)
+                errcnt += 1
+            }
 
           // ================================================================================
 
@@ -2202,6 +2208,8 @@ object CelloParser {
             mutyp = mutyp, zygosity = zygotype,
             text = textdata, sourcedComment = sc
           ) :: celloSeqVarlist
+
+
 
 
         } else if (category.equals("Registration")) { // prepare registration list
