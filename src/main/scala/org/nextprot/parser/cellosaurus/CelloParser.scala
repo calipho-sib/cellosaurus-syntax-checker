@@ -211,12 +211,14 @@ object CelloParser {
     val ok_zygositylist = List(
       "-",
       "Hemizygous",
+      "Hemizygous or homozygous",
       "Homoplasmic",
       "Homozygous",
       "Mosaic",
       "Unspecified",
       "Heteroplasmic",
-      "Heterozygous"
+      "Heterozygous",
+      "Heterozygous or homozygous"                   
     )
     val ok_vartyplist = List(
       "Simple",
@@ -2197,9 +2199,8 @@ object CelloParser {
           seqvartoks.foreach(token => {
             if (token.contains("Zygosity=")) {
               zygotype = token.split("=")(1)
-              if (zygotype.contains(" ")) { zygotype = zygotype.split(" ")(0) }
-              else if (zygotype.contains(".")) {
-                zygotype = zygotype.split("\\.")(0)
+              if (zygotype.contains(" (")) { zygotype = zygotype.split(" \\(")(0) }
+              if (zygotype.contains(".")) { zygotype = zygotype.split("\\.")(0)
               }
             }
           })

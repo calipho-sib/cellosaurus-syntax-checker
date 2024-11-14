@@ -879,8 +879,10 @@
              <xs:simpleType>
                 <xs:restriction base="xs:string">
                    <xs:enumeration value="Hemizygous"/>
+                   <xs:enumeration value="Hemizygous or homozygous"/>
                    <xs:enumeration value="Heteroplasmic"/>
                    <xs:enumeration value="Heterozygous"/>
+                   <xs:enumeration value="Heterozygous or homozygous"/>
                    <xs:enumeration value="Homoplasmic"/>
                    <xs:enumeration value="Homozygous"/>
                    <xs:enumeration value="Mosaic"/>
