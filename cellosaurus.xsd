@@ -2,8 +2,8 @@
 <!-- *****************************************************************************
         XML Schema Definition (XSD) for the Cellosaurus XML
 
-        Date: 2024-December-xx; Release: 9.10
-
+        Date: 2025-April-xx; Release: 9.10 or new ?
+        
         Copyright (c) CALIPHO group @ SIB - Swiss Institute of Bioinformatics
         Distributed under the Creative Commons Attribution 4.0 International (CC BY 4.0) licence
 *******************************************************************************-->
@@ -291,6 +291,7 @@
             <xs:element ref="label" minOccurs="0" maxOccurs="1"/>
             <xs:element ref="discontinued" minOccurs="0" maxOccurs="1"/>
             <xs:element ref="url" minOccurs="0" maxOccurs="1"/>
+            <xs:element ref="iri" minOccurs="0" maxOccurs="1"/>
          </xs:sequence>
          <xs:attribute ref="database" use="required"/>
          <xs:attribute name="category" use="required">
@@ -1142,6 +1143,7 @@
    <!-- Web page list element definition ends -->
 
    <xs:element name="url" type="xs:string"/>
+   <xs:element name="iri" type="xs:string"/>
 
    <!-- Publication list element definition begins -->
    <xs:element name="publication-list">

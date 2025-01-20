@@ -88,6 +88,8 @@ class DbXref(
   val category = DbXrefInfo.getCat(db)
   val url = DbXrefInfo.getUrl(db)
   var final_url = url
+  val iri = DbXrefInfo.getIri(db)
+  var final_iri = ""
 
   init
   def init = { // prepare final url from template and accession
@@ -113,6 +115,11 @@ class DbXref(
     } else {
       final_url = "" // for xrefs like ICLC
     }
+
+    if (iri.contains("%s")) {
+        final_iri = iri.replace("%s", ac)
+    } 
+
   }
 
   override def toString() :String = {
@@ -136,6 +143,12 @@ class DbXref(
       {
       if (final_url != "")
         <url>{scala.xml.PCData(final_url)}</url>
+      else
+        Null
+      }
+      {
+      if (final_iri != "")
+        <iri>{scala.xml.PCData(final_iri)}</iri>
       else
         Null
       }
