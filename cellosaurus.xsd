@@ -1129,18 +1129,40 @@
    </xs:element>
    <!-- Same origin as element definition ends -->
 
-   <!-- Web page list element definition begins -->
+   <!-- Web page list, web page element definition begins -->
    <xs:element name="web-page-list">
       <xs:annotation>
          <xs:documentation>Describes web pages for the entry.</xs:documentation>
       </xs:annotation>
       <xs:complexType>
          <xs:sequence>
-            <xs:element ref="url" minOccurs="1" maxOccurs="unbounded"/>
+            <xs:element ref="web-page" minOccurs="1" maxOccurs="unbounded"/>
          </xs:sequence>
       </xs:complexType>
    </xs:element>
-   <!-- Web page list element definition ends -->
+
+   <xs:element name="web-page">
+      <xs:annotation>
+         <xs:documentation>Describes a web page for the entry.</xs:documentation>
+      </xs:annotation>
+      <xs:complexType>
+         <xs:sequence>
+            <xs:element ref="url" minOccurs="1" maxOccurs="1"/>
+         </xs:sequence>
+         <xs:attribute name="category" use="required">
+            <xs:simpleType>
+               <xs:restriction base="xs:string">
+                  <xs:enumeration value="Info"/>
+                  <xs:enumeration value="Provider"/>
+               </xs:restriction>
+            </xs:simpleType>
+         </xs:attribute>
+         <xs:attribute name="institution" type="xs:string" use="required"/>
+         <xs:attribute name="specifier" type="xs:string" use="required"/>
+      </xs:complexType>
+   </xs:element>
+
+   <!-- Web page list, web page elements definition ends -->
 
    <xs:element name="url" type="xs:string"/>
    <xs:element name="iri" type="xs:string"/>

@@ -726,12 +726,13 @@ object CelloParser {
           }
 
         } else if (entryline.startsWith("WW   ")) { // Web links
-          if (
-            !(entrylinedata.startsWith("http://") || entrylinedata
-              .startsWith("https://") || entrylinedata.startsWith("ftp://"))
-          ) {
-            Console.err.println("Invalid url found at: " + entryline);
-            errcnt += 1
+          try { 
+            new WebPage(entrylinedata)
+          } catch {
+            case e: Exception => {
+              errcnt += 1
+              Console.err.println(s"ERROR while parsing WW line for ${ac}: ${e.getMessage}")
+            }
           }
           wwcnt += 1
 
@@ -2211,8 +2212,6 @@ object CelloParser {
           ) :: celloSeqVarlist
 
 
-
-
         } else if (category.equals("Registration")) { // prepare registration list
           var regtoks = textdata.split("; ")
           celloReglist = new Registration(
@@ -2231,8 +2230,13 @@ object CelloParser {
         celloCommentlist = new Comment(category = category, text = textdata, cellId = id) :: celloCommentlist
 
       } else if (entryline.startsWith("WW   ")) { // web pages
-        celloWebPagelist =
-          new WebPage(url = entrylinedata.trim()) :: celloWebPagelist
+        try {
+          val wp = new WebPage(entrylinedata.trim())
+          celloWebPagelist = wp :: celloWebPagelist
+        } catch {
+          case e: Exception => {} // handled earlier
+        }
+
       } else if (entryline.startsWith("DI   ")) { // diseases
         celloDislist = new DbXref(
           db = entrylinedata.split("; ")(0),
@@ -2484,15 +2488,6 @@ class Synonym(val syno: String) {
   }
 }
 
-class WebPage(val url: String) {
-  def toXML =
-    <url>{scala.xml.PCData(url)}</url>
-
-  def toOBO = {
-    val drline = "xref: " + url + "\n"
-    drline
-  }
-}
 
 class Registration(val registry: String, val regnumber: String) {
   def toXML =
@@ -2502,6 +2497,52 @@ class Registration(val registry: String, val regnumber: String) {
 class HLAData(val geneSymbol: String, val alleles: String) {
   def toXML =
     <hla-gene-alleles gene={geneSymbol} alleles={alleles} />
+}
+
+
+class WebPage(val data: String) {
+
+  val wp = parse(data)
+
+  def parse(data: String): Map[String, String] = {
+    val res = scala.collection.mutable.Map[String, String]()
+    val elems = data.split("; ")
+    if (elems.size != 4) throw new Exception("Expected 4 elements in: " + data)
+    val cat = elems(0).trim()
+    if (cat == "Provider" || cat == "Info") {
+      res("category") = cat
+    } else {
+      throw new Exception("Invalid category " + cat + " in: " + data)
+    }
+    val org = elems(1).trim()
+    if (org == "-" || SourceChecker.isKnownOrgRef(org)) {
+      res("institution") = org
+    } else {
+      throw new Exception("Unknown institution " + org + " in: " + data)
+    }
+    res("specifier") = elems(2).trim() // no check for this one
+    val url = elems(3).trim()
+    if (url.startsWith("http")) {
+      res("url") = url
+    } else {
+      throw new Exception("Invalid URL " + org + " in : " + data)
+    }
+    return res
+  }
+
+  def toXML =
+    val cat: String = wp("category")
+    val org: String = wp("institution")
+    val url: String = wp("url")
+    val txt: String = wp("specifier")
+    <web-page category={cat} institution={org} specifier={txt}>
+      <url>{scala.xml.PCData(url)}</url>
+    </web-page>
+
+  def toOBO = {
+    val drline = "xref: " + wp("url") + "\n"
+    drline
+  }
 }
 
 class CellType(val data: String) {
