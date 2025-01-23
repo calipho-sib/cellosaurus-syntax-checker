@@ -95,7 +95,6 @@ object CelloParser {
     var oigroupmap = Map[String, List[OiEntry]]()
     var drmap = ArrayBuffer[String]()
     val emap = Map.empty[String, Int]
-    val oxmap = Map.empty[String, Int]
     val line_occmap = Map(
       "ID" -> (1, 1),
       "AC" -> (1, 1),
@@ -355,6 +354,10 @@ object CelloParser {
       jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
         "file.separator"
       ) + "institution_list"
+    var speciesListPath =
+      jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
+        "file.separator"
+      ) + "cellosaurus_species.cv"
 
     // var celloCVpath = "/home/agateau/workspace/cellosaurus-syntax-checker/celloparser.cv"
     if (!new File(celloSiteMappingPath).exists) {
@@ -379,6 +382,10 @@ object CelloParser {
     }
     if (!new File(celloInstitutionListPath).exists) {
       Console.err.println("institution_list not found at: " + celloInstitutionListPath);
+      sys.exit(1)
+    }
+    if (!new File(speciesListPath).exists) {
+      Console.err.println("cellosaurus_species.cv not found at: " + speciesListPath);
       sys.exit(1)
     }
     var ca = ArrayBuffer[String]()
@@ -443,6 +450,7 @@ object CelloParser {
     println("args(0):" + args(0))
     val cpDict = SourceChecker.loadHierarchy(args(0))
     SourceChecker.init(DbXrefInfo.getDbSet(), instDict, cpDict)
+    SpeciesChecker.init(speciesListPath)
 
 /*
     println("Direct_author_submission: " + SourceChecker.isKnownMiscRef("Direct_author_submission"))
@@ -1258,33 +1266,11 @@ object CelloParser {
             ); errcnt += 1
           }
         } else if (entryline.startsWith("OX   ")) { // Organisms
-          if (entryline.endsWith(";")) {
-            Console.err.println("OX trailing ; found at: " + entryline);
+
+          if ( ! SpeciesChecker.checkAndCountOxLine(entryline)) {
+            Console.err.println("ERROR, invalid OX line: " + entryline)
             errcnt += 1
           }
-          val oxlist = entrylinedata.split(";")
-          if (oxlist.length != 2) {
-            Console.err.println("Illegal taxonomy format found at: " + entryline
-            ); errcnt += 1
-          }
-          if(oxlist(0).split("=").length > 2) {
-            Console.err.println("Too many ⁼'=' found at: " + entryline); 
-            errcnt += 1
-          }
-          val dbname = oxlist(0).split("=")(0)
-          val taxid = oxlist(0).split("=")(1)
-          if (dbname != "NCBI_TaxID") {
-            Console.err.println("Illegal taxonomy db:" + dbname + " found at: " + entryline); 
-            errcnt += 1
-          }
-          if (oxlist.length == 2 && !oxlist(1).contains(" ! ")) {
-            Console.err.println("Illegal taxonomy format found at: " + entryline); 
-            errcnt += 1
-          }
-          if ((oxlist.length == 2 && oxlist(1) == " ! Homo sapiens" && (taxid != "9606")) || (oxlist.length == 2 && oxlist(1) == " ! Mus musculus" && (taxid != "10090"))) {
-              Console.err.println("Wrong taxid at: " + entryline) 
-          }
-          if (!oxmap.contains(taxid)) oxmap(taxid) = 1 else oxmap(taxid) += 1
 
         } else if (entryline.startsWith("HI   ") || entryline.startsWith("OI   ")) { // Hierarchy
           var hitoken = "";
@@ -1932,12 +1918,12 @@ object CelloParser {
       println(s"$rxcnt RX refs (${pmids.size} unique PMIDs)")
       println(s"$wwcnt Web links")
       println(s"$syncnt synonyms")
-      println(s"${oxmap.size} different species")
-      oxmap.keys.foreach { i =>
-        if (i == "9606") println("Human: " + oxmap(i))
-        else if (i == "10090") println("Mouse: " + oxmap(i))
-        else if (i == "10116") println("Rat: " + oxmap(i))
-      }
+      println(s"${SpeciesChecker.getNumberOfDifferentSpecies()} different species")
+      println(s"Human: ${SpeciesChecker.getNumberOfLinesWithSpecies("9606")}")
+      println(s"Mouse: ${SpeciesChecker.getNumberOfLinesWithSpecies("10090")}")
+      println(s"Rat  : ${SpeciesChecker.getNumberOfLinesWithSpecies("10116")}")
+      
+
     }
 
     println("Parsing End " + new java.util.Date())

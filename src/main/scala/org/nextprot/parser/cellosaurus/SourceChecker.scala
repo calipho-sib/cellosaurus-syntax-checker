@@ -155,6 +155,11 @@ object SourceChecker {
             } else if (line.startsWith("AC   ")) {
                 ac = line.substring(5).strip()
             } else if (line.startsWith("HI   ")) {
+                val hi_parts = line.substring(5).split(" ! ")
+                if (hi_parts.size !=2) {
+                    println(s"FATAL ERROR, invalid HI line: ${line}")
+                    sys.exit(1)
+                } 
                 parentId = line.substring(5).split(" ! ")(1).strip()
             } else if (line.startsWith("//")) {
                 val parentLink = ParentLink(id, ac, parentId)
