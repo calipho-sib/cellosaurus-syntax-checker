@@ -108,7 +108,9 @@ object SimpleSourcedCommentParser {
     
     var validCount: Integer = 0
 
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     if (SourceChecker.isKnownMiscRef(sc.sources)) {
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
       val prefix = SourceChecker.getMiscRefPrefix(sc.sources)
 
@@ -162,25 +164,36 @@ object SimpleSourcedCommentParser {
         
         src_count += 1
 
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         if (SourceChecker.isKnownPubliRef(src)) {
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
           sc.publist = new PBsource(src) :: sc.publist
           validCount+=1
           sc.status = SOURCES_STATUS.SOME_VALID
 
         // cellosaurus xrefs appearing at the end of comments are not considered sources
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         } else if (SourceChecker.isKnownXref(src)  && ! SourceChecker.isInDbSet(src, Set("Cellosaurus"))) {
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
           val parts = src.split("=")
           val xref = new DbXref(db=parts(0), ac=parts(1))
           sc.xreflist = new XRsource("", xref) :: sc.xreflist
           validCount+=1
           sc.status = SOURCES_STATUS.SOME_VALID
 
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         } else if (SourceChecker.isKnownOrgRef(src) || src == "Direct_author_submission") {
-          sc.orglist = new STsource(src) :: sc.orglist
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+          val parts = src.split("=")
+          val inst = parts(0)
+          val specifier = if (parts.size == 2) parts(1) else null
+          sc.orglist = new STsource(src, inst, specifier) :: sc.orglist
           validCount+=1
           sc.status = SOURCES_STATUS.SOME_VALID
 
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         } else {
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
           if (verbose  && ! SourceChecker.isInDbSet(src, Set("Cellosaurus"))) {
             if (sc.value.startsWith("ST   ")) {
               println(s"ERROR: Unknown source '$src' at cell line '${cellLineId}' in '${sc.value}'")
@@ -375,6 +388,14 @@ object SimpleParserPlayground {
     assertEquals(sc.status, SOURCES_STATUS.ALL_VALID, "All sources are valid when Direct_author_submission in at first pos in sources")
     //println(sc)
     
+    println("\n --- Org source with / without a specifier ---\n")
+    sc = parser.parse("Some comment (InSCREENeX=INS-CI-1031)", "someId")
+    assertEquals(sc.orglist.size, 1, "InSCREENeX=INS-CI-1031 should become an STSource")
+    assertEquals(sc.orglist(0).name, "InSCREENeX=INS-CI-1031", "source name should be 'InSCREENeX=INS-CI-1031'")
+    assertEquals(sc.orglist(0).institution, "InSCREENeX", "source institution should be 'InSCREENeX'")
+    assertEquals(sc.orglist(0).specifier, "INS-CI-1031", "source specifier should be 'INS-CI-1031'")
+    //println(sc.orglist(0).toXML)
+
     println("\nEnd")
 
   }

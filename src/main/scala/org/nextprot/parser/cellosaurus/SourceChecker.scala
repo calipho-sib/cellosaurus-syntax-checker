@@ -77,7 +77,11 @@ object SourceChecker {
 
     def isKnownOrgRef(name: String): Boolean = {
         if (knownXrefDbSet.contains(name)) return true
-        if (knownInstituteMap.contains(name)) return true
+        val elems = name.split("=")
+        // sometimes the org name comes with a so-called specifier
+        // example: InSCREENeX=INS-CI-1031 
+        val org_name = elems(0)
+        if (knownInstituteMap.contains(org_name)) return true
         return false
     }
 
@@ -196,18 +200,22 @@ object SourceChecker {
         }
 
         // Tests
+        println("--- tests ---")
         println(isOk(SourceChecker.isKnownOrgRef("ICLAC")) + "'ICLAC' should be known org")
-        println(isOk(SourceChecker.isKnownOrgRef("Center for iPS Cell Research and Application")) + "'Center for iPS Cell Research and Application' should be known org")
+        println(isOk(SourceChecker.isKnownOrgRef("Center for iPS Cell Research and Application, Kyoto University")) + "'Center for iPS Cell Research and Application, Kyoto University' should be known org")
         println(isOk(SourceChecker.isKnownOrgRef("CiRA")) + "'CiRA' should be known org");
-
         println(isOk(SourceChecker.isKnownMiscRef("from parent cell line bla bla")) + "'from parent cell line bla bla' should be known misc ref");
         println(isOk(SourceChecker.isKnown("from parent cell line bla bla")) + "'from parent cell line bla bla' should be known");
-
         println(isOk(SourceChecker.getKnownOrgRefId("ICLAC")=="ICLAC")  + "id should be 'ICLAC'")
-        println(isOk(SourceChecker.getKnownOrgRefId("Center for iPS Cell Research and Application")=="CiRA")  + "id should be 'CiRA'")
+        println(isOk(SourceChecker.getKnownOrgRefId("Center for iPS Cell Research and Application, Kyoto University")=="CiRA")  + "id should be 'CiRA'")
         println(isOk(SourceChecker.getKnownOrgRefId("UniProtKB")=="UniProtKB")  + "id should be 'UniProtKB'")
         println(isOk(SourceChecker.getKnownOrgRefId("Schtroupf")==null)  + "id should be null")
 
+        println(isOk(SourceChecker.isKnownXref("UBERON=UBERON_0002299")) + "'UBERON=UBERON_0002299' should be known xref");
+        println(isOk(SourceChecker.isKnownOrgRef("InSCREENeX")) + "'InSCREENeX' should be known org");
+        println(isOk(SourceChecker.isKnownOrgRef("InSCREENeX=INS-CI-1031")) + "'InSCREENeX=INS-CI-1031' should be known org");
+
+        println("--- end ---")
 
     }
   

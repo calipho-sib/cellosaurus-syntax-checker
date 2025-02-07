@@ -4,13 +4,20 @@ import scala.xml._
 
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-class STsource(val src: String) {
+class STsource(val name: String, val institution: String = null, val specifier: String = null) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   override def toString() :String = {
-    return s"STsource($src)"
+    return s"STsource($name , $institution , $specifier)"
   }
-  def toXML =
-    <source>{src}</source>
+  def toXML = {
+    if (institution == null || institution.size==0) {
+    <source>{name}</source>
+    } else if (specifier==null || specifier.size==0) {
+    <source institution={institution}>{name}</source>
+    } else {
+    <source institution={institution} specifier={specifier}>{name}</source>
+    }
+  }
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 

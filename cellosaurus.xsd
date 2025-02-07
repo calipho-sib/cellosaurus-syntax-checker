@@ -401,6 +401,8 @@
                <xs:element ref="reference"/>
           </xs:choice>
          </xs:sequence>
+         <xs:attribute name="institution" type="xs:string" use="optional"/>
+         <xs:attribute name="specifier" type="xs:string" use="optional"/>
       </xs:complexType>
    </xs:element>
 
@@ -976,6 +978,7 @@
                   <xs:enumeration value="CRISPR/Cas9"/>
                   <xs:enumeration value="Homologous recombination"/>
                   <xs:enumeration value="PiggyBac transposition"/>
+                  <xs:enumeration value="Recombinase-mediated cassette exchange"/>
                   <xs:enumeration value="Sleeping Beauty transposition"/>
                   <xs:enumeration value="TALEN"/>
                   <xs:enumeration value="Transduction"/>

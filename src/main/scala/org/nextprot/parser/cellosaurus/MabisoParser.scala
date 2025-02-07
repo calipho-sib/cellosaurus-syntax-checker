@@ -80,9 +80,9 @@ object MabisoParser {
     }
   }
 
-  def getRawSources(srcList: List[String]) : List[STsource] = {
-    return srcList.filterNot( _.contains("=") ).map(STsource(_)).toList
-  }
+  // def getRawSources(srcList: List[String]) : List[STsource] = {
+  //   return srcList.filterNot( _.contains("=") ).map(STsource(_)).toList
+  // }
 
   def getXrefSources(srcList: List[String]) : List[DbXref] = {
     return srcList
