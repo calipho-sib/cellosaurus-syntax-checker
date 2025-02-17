@@ -90,6 +90,7 @@
              <xs:element ref="hla-typing-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="doubling-time-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="knockout-cell-list" minOccurs="0" maxOccurs="1"/>
+             <xs:element ref="omics-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="microsatellite-instability-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="monoclonal-antibody-isotype-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="monoclonal-antibody-target-list" minOccurs="0" maxOccurs="1"/>
@@ -249,7 +250,6 @@
                   <xs:enumeration value="Group"/>
                   <xs:enumeration value="Karyotypic information"/>
                   <xs:enumeration value="Miscellaneous"/>
-                  <xs:enumeration value="Omics"/>
                   <xs:enumeration value="Part of"/>
                   <xs:enumeration value="Population"/>
                   <xs:enumeration value="Problematic cell line"/>
@@ -548,6 +548,45 @@
          </xs:attribute>
       </xs:complexType>
    </xs:element>
+
+
+<!--   ======== CC Topic : Omics ==================  -->
+
+   <xs:element name="omics-list">
+      <xs:annotation>
+         <xs:documentation>Describes the list of omics for the cell line.</xs:documentation>
+      </xs:annotation>
+      <xs:complexType>
+         <xs:sequence>
+            <xs:element ref="omics" minOccurs="1" maxOccurs="unbounded"/>
+         </xs:sequence>
+      </xs:complexType>
+   </xs:element>
+
+   <xs:element name="omics">
+      <xs:annotation>
+         <xs:documentation>Describes an omics of the cell line.</xs:documentation>
+      </xs:annotation>
+      <xs:complexType mixed="true">
+         <xs:attribute name="branch" use="required">
+            <xs:simpleType>
+               <xs:restriction base="xs:string">
+                  <xs:enumeration value="Genomics"/>
+                  <xs:enumeration value="Glycomics"/>
+                  <xs:enumeration value="Lipidomics"/>
+                  <xs:enumeration value="Metabolomics"/>
+                  <xs:enumeration value="Phenotyping"/>
+                  <xs:enumeration value="Proteomics"/>
+                  <xs:enumeration value="Transcriptomics"/>
+                  <xs:enumeration value="Variations"/>
+               </xs:restriction>
+            </xs:simpleType>
+         </xs:attribute>
+      </xs:complexType>
+   </xs:element>
+
+<!--   ======== ends CC Topic : Omics ==================  -->
+
 
 <!--   ======== ends CC Topic : Derived from site ==================  -->
 

@@ -34,6 +34,7 @@ class CelloEntry(
     val misspellinglist: List[Misspelling],
     val doublingTimeList: List[DoublingTime],
     val knockoutList: List[Knockout],
+    val omicsList: List[Omics],
     val msiList: List[Msi],
     val mabisoList: List[Mabiso],
     val mabtarList: List[Mabtar],
@@ -201,6 +202,13 @@ class CelloEntry(
       {
       if (knockoutList.size > 0)
         <knockout-cell-list>{knockoutList.map(_.toXML)}</knockout-cell-list>
+      else
+        Null
+      }
+
+      {
+      if (omicsList.size > 0)
+        <omics-list>{omicsList.map(_.toXML)}</omics-list>
       else
         Null
       }

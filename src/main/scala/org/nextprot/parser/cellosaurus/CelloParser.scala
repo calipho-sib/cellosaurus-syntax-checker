@@ -44,6 +44,7 @@ object CelloParser {
     "Doubling time",
     "Microsatellite instability",
     "Knockout cell",
+    "Omics",
     "Monoclonal antibody isotype",
     "Monoclonal antibody target",
     "Derived from site",
@@ -846,6 +847,16 @@ object CelloParser {
               case e: Exception => {
                 errcnt += 1
                 Console.err.println(s"ERROR while parsing Knockout cell comment of ${ac}: ${e.getMessage}")
+              }
+            }
+
+          } else if (cctopic == "Omics") {
+            try {
+              OmicsParser.parseLine(cctext.trim)
+            } catch {
+              case e: Exception => {
+                errcnt += 1
+                Console.err.println(s"ERROR while parsing Omics comment of ${ac}: ${e.getMessage}")
               }
             }
 
@@ -1953,6 +1964,7 @@ object CelloParser {
     var celloHLAlists = List[HLAlistwithSource]()
     var celloDoublingTimeList = List[DoublingTime]()
     var celloKnockoutList = List[Knockout]()
+    var celloOmicsList = List[Omics]()
     var celloMsiList = List[Msi]()
     var celloMabisoList = List[Mabiso]()
     var celloMabtarList = List[Mabtar]()
@@ -2060,6 +2072,14 @@ object CelloParser {
           try {
             val koc = KnockoutParser.parseLine(textdata)
             celloKnockoutList = koc :: celloKnockoutList
+          } catch {
+            case e: Exception => {} // handled earlier
+          }
+
+        } else if (category.equals("Omics")) {
+          try {
+            val om = OmicsParser.parseLine(textdata)
+            celloOmicsList = om :: celloOmicsList
           } catch {
             case e: Exception => {} // handled earlier
           }
@@ -2367,6 +2387,7 @@ object CelloParser {
       misspellinglist = celloMisspellingList,
       doublingTimeList = celloDoublingTimeList,
       knockoutList = celloKnockoutList,
+      omicsList = celloOmicsList,
       msiList = celloMsiList,
       mabisoList = celloMabisoList,
       mabtarList = celloMabtarList,
