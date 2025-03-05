@@ -355,6 +355,10 @@ object CelloParser {
       jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
         "file.separator"
       ) + "institution_list"
+    var celloOmicsListPath =
+      jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
+        "file.separator"
+      ) + "cellosaurus_omics.cv"
     var speciesListPath =
       jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
         "file.separator"
@@ -383,6 +387,10 @@ object CelloParser {
     }
     if (!new File(celloInstitutionListPath).exists) {
       Console.err.println("institution_list not found at: " + celloInstitutionListPath);
+      sys.exit(1)
+    }
+    if (!new File(celloOmicsListPath).exists) {
+      Console.err.println("cellosaurus_omics.vc not found at: " + celloOmicsListPath);
       sys.exit(1)
     }
     if (!new File(speciesListPath).exists) {
@@ -452,6 +460,7 @@ object CelloParser {
     val cpDict = SourceChecker.loadHierarchy(args(0))
     SourceChecker.init(DbXrefInfo.getDbSet(), instDict, cpDict)
     SpeciesChecker.init(speciesListPath)
+    OmicsParser.load(celloOmicsListPath)
 
 /*
     println("Direct_author_submission: " + SourceChecker.isKnownMiscRef("Direct_author_submission"))

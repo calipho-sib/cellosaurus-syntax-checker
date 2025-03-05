@@ -20,13 +20,26 @@ class Omics(branch: String, rest: String) {
 
 object OmicsParser {
 
+    var possibleValues = scala.collection.mutable.Set[String]() 
+
+    def load(filename: String): Unit = {
+        println("Loading " + filename)
+        val lines = Source.fromFile(filename).getLines()
+        var lineNo = 0
+        for (line <- lines) {
+            lineNo += 1
+            possibleValues.add(line.strip())
+        }
+    }
+
     def parseLine(rawtext: String) : Omics = {
         val text = if (rawtext.endsWith(".")) rawtext.substring(0,rawtext.length-1) else rawtext
         
         val elems = text.split("; ")
-        val possibleValues = Set("Genomics", "Glycomics", "Lipidomics", "Metabolomics", "Phenotyping", "Proteomics", "Transcriptomics", "Variations")
+        //val possibleBranches = Set("Genomics", "Glycomics", "Lipidomics", "Metabolomics", "Phenotyping", "Proteomics", "Transcriptomics", "Variations")
         val branch = elems.head
-        if (! possibleValues.contains(branch)) throw new Exception("Invalid omics branch " + branch)
+        //if (! possibleBranches.contains(branch)) throw new Exception("Invalid omics branch: " + branch)
+        if (! possibleValues.contains(rawtext)) throw new Exception("Invalid omics value: " + rawtext)
         val rest = elems.tail.mkString("; ")
         return new Omics(branch, rest)
     }
@@ -35,9 +48,12 @@ object OmicsParser {
 
     def main(args: Array[String]): Unit = {
 
+        OmicsParser.load("../cellosaurus-api/data_in/cellosaurus_omics.cv")
         var omics: Omics = null
         try {
-            omics = OmicsParser.parseLine("Genomics; hello; boy")
+            omics = OmicsParser.parseLine("Genomics; Whole genome sequencing; Low read coverage.") // OK
+            println(omics.toXML)
+            omics = OmicsParser.parseLine("Genomics; hello; boy") // raises error
             println(omics.toXML)
         } catch {
             case e: Exception => { println(e) }
