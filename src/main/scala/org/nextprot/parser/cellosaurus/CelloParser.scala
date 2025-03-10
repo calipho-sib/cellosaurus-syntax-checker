@@ -974,7 +974,7 @@ object CelloParser {
               case e: Exception => {
                 errcnt += 1
                 println(
-                  s"ERROR while parsing Cell type comment: ${e.getMessage}"
+                  s"ERROR while parsing Cell type comment: ${e.getMessage} at line: ${cctext.trim}"
                 )
               }
             }
