@@ -350,11 +350,11 @@ object CelloParser {
     var celloSiteMappingPath =
       jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
         "file.separator"
-      ) + "site_mapping_to_cl_uberon"
+      ) + "cellosaurus_anatomy.cv"
     var celloInstitutionListPath =
       jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
         "file.separator"
-      ) + "institution_list"
+      ) + "cellosaurus_institutions.cv"
     var celloOmicsListPath =
       jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
         "file.separator"
@@ -367,7 +367,7 @@ object CelloParser {
     // var celloCVpath = "/home/agateau/workspace/cellosaurus-syntax-checker/celloparser.cv"
     if (!new File(celloSiteMappingPath).exists) {
       Console.err.println(
-        "site_mapping_to_cl_uberon not found at: " + celloSiteMappingPath
+        "cellosaurus_anatomy.cv not found at: " + celloSiteMappingPath
       ); sys.exit(1)
     }
     if (!new File(celloCVpath).exists) {
@@ -386,7 +386,7 @@ object CelloParser {
       sys.exit(1)
     }
     if (!new File(celloInstitutionListPath).exists) {
-      Console.err.println("institution_list not found at: " + celloInstitutionListPath);
+      Console.err.println("cellosaurus_institutions.cv not found at: " + celloInstitutionListPath);
       sys.exit(1)
     }
     if (!new File(celloOmicsListPath).exists) {
