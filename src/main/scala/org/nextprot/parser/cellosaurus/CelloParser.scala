@@ -390,7 +390,7 @@ object CelloParser {
       sys.exit(1)
     }
     if (!new File(celloOmicsListPath).exists) {
-      Console.err.println("cellosaurus_omics.vc not found at: " + celloOmicsListPath);
+      Console.err.println("cellosaurus_omics.cv not found at: " + celloOmicsListPath);
       sys.exit(1)
     }
     if (!new File(speciesListPath).exists) {
@@ -2090,7 +2090,7 @@ object CelloParser {
             val om = OmicsParser.parseLine(textdata)
             celloOmicsList = om :: celloOmicsList
           } catch {
-            case e: Exception => {} // handled earlier
+            case e: Exception => { } // handled earlier
           }
 
         } else if (category.equals("Microsatellite instability")) {

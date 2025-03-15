@@ -33,13 +33,11 @@ object OmicsParser {
     }
 
     def parseLine(rawtext: String) : Omics = {
-        val text = if (rawtext.endsWith(".")) rawtext.substring(0,rawtext.length-1) else rawtext
-        
+        // make sure data ends with a "." because possibleValues all ends with a "."
+        val text = if (! rawtext.endsWith(".")) rawtext + "." else rawtext
         val elems = text.split("; ")
-        //val possibleBranches = Set("Genomics", "Glycomics", "Lipidomics", "Metabolomics", "Phenotyping", "Proteomics", "Transcriptomics", "Variations")
         val branch = elems.head
-        //if (! possibleBranches.contains(branch)) throw new Exception("Invalid omics branch: " + branch)
-        if (! possibleValues.contains(rawtext)) throw new Exception("Invalid omics value: " + rawtext)
+        if (! possibleValues.contains(text)) throw new Exception("Invalid omics value: " + text)
         val rest = elems.tail.mkString("; ")
         return new Omics(branch, rest)
     }
