@@ -462,13 +462,13 @@ object CelloParser {
     SpeciesChecker.init(speciesListPath)
     OmicsParser.load(celloOmicsListPath)
 
-/*
+    /*
     println("Direct_author_submission: " + SourceChecker.isKnownMiscRef("Direct_author_submission"))
     println("Direct_author_submission: " + SourceChecker.isKnown("Direct_author_submission"))
     println("DepMap:" + SourceChecker.isKnownOrgRef("DepMap"))
     println("Cosmic-CLP:" + SourceChecker.isKnownOrgRef("Cosmic-CLP"))
     sys.exit()
-*/
+    */
 
     println(s"Checking ${args(0)} for non UTF-8 characters...")
     if (Utf8Checker.check(args(0))) { println("ok") } else { println("Exiting"); sys.exit() }
