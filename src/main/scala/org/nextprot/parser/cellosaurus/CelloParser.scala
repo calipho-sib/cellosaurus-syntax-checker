@@ -2538,12 +2538,20 @@ class WebPage(val data: String) {
     }
     res("specifier") = elems(2).trim() // no check for this one
     val url = elems(3).trim()
-    if (url.startsWith("http")) {
+    if (checkURL(url)) {
       res("url") = url
     } else {
-      throw new Exception("Invalid URL " + org + " in : " + data)
+      throw new Exception("Invalid URL " + url + " in : " + data)
     }
     return res
+  }
+
+  def checkURL(url: String): Boolean = {
+    if (! url.startsWith("http")) return false
+    if (url.contains("<")) return false
+    if (url.contains(">")) return false
+    if (url.contains("\"")) return false
+    return true
   }
 
   def toXML =
