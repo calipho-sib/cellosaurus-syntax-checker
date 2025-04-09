@@ -1533,7 +1533,7 @@ object CelloParser {
       val xmlheader = // date, version, entry count and pub count are dynamic
         <header>
             <terminology-name>Cellosaurus</terminology-name>
-            <description>Cellosaurus: a controlled vocabulary of cell lines</description>
+            <description>Cellosaurus: a knowledge resource on cell lines</description>
             <release version={celloversion} updated={
           todaystring
         } nb-cell-lines={Entries.size.toString} nb-publications={

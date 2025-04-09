@@ -36,7 +36,8 @@ object OmicsParser {
         // make sure data ends with a "." because possibleValues all ends with a "."
         val text = if (! rawtext.endsWith(".")) rawtext + "." else rawtext
         val elems = text.split("; ")
-        val branch = elems.head
+        val elem1 = elems.head
+        val branch = if (elem1.endsWith(".")) elem1.substring(0,elem1.size-1) else elem1
         if (! possibleValues.contains(text)) throw new Exception("Invalid omics value: " + text)
         val rest = elems.tail.mkString("; ")
         return new Omics(branch, rest)
@@ -51,7 +52,9 @@ object OmicsParser {
         try {
             omics = OmicsParser.parseLine("Genomics; Whole genome sequencing; Low read coverage.") // OK
             println(omics.toXML)
-            omics = OmicsParser.parseLine("Genomics; hello; boy") // raises error
+            omics = OmicsParser.parseLine("Proteomics.") // OK
+            println(omics.toXML)
+            omics = OmicsParser.parseLine("Genomics; hello; boy") // raises error cos not in cellosaurus_omics.cv
             println(omics.toXML)
         } catch {
             case e: Exception => { println(e) }
