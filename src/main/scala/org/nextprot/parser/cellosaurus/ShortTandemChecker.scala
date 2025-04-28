@@ -22,6 +22,9 @@ object ShortTandemChecker {
     var prev_marker = ""
     var prev_allele = ""
     var marker_wo_src = false
+    if (st_lines.size > 0 && markers.size == 0) {
+        println("ERROR, no ST marker in " + ac)
+    }
 
     markers.sorted.foreach(m => {
       val elems = m.split(":")

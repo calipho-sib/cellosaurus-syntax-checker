@@ -2396,7 +2396,7 @@ object CelloParser {
       misspellinglist = celloMisspellingList,
       doublingTimeList = celloDoublingTimeList,
       knockoutList = celloKnockoutList,
-      omicsList = celloOmicsList,
+      omicsList = celloOmicsList.reverse,
       msiList = celloMsiList,
       mabisoList = celloMabisoList,
       mabtarList = celloMabtarList,
