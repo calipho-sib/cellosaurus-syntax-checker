@@ -1017,6 +1017,7 @@
                   <xs:enumeration value="CRISPR/Cas9"/>
                   <xs:enumeration value="Homologous recombination"/>
                   <xs:enumeration value="PiggyBac transposition"/>
+                  <xs:enumeration value="Protein trap"/>
                   <xs:enumeration value="Recombinase-mediated cassette exchange"/>
                   <xs:enumeration value="Sleeping Beauty transposition"/>
                   <xs:enumeration value="TALEN"/>
