@@ -89,6 +89,7 @@
              <xs:element ref="reference-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="hla-typing-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="doubling-time-list" minOccurs="0" maxOccurs="1"/>
+             <xs:element ref="doubling-time-range" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="knockout-cell-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="omics-list" minOccurs="0" maxOccurs="1"/>
              <xs:element ref="microsatellite-instability-list" minOccurs="0" maxOccurs="1"/>
@@ -713,6 +714,19 @@
          </xs:sequence>
       </xs:complexType>
    </xs:element>
+
+   <xs:element name="doubling-time-range">
+      <xs:annotation>
+         <xs:documentation>Describes the consolidated range of doubling time observed for the cell line in hour(s).</xs:documentation>
+      </xs:annotation>
+      <xs:complexType>
+         <xs:attribute name="unit" type="xs:string" use="required"/>   <!-- value is always "hour" -->
+         <xs:attribute name="min" type="xs:integer" use="required"/>
+         <xs:attribute name="max" type="xs:integer" use="required"/>
+      </xs:complexType>
+   </xs:element>
+
+
 
    <xs:element name="doubling-time-value" type="xs:string"/>
    <xs:element name="doubling-time-note" type="xs:string"/>

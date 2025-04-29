@@ -46,7 +46,18 @@ class CelloEntry(
     val breed: Breed
 ) {
 
-  // pam
+  // - - - - - - - - - - - - - - - - - - - - 
+  // init instance time
+  // - - - - - - - - - - - - - - - - - - - - 
+  var dtlist = List[String]()
+  for (dt <- doublingTimeList) {
+    dtlist = dtlist :+ dt.value
+  }
+  val doublingTimeRange : Option[(Int,Int)] = DoublingTimeStateAutomaton.getConsolidatedDoublingTimeRangeInHours(dtlist)
+
+  // - - - - - - - - - - - - - - - - - - - - 
+
+
   def getOiGroup(): String = {
     var result = List[String]()
     if (origin.size > 0) {
@@ -195,6 +206,13 @@ class CelloEntry(
       {
       if (doublingTimeList.size > 0)
         <doubling-time-list>{doublingTimeList.map(_.toXML)}</doubling-time-list>
+      else
+        Null
+      }
+
+      {
+      if (doublingTimeRange != None)
+        <doubling-time-range unit="hour" min={doublingTimeRange.get._1.toString} max={doublingTimeRange.get._2.toString} />
       else
         Null
       }

@@ -840,7 +840,8 @@ object CelloParser {
                 if (sc.getSourceCount() == 0) {
                   println(s"ERROR: No valid source at cell line '${id}' in ${entryline}")
                 }
-                new DoublingTime(value = dt("value"), note = dt("note"), sc = sc)
+                val range = DoublingTimeStateAutomaton.getDoublingTimeRangeInHours(dt("value")) // may send WARNINGs
+                new DoublingTime(value = dt("value"), note = dt("note"), sc = sc)               // output not used here
               })
             } catch {
               case e: Exception => {

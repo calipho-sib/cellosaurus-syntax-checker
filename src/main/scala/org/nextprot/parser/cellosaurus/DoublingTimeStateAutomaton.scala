@@ -3,16 +3,6 @@ package org.nextprot.parser.cellosaurus
 import scala.io.Source
 import scala.collection.mutable.Map
 
-class DtElement(val value: String) {
-  var note: String = null;
-  var refs: String = null;
-  override def toString() : String = {
-    val v = "value=" + value
-    val n = if (note==null) "(null)" else note
-    val r = if (refs==null) "(null)" else refs
-    return v + " note=" + n + " refs=" + r
-  }
-}
 
 object DoublingTimeStateAutomaton {
 
@@ -117,6 +107,90 @@ object DoublingTimeStateAutomaton {
     return dtlist.reverse
   }
 
+  def getConsolidatedDoublingTimeRangeInHours(dtList: List[String]): Option[(Int, Int)] = {
+    var min : Int = 1000000000
+    var max : Int = 0
+    for (value <- dtList) {
+      val opt_range = getDoublingTimeRangeInHours(value)
+      if (opt_range != None) {
+        val range = opt_range.get
+        if (range._1 < min) min = range._1
+        if (range._2 > max) max = range._2
+      }
+    }
+    if (max == 0) return None
+    return Some((min, max))
+  }
+
+
+  def getDoublingTimeRangeInHours(raw_value: String): Option[(Int, Int)] = {
+
+    try {
+
+      val value = raw_value
+        .replace("<", "").replace("~","")                           // filter out any ~ or < (we ignore them)
+        .replace("hours","hour").replace("days", "day")             // standardize unit
+        .replace("weeks","week").replace("months", "month")         // standardize unit
+      if (! value.contains("hour") && ! value.contains("day") &&    // ignore values without a time unit
+          ! value.contains("week") && ! value.contains("month")) {  // ignore values without a time unit
+        return None
+      } 
+
+      val parts = value.split(" ")
+      var unit : String = "";
+      var q1 : Float = 0.0f;
+      var q2 : Float = 0.0f;
+      if (parts.size==2) {
+        unit = parts(1)
+        val expr = parts(0)
+        if (expr.charAt(0) == '>') {
+          val q = expr.substring(1).toFloat
+          q1 = q + 1.0f
+          q2 = q * 1.1f
+          if (q2 < q1) {
+            val tmp = q2
+            q2 = q1
+            q1 = tmp
+          }
+        } else if (expr.contains("-")) {
+          val subparts = expr.split("-")
+          q1 = subparts(0).toFloat
+          q2 = subparts(1).toFloat
+        } else {
+          q1 = expr.toFloat
+          q2 = q1
+        }
+      } else if (parts.size==4 && parts(1) == "+-") {
+        unit = parts(3)
+        val center : Float = parts(0).toFloat
+        val shift : Float = parts(2).toFloat
+        q1 = center - shift
+        q2 = center + shift
+      } else {
+        println("WARNING, cannot parse doubling time expression: " + raw_value)
+        return None
+      }
+      // now convert quantities into hours
+      if (unit == "day") {
+        q1 = q1 * 24.0f
+        q2 = q2 * 24.0f
+      } else if (unit == "week") {
+        q1 = q1 * 168.0f
+        q2 = q2 * 168.0f
+      } else if (unit == "month") {
+        q1 = q1 * 30.0f * 24.0f
+        q2 = q2 * 31.0f * 24.0f
+      }
+      // now round to integer values
+      return Some((q1.toInt, math.ceil(q2).toInt))
+    } catch {
+      case _: Exception =>
+        println("WARNING, cannot parse doubling time expression: " + raw_value)
+        return None
+    }    
+  }
+
+
   def main(args: Array[String]): Unit = {
 
     val filename = args(0)
@@ -126,14 +200,20 @@ object DoublingTimeStateAutomaton {
       if (line.startsWith("CC   Doubling time")) {
         val parsedLine = line.substring(20).trim()        
         lineNo += 1
+        println("----------------------------------------")
         println(line)
         try {
           val elems = parseLine(parsedLine)
           val dtlist = buildDtList(elems)
+          var values = List[String]()
           for (dt <- dtlist) {
-            println(dt)
+            val value = dt("value")
+            values = values :+ value
+            println(value)
+            println("--> " + getDoublingTimeRangeInHours(dt("value")))
           }
 
+          println("==> " + getConsolidatedDoublingTimeRangeInHours(values))
         } catch {
           case e: Exception => println(s"ERROR at line $lineNo: ${e.getMessage}")
         }
