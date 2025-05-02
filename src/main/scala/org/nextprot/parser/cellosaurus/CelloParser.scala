@@ -675,7 +675,8 @@ object CelloParser {
             ); errcnt += 1
           }
           drcnt += 1
-          drlist += entrylinedata.split("/")(0)
+          // drlist += entrylinedata.split("/")(0) // not necessary anymore (was for AddexBio)
+          drlist += entrylinedata
           if (drmapname != "") { // Add DR to DRmap
             if (id.contains(" [")) coreid = id.split("\\[")(0).trim()
             else coreid = id
@@ -822,12 +823,15 @@ object CelloParser {
                 "No match for discontinued: '" + discontinued + "' found among DR lines of " + ac
               ); errcnt += 1
             }
+
+
           } else if (cctopic == "From") {
             if (cctoks.size < 3 || cctoks.size > 4) {
               Console.err.println(
                 "Invalid number of elements in 'From' comment at: " + entryline
               ); errcnt += 1
             }
+
           } else if (cctopic == "Doubling time") {
             try {
               val elems = DoublingTimeStateAutomaton.parseLine(cctext.trim)
@@ -891,7 +895,7 @@ object CelloParser {
             } catch {
               case e: Exception => {
                 errcnt += 1
-                println(s"ERROR while parsing Monoclonal antibody isotype comment: ${e.getMessage}")
+                println(s"ERROR while parsing Monoclonal antibody isotype comment of ${ac}: ${e.getMessage}")
               }
             }
 
@@ -901,7 +905,7 @@ object CelloParser {
             } catch {
               case e: Exception => {
                 errcnt += 1
-                println(s"ERROR while parsing Monoclonal antibody target comment: ${e.getMessage}")
+                println(s"ERROR while parsing Monoclonal antibody target comment of ${ac}: ${e.getMessage}")
               }
             }
 
@@ -913,7 +917,7 @@ object CelloParser {
               case e: Exception => {
                 errcnt += 1
                 println(
-                  s"ERROR while parsing Derived from site comment: ${e.getMessage}"
+                  s"ERROR while parsing Derived from site comment of ${ac}: ${e.getMessage}"
                 )
               }
             }
@@ -924,7 +928,7 @@ object CelloParser {
               case e: Exception => {
                 errcnt += 1
                 println(
-                  s"ERROR while parsing Transformant comment: ${e.getMessage}"
+                  s"ERROR while parsing Transformant comment of ${ac}: ${e.getMessage}"
                 )
               }
             }
@@ -935,7 +939,7 @@ object CelloParser {
             } catch {
               case e: Exception => {
                 errcnt += 1
-                println(s"ERROR while parsing Genetic integration comment: ${e.getMessage}")
+                println(s"ERROR while parsing Genetic integration comment of ${ac}: ${e.getMessage}")
               }
             }
 
@@ -943,11 +947,15 @@ object CelloParser {
           } else if (cctopic == "Selected for resistance to") {
             try {
               val result = ResistanceParser.parseLine(cctext.trim)
+              if (result("db") != null) {
+                // try to build a Xref... which may throw a useful error for user
+                val xref = new DbXref(result("db"), result("ac"))
+              }
             } catch {
               case e: Exception => {
                 errcnt += 1
                 println(
-                  s"ERROR while parsing Selected for resistance to comment: ${e.getMessage}"
+                  s"ERROR while parsing Selected for resistance to comment of ${ac}: ${e.getMessage}"
                 )
               }
             }
@@ -1068,6 +1076,31 @@ object CelloParser {
                 Console.err.println("Illegal element before source(s) at: " + entryline)
                 errcnt += 1
             }
+
+            var textdata = entryline.substring(25).strip()
+            var seqvartoks = textdata.split("; ")
+            var seqvartype = seqvartoks(0)
+            var zygotype = ""
+            var mutyp = ""
+            if (seqvartype == "Mutation" || seqvartype == "Gene amplification") mutyp = seqvartoks(4)
+            seqvartoks.foreach(token => {
+              if (token.contains("Zygosity=")) {
+                zygotype = token.split("=")(1)
+                if (zygotype.contains(" (")) { zygotype = zygotype.split(" \\(")(0) }
+                if (zygotype.contains("."))  { zygotype = zygotype.split("\\.")(0) }
+              }
+            })
+            try {
+              new SequenceVariation(
+                cl_ac = ac, vartyp = seqvartype, mutyp = mutyp, 
+                zygosity = zygotype, text = textdata, sourcedComment = sc)
+            } catch {
+              case e: Exception => {
+                Console.err.println(s"ERROR while parsing Sequence variation comment at $ac : ${e.getMessage}")
+                errcnt += 1
+              } 
+            }
+
 
           // ================================================================================
 
@@ -2202,31 +2235,31 @@ object CelloParser {
           }
           popDatawithSource = new PopulistwithSource(poplist = cellopoplist.reverse, sc = sc)
 
+
+
         } else if (category.equals("Sequence variation")) { // prepare stuff
+
           var seqvartoks = textdata.split("; ")
           var seqvartype = seqvartoks(0)
           var zygotype = ""
           var mutyp = ""
-
           val sc = SimpleSourcedCommentParser.parse(textdata, clId = id, verbose=false)
-
-          if (seqvartype == "Mutation" || seqvartype == "Gene amplification") {
-            mutyp = seqvartoks(4)
-          }
+          if (seqvartype == "Mutation" || seqvartype == "Gene amplification") mutyp = seqvartoks(4)
           seqvartoks.foreach(token => {
             if (token.contains("Zygosity=")) {
               zygotype = token.split("=")(1)
               if (zygotype.contains(" (")) { zygotype = zygotype.split(" \\(")(0) }
-              if (zygotype.contains(".")) { zygotype = zygotype.split("\\.")(0)
-              }
+              if (zygotype.contains("."))  { zygotype = zygotype.split("\\.")(0) }
             }
           })
-          celloSeqVarlist = new SequenceVariation(
-            cl_ac = ac, vartyp = seqvartype,
-            mutyp = mutyp, zygosity = zygotype,
-            text = textdata, sourcedComment = sc
-          ) :: celloSeqVarlist
-
+          try {
+            val sv = new SequenceVariation(
+              cl_ac = ac, vartyp = seqvartype, mutyp = mutyp, 
+              zygosity = zygotype, text = textdata, sourcedComment = sc)
+            celloSeqVarlist = sv  :: celloSeqVarlist
+          } catch {
+            case e: Exception => {} // handled earlier
+          }
 
         } else if (category.equals("Registration")) { // prepare registration list
           var regtoks = textdata.split("; ")
