@@ -560,6 +560,25 @@ object CelloParser {
           ) + " Please correct before re-check"
         ); sys.exit(2)
       }
+
+      val singleTopicMap = scala.collection.mutable.Map(
+        "CC   Problematic cell line" -> 0,
+        "CC   Population" -> 0, 
+        "CC   Doubling time" -> 0, 
+        "CC   Monoclonal antibody isotype" -> 0, 
+        "CC   Genome ancestry" -> 0, 
+        "CC   Donor information" -> 0, 
+        "CC   Breed/subspecies" -> 0)
+        ac = "???"
+      entry.foreach(line => {
+        if (line.startsWith("AC   ")) ac = line.substring(5).strip()
+        val topic = line.split(":")(0)
+        if (singleTopicMap.contains(topic)) singleTopicMap(topic) += 1
+      })
+      for ((topic, count) <- singleTopicMap) {
+        if (count > 1) println(s"ERROR in $ac : unexpected multiple $topic topic lines" )
+      }
+
       entry.foreach(entryline => { // println(entryline)
         var entrylinedata = ""
         var header = entryline.substring(0, 2)
@@ -947,7 +966,7 @@ object CelloParser {
           } else if (cctopic == "Selected for resistance to") {
             try {
               val result = ResistanceParser.parseLine(cctext.trim)
-              if (result("db") != null) {
+              if (result != null && result("db") != null) {
                 // try to build a Xref... which may throw a useful error for user
                 val xref = new DbXref(result("db"), result("ac"))
               }
