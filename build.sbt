@@ -18,6 +18,7 @@ lazy val root = project
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.GeneticIntegrationParser"),
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.BreedParser"),
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.SiteMapping"),
+//    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.AuthorNameTester"),
 //    Compile / mainClass := Some("org.nextprot.parser.cellosaurus.DerivedFromSiteParser"),
     Compile / mainClass := Some("org.nextprot.parser.cellosaurus.CelloParser"),
     scalacOptions ++= Seq("-deprecation", "-explain"),

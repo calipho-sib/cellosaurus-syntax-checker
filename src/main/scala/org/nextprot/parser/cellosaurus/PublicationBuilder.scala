@@ -10,8 +10,10 @@ class Author(val name: String) {
     val is_person = ! name.startsWith("RG/")
     val clean_name = 
       if (is_person) name else name.substring(3)
+    val authorName = 
+      if (is_person) AuthorName(name) else null
     if (is_person) 
-      <person name={name}/>
+      authorName.toXML
     else
       <consortium name={clean_name}/>
 }
@@ -153,8 +155,9 @@ object PublicationBuilder {
         for (xref <- xref_arr) xreflist.append(xref)
         internalId = xreflist(0) // Pubmed comes first when PubMed + DOI
       } else if (line.startsWith("RA   "))
-        val auth_arr = linedata.substring(0, linedata.size - 1).split(", ")
-        for (auth <- auth_arr) authorlist.append(auth)
+        val auth = linedata.strip()
+        val authorName = new AuthorName(auth) // this may send an error to stdout
+        if (! authorName.invalid) authorlist.append(auth)
       else if (line.startsWith("RG   "))
         val rg_arr = linedata.split(";")
         for (rg <-rg_arr) authorlist.append("RG/" + rg)
@@ -188,8 +191,13 @@ object PublicationBuilder {
                 val elems = linedata.substring(18).split("; ")
                 booktitle = elems(0)
                 if (elems(1).endsWith("(eds.)")) {
-                    val eds = elems(1).dropRight(7).split(", ")
-                    for (ed <- eds) if (ed != "None") editorlist.append(ed)
+                    val eds = elems(1).dropRight(7).split(" & ")
+                    for (ed <- eds) { 
+                      if (ed != "None") { 
+                        val editorName = new AuthorName(ed) // this may send an error to stdout
+                        if (! editorName.invalid) editorlist.append(ed) 
+                      }
+                    }
                 }
                 val range = elems(2).substring(3).split("-") // pp.1-234 => Array(1,234) 
                 firstpage = range(0)
