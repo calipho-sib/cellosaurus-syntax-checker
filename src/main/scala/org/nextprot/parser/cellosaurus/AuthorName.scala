@@ -68,7 +68,7 @@ class AuthorName(val newFormat: String):
   def toXML = 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
     
-    <person name={oldFormat} lastname={lastname} firstnames={firstnames} suffix={suffix} />
+    <person name={oldFormat} last-name={lastname} first-names={firstnames} name-suffix={suffix} />
 
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 

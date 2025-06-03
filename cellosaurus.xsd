@@ -1351,6 +1351,9 @@
       </xs:annotation>
       <xs:complexType>
          <xs:attribute name="name" type="xs:string" use="required"/>
+         <xs:attribute name="last-name" type="xs:string" use="required"/>
+         <xs:attribute name="first-names" type="xs:string" use="required"/>
+         <xs:attribute name="name-suffix" type="xs:string" use="optional"/>
       </xs:complexType>
    </xs:element>
    <!-- Person definition ends -->
