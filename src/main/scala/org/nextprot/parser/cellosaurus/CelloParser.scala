@@ -1613,10 +1613,12 @@ object CelloParser {
     var ox = ""
     var cellAge = ""
     var cellPopulation = ""
+    var cellBreed = ""
     var cellSex = ""
     var parentAge = ""
     var parentSex = ""
     var parentPopulation = ""
+    var parentBreed = ""
     var parentSpecies = ""
     var category = ""
     var derivedfromcc = ""
@@ -1631,9 +1633,11 @@ object CelloParser {
       cellAge = ""
       cellSex = ""
       cellPopulation = ""
+      cellBreed = ""
       parentac = ""
       parentAge = ""
       parentPopulation = ""
+      parentBreed = ""
       parentSex = ""
       parentSpecies = ""
       derivedfromcc = ""
@@ -1714,6 +1718,8 @@ object CelloParser {
                 parentAge = line.split("   ")(1)
               } else if (line.startsWith("CC   Population")) {
                 parentPopulation = line.split(":")(1).trim()
+              } else if (line.startsWith("CC   Breed/subspecies")) {
+                parentBreed= line.split(": ")(1).trim()                
               } else if (line.startsWith("HI   ")) {
                 if (line.substring(5).split(" ")(0).equals(ac)) {
                   Console.err.println("Reciprocal HI: " + parentac + "/" + ac);
@@ -1728,6 +1734,8 @@ object CelloParser {
           cellAge = entryline.split("   ")(1)
         } else if (entryline.startsWith("CC   Population")) {
           cellPopulation = entryline.split(": ")(1).trim()
+        } else if (entryline.startsWith("CC   Breed/subspecies")) {
+          cellBreed = entryline.split(": ")(1).trim()
         } else if (entryline.startsWith("CA   ")) {
           category = entryline.split("   ")(1)
         }
@@ -1779,6 +1787,13 @@ object CelloParser {
         if ((parentac != "") && cellPopulation != parentPopulation) {
           Console.err.println(
             "Wrong or missing parent's  ( " + parentac + ":" + parentPopulation + " ) population match in: " + ac
+          ); errcnt += 1
+        }
+        if ((parentac != "") && cellBreed != parentBreed) {
+          Console.err.println("  cellBreed: " + cellBreed )
+          Console.err.println("parentBreed: " + parentBreed )
+          Console.err.println(
+            "Wrong or missing parent's  ( " + parentac + ":" + parentBreed + " ) breed/subspecies match in: " + ac
           ); errcnt += 1
         }
         if ((parentac != "") && parentAge != "" && cellAge != parentAge) {
