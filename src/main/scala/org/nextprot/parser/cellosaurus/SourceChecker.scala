@@ -58,7 +58,9 @@ object SourceChecker {
     }
 
     def getCellosaurusParentIdFromId(id: String) : String = {
-        return knownParentLinkMap(id).parentId
+        val parentLink: ParentLink = knownParentLinkMap.getOrElse(id, null)
+        if (parentLink == null) return null
+        return parentLink.parentId
     }
 
     def isKnownXref(db_ac: String): Boolean = {
