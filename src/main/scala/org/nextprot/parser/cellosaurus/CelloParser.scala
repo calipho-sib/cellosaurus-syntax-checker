@@ -351,7 +351,11 @@ object CelloParser {
       jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
         "file.separator"
       ) + "cellosaurus_anatomy.cv"
-    var celloInstitutionListPath =
+    var celloJournalListPath = 
+      jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
+        "file.separator"
+      ) + "cellosaurus_journals.cv"
+    var celloInstitutionListPath = 
       jarpath.getAbsoluteFile().getParentFile().toString() + System.getProperty(
         "file.separator"
       ) + "cellosaurus_institutions.cv"
@@ -383,6 +387,10 @@ object CelloParser {
     // var celloRefpath = "/home/agateau/workspace/cellosaurus-syntax-checker/cellosaurus_refs.txt"
     if (!new File(celloRefpath).exists) {
       Console.err.println("cellosaurus_refs.txt not found at: " + celloRefpath);
+      sys.exit(1)
+    }
+    if (!new File(celloJournalListPath).exists) {
+      Console.err.println("cellosaurus_journals.cv not found at: " + celloJournalListPath);
       sys.exit(1)
     }
     if (!new File(celloInstitutionListPath).exists) {
@@ -461,6 +469,7 @@ object CelloParser {
     SourceChecker.init(DbXrefInfo.getDbSet(), instDict, cpDict)
     SpeciesChecker.init(speciesListPath)
     OmicsParser.load(celloOmicsListPath)
+    JournalChecker.init(celloJournalListPath)
 
     /*
     println("Direct_author_submission: " + SourceChecker.isKnownMiscRef("Direct_author_submission"))

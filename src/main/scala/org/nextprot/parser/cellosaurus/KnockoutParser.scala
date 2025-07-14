@@ -3,7 +3,7 @@ package org.nextprot.parser.cellosaurus
 import scala.io.Source
 import scala.xml._
 
-class Knockout(method: String, xref: DbXref, note: String) {
+class Knockout(val method: String, val xref: DbXref, val note: String) {
         
     override def toString() : String = {
         s"Knockout(method=$method, xref:$xref, note:${if (note==null) "(null)" else note})"

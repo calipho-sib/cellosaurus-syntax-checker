@@ -227,33 +227,25 @@ object PublicationBuilder {
                 parseCommonFields(elems)
 
             } else { // General journal RL eg: RL   Naunyn Schmiedebergs Arch. Pharmacol. 352:662-669(1995).
-            year = linedata.split(":")(1).split("[\\(||\\)]")(1)
-            val rltokens = linedata.split(":")(0).split(" ")
-            pubtype = "article"
-            journal = rltokens.dropRight(1).mkString(" ")
-            if (journal.contains("Suppl")) { // add the Suppl part to volume, eg: J. Physiol. Pharmacol. 60 Suppl.
-                var digitpos = 0
-                val matchlist =
-                new Regex("[0-9]").findAllIn(journal).matchData.toList
-                if (matchlist.size != 0)
-                digitpos = matchlist(0).start
-                else
-                digitpos = journal.indexOf("Suppl")
-                volume = journal.substring(digitpos)
-                journal = journal.substring(0, digitpos - 1)
-            }
+              year = linedata.split(":")(1).split("[\\(||\\)]")(1)
+              pubtype = "article"
 
-            if (volume == "")
-                volume = rltokens(rltokens.size - 1)
-            else // Add to suppl part
-                volume = volume + " " + rltokens(rltokens.size - 1)
+              val jv: JournalVolume = JournalChecker.extract_journal_volume(linedata.split(":")(0))
+              if (jv == null) {
+                journal =" volume_not_found"
+                volume =" volume_not_found"
+                println(s"ERROR, could not split journal and volume at line: ${line}")
+              } else {
+                journal = jv.journal
+                volume = jv.volume
+              }
 
-            val pages = linedata.split(":")(1).split("\\(")(0).split("-")
-            firstpage = pages(0)
-            if (pages.size > 1)
-                lastpage = pages(1)
-            else // like RL   Cancer Genet. Cytogenet. 84:142 Abs. A10(1995).
-                lastpage = firstpage
+              val pages = linedata.split(":")(1).split("\\(")(0).split("-")
+              firstpage = pages(0)
+              if (pages.size > 1)
+                  lastpage = pages(1)
+              else // like RL   Cancer Genet. Cytogenet. 84:142 Abs. A10(1995).
+                  lastpage = firstpage
             }
         } catch {
             case e: Exception => {throw new Exception(s"ERROR while parsing: ${line}") } // handled earlier
