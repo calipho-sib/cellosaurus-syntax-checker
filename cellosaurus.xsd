@@ -615,6 +615,7 @@
             <xs:simpleType>
                <xs:restriction base="xs:string">
                   <xs:enumeration value="BAC homologous recombination"/>
+                  <xs:enumeration value="CRISPR/Cas12a"/>
                   <xs:enumeration value="CRISPR/Cas9"/>
                   <xs:enumeration value="CRISPR/Cas9n"/>
                   <xs:enumeration value="Cre/loxP"/>

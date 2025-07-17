@@ -20,16 +20,36 @@ class Knockout(val method: String, val xref: DbXref, val note: String) {
 }
 
 object KnockoutParser {
+    /*
+    Format:    CC   Knockout cell: Method=<method>; <Resource_abbrev>; <ac>; <Gene/protein_name>[ (Note=<Free_text>)].
+    Examples:
+    CC   Knockout cell: Method=CRISPR/Cas9; MGI; MGI:88127; B2m.
+    CC   Knockout cell: Method=KO mouse; MGI; MGI:104738; Cdkn2a (Note=1 of 2 alleles).
+    CC   Knockout cell: Method=KO mouse; MGI; MGI:109583; Pten.
+    CC   Knockout cell: Method=Homologous recombination; MGI; MGI:99204; Zfp57 (Note=1 of 2 alleles).
+    */
+
+    val allowed_methods: Set[String] = Set(
+        "BAC homologous recombination", "CRISPR/Cas9", "CRISPR/Cas9n", "CRISPR/Cas12a", "Cre/loxP",  
+        "EBV-based vector siRNA knockdown", "Floxing/Cre recombination", "Gamma radiation",  
+        "Gene trap", "Gene-targeted KO mouse", "Helper-dependent adenoviral vector",  
+        "Homologous recombination", "KO mouse", "KO pig", "Knockout-first conditional",  
+        "Mutagenesis", "Not specified", "Null mutation", "P-element", "Prime editing",  
+        "Promoterless gene targeting", "Recombinant Adeno-Associated Virus", "TALEN",  
+        "Targeted integration", "X-ray", "ZFN", "miRNA knockdown", "shRNA knockdown", 
+        "siRNA knockdown"      
+    )
 
     def parseLine(rawtext: String) : Knockout = {
         val text = if (rawtext.endsWith(".")) rawtext.substring(0,rawtext.length-1) else rawtext
         val toklist = text.split("; ")
         val method = toklist(0).split("=")(1)
+        if (! allowed_methods.contains(method)) throw new Exception(s"Unknown method name in '${rawtext}'") 
         val db = toklist(1)
         val ac = toklist(2)
         val dbac = db + "=" + ac
         if (! SourceChecker.isInDbSet(dbac, Set("HGNC", "MGI", "UniProtKB", "FlyBase_Gene", "VGNC", "RGD", "CGNC")) ) 
-          throw new Exception(s"found invalid xref in Knockout cell comment '${rawtext}'")
+          throw new Exception(s"Invalid xref in Knockout cell comment '${rawtext}'")
         val geneAndNote = toklist(3).split(" \\(Note=")
         val geneName = geneAndNote(0)
         val note = if (geneAndNote.length>1) geneAndNote(1).split("\\)")(0) else null
