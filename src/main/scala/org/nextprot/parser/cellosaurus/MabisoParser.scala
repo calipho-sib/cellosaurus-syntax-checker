@@ -48,7 +48,8 @@ object MabisoParser {
 
   val validHeavyChains = Set("IgA", "IgA+IgM", "IgA2", "IgE", "IgE Iga haplotype", "IgE Igb haplotype", "IgG", 
     "IgG+IgM", "IgG1", "IgG1+IgG2", "IgG1+IgG2a", "IgG1+IgG2b", "IgG1+IgG3", "IgG1+IgM", "IgG2", "IgG2a", 
-    "IgG2a+IgG2b", "IgG2b", "IgG2c", "IgG3", "IgG3+IgM", "IgG4", "IgM", "IgM+IgY", "IgY", "Not determined", "Not specified")
+    "IgG2a+IgG2b", "IgG2b", "IgG2c", "IgG3", "IgG3+IgM", "IgG4", "IgM", "IgM+IgY", "IgY", "Not determined", "Not specified",
+    "IgG2a+IgM")
 
   val validPubliDb = Set("PubMed", "DOI", "CelloPub", "Patent")
 
