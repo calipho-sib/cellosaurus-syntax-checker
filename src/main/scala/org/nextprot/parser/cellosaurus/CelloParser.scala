@@ -1249,12 +1249,12 @@ object CelloParser {
                   // Todo: maybe split at parenthesis and apply a simpler stdataregexp only to the reference part if any
                   if (repcntregexp.findFirstIn(chrdata) == None) {
                     Console.err.println(
-                      "Incorrect ST data format (regex) at: " + entryline
+                      "Incorrect ST data format in '" + chrdata + "' (regex1) at: " + entryline
                     ); errcnt += 1
                   } // repeat counts
                   else if (stdataregexp.findFirstIn(stdata) == None) {
                     Console.err.println(
-                      "Incorrect ST data format (regex) at: " + entryline
+                      "Incorrect ST data format in '" + stdata + "' (regex2) at: " + entryline
                     ); errcnt += 1
                   } // repeats plus references
                   else {
@@ -1778,7 +1778,7 @@ object CelloParser {
           errcnt += 1
         }
         if (
-          (parentSpecies != "") && !ox
+          (parentSpecies != "") && !ox.toLowerCase
             .contains("hybrid") && (parentSpecies != ox)
         ) {
           Console.err.println(
