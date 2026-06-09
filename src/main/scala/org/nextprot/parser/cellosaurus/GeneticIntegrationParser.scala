@@ -43,7 +43,7 @@ object GeneticIntegrationParser {
   */
 
   val validDbs = Set("CGNC", "FlyBase_Gene", "FPbase", "HGNC", "MGI", "RGD", "UniProtKB", "VGNC")
-  val validMethods = Set("CRISPR/Cas9", "Homologous recombination", "PiggyBac transposition", "Protein trap", 
+  val validMethods = Set("CRISPR/Cas9", "Homologous recombination", "Not specified", "PiggyBac transposition", "Protein trap", 
     "Recombinase-mediated cassette exchange", "Sleeping Beauty transposition", "TALEN", "Transduction", 
     "Transfection/transduction", "Transfection", "Transgenic mouse", "Transgenic rat", "Transgenic fish", "ZFN")
   
