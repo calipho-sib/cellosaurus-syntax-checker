@@ -1286,13 +1286,13 @@ object CelloParser {
                     // check for order and unicity
                     if (toklist.length != toklist.distinct.length) {
                       Console.err.println(
-                        "Duplicate in ST data at: " + entryline
+                        "Duplicate in ST data at: " + entryline + " in " + ac
                       ); errcnt += 1
                     } else if (toklist.length > 1) {
                       val doubles = toklist.map { x => x.toDouble }
                       if (doubles.toList != doubles.sortWith(_ < _).toList) {
                         Console.err.println(
-                          "Wrong order in ST data at: " + entryline
+                          "Wrong order in ST data at: " + entryline + " in " + ac
                         ); errcnt += 1
                       }
                     }
