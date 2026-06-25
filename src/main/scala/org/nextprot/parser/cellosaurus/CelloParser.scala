@@ -1812,6 +1812,7 @@ object CelloParser {
         }
         // else if ((parentac != "") && parentAge == "" && cellAge != parentAge) { Console.err.println("Check sisters  ( " + parentac  + ") for age  in: " + ac); errcnt += 1 }
         if ((parentac != "") && derivedfromcc != parentderivedfromcc) {
+          //Console.err.println("derivedfromcc: '" + derivedfromcc + " != '" + parentderivedfromcc + "'")
           Console.err.println(
             "Missing or conflicting parent's (" + parentac + ") 'derived from' CC in: " + ac
           ); errcnt += 1
