@@ -632,7 +632,7 @@ object CelloParser {
           // Map AC to ID
           idacmap(ac) = id
           if (conflictfilename != "") {
-            if (id.contains(" [")) {
+            if (id.contains(" [") && id.endsWith("]")) {
               stripid = id.split(" \\[")(0)
               val default = (-1, "")
               if (idacmap.values.exists(_ == stripid)) {
